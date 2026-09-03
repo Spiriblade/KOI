@@ -1265,7 +1265,7 @@ nav {
 
 .preview-player-row {
     display: grid;
-    grid-template-columns: 1.4fr 1.4fr 100px 100px;
+    grid-template-columns: 1.4fr 1.4fr 100px 70px 100px;
     align-items: center;
     min-height: 38px;
     padding: 5px 8px;
