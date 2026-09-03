@@ -3713,18 +3713,28 @@ function renderRecentGamePreview(
     container.innerHTML = `
 
         <div class="preview-header">
-
-            <div class="preview-title">
-                Game ${gameIndex + 1}
-            </div>
-
-            <div
-                class="preview-result ${resultClass}"
-            >
-                ${resultText}
-            </div>
-
+    <div>
+        <div class="preview-title">
+            Game ${gameIndex + 1}
         </div>
+
+        ${
+            game.gametime
+                ? `
+                    <div class="preview-game-time">
+                        GameTime: ${escapeHtml(game.gametime)}
+                    </div>
+                  `
+                : ""
+        }
+    </div>
+
+    <div
+        class="preview-result ${resultClass}"
+    >
+        ${resultText}
+    </div>
+</div>
 
 
         <!-- KOI -->
