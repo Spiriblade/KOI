@@ -760,6 +760,7 @@ function renderGameEditor() {
                     Game ${currentGameIndex + 1}
                 </h2>
 
+
                 <div class="form-group">
 
                     <label>
@@ -793,22 +794,27 @@ function renderGameEditor() {
 
                 </div>
 
+
+                <div class="form-group">
+
+                    <label>
+                        GameTime
+                    </label>
+
+                    <input
+                        type="text"
+                        id="current-game-time"
+                        placeholder="z. B. 32:45"
+                        value="${escapeHtml(
+                            game?.gametime || ""
+                        )}"
+                        autocomplete="off"
+                    >
+
+                </div>
+
             </div>
-            <div class="form-group">
 
-    <label>
-        GameTime
-    </label>
-
-    <input
-        type="text"
-        id="current-game-time"
-        placeholder="z. B. 32:45"
-        value="${escapeHtml(game?.gametime || "")}"
-        autocomplete="off"
-    >
-
-</div>                            
 
             <h2>
                 KOI
