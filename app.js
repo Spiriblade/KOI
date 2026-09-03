@@ -340,10 +340,11 @@ async function loadMatches() {
 
 
             games[gameRow.game_number - 1] = {
-                result: gameRow.result,
-                koi: koi,
-                enemy: enemy
-            };
+    result: gameRow.result,
+    gametime: gameRow.gametime || "",
+    koi: koi,
+    enemy: enemy
+};
 
         });
 
@@ -793,7 +794,21 @@ function renderGameEditor() {
                 </div>
 
             </div>
+            <div class="form-group">
 
+    <label>
+        GameTime
+    </label>
+
+    <input
+        type="text"
+        id="current-game-time"
+        placeholder="z. B. 32:45"
+        value="${escapeHtml(game?.gametime || "")}"
+        autocomplete="off"
+    >
+
+</div>                            
 
             <h2>
                 KOI
@@ -1280,17 +1295,20 @@ async function saveCurrentMatch() {
     if (resultElement) {
 
         const currentGame = {
+    result:
+        resultElement.value,
 
-            result:
-                resultElement.value,
+    gametime:
+        document.getElementById(
+            "current-game-time"
+        )?.value.trim() || "",
 
-            koi:
-                getPlayersFromEditor("koi"),
+    koi:
+        getPlayersFromEditor("koi"),
 
-            enemy:
-                getPlayersFromEditor("enemy")
-
-        };
+    enemy:
+        getPlayersFromEditor("enemy")
+};
 
 
         /*
@@ -1355,10 +1373,13 @@ async function saveCurrentMatch() {
                 error
             } = await supabaseClient
                 .from("games")
-                .update({
-                    result:
-                        currentGame.result
-                })
+               .update({
+    result:
+        currentGame.result,
+
+    gametime:
+        currentGame.gametime
+})
                 .eq("id", existingGame.id)
                 .select()
                 .single();
@@ -1426,10 +1447,11 @@ async function saveCurrentMatch() {
             } = await supabaseClient
                 .from("games")
                 .insert({
-                    match_id: matchId,
-                    game_number: gameNumber,
-                    result: currentGame.result
-                })
+    match_id: matchId,
+    game_number: gameNumber,
+    result: currentGame.result,
+    gametime: currentGame.gametime
+})
                 .select()
                 .single();
 
