@@ -385,13 +385,18 @@ function showPage(page) {
 
     /*
         Wenn der Match-Editor verlassen wird,
-        wird er komplett zurückgesetzt.
-
-        Dadurch bleiben beim nächsten Öffnen
-        keine alten Eingaben oder Games stehen.
+        setzen wir ihn komplett zurück.
+        
+        Wichtig:
+        Das passiert NICHT beim Wechsel innerhalb
+        des Editors, sondern nur wenn eine andere
+        Seite geöffnet wird.
     */
-    if (page !== "match-editor") {
-        startNewMatch(false);
+    if (
+        page !== "match-editor" &&
+        document.getElementById("match-editor-page")?.classList.contains("active")
+    ) {
+        resetMatchEditor();
     }
 
 
