@@ -392,12 +392,9 @@ function showPage(page) {
         des Editors, sondern nur wenn eine andere
         Seite geöffnet wird.
     */
-    if (
-        page !== "match-editor" &&
-        document.getElementById("match-editor-page")?.classList.contains("active")
-    ) {
-        resetMatchEditor();
-    }
+    const leavingMatchEditor =
+    page !== "match-editor" &&
+    document.getElementById("match-editor-page")?.classList.contains("active");
 
 
     document.querySelectorAll(".page")
@@ -431,7 +428,9 @@ function showPage(page) {
     if (page === "matches") {
         renderMatches();
     }
-
+if (leavingMatchEditor) {
+    resetMatchEditor();
+}
 }
 
 
