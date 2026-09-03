@@ -383,11 +383,21 @@ document.querySelectorAll(".nav-btn")
 
 function showPage(page) {
 
+    /*
+        Wenn der Match-Editor verlassen wird,
+        wird er komplett zurückgesetzt.
+
+        Dadurch bleiben beim nächsten Öffnen
+        keine alten Eingaben oder Games stehen.
+    */
+    if (page !== "match-editor") {
+        startNewMatch(false);
+    }
+
+
     document.querySelectorAll(".page")
         .forEach(element => {
-
             element.classList.remove("active");
-
         });
 
 
@@ -401,18 +411,17 @@ function showPage(page) {
 
     document.querySelectorAll(".nav-btn")
         .forEach(button => {
-
             button.classList.toggle(
                 "active",
                 button.dataset.page === page
             );
-
         });
 
 
     if (page === "overview") {
         renderOverview();
     }
+
 
     if (page === "matches") {
         renderMatches();
@@ -433,7 +442,7 @@ document.getElementById("new-match-btn")
     });
 
 
-function startNewMatch() {
+function startNewMatch(showEditor = true) {
 
     /*
         Sicherstellen, dass wir wirklich ein
@@ -494,7 +503,9 @@ function startNewMatch() {
     /*
         Match hinzufügen anzeigen
     */
+    if (showEditor) {
     showPage("match-editor");
+}
 
 }
 
