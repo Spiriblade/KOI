@@ -1580,28 +1580,41 @@ async function saveCurrentMatch() {
 
         if (playerRows.length > 0) {
 
-            const {
-                error
-            } = await supabaseClient
-                .from("game_players")
-                .insert(playerRows);
+    const {
+        error
+    } = await supabaseClient
+        .from("game_players")
+        .insert(
+            playerRows.map((player, index) => ({
+                game_id: player.game_id,
+                player_order: index % 5,
+                team: player.team,
+                player_name: player.player_name,
+                champion: player.champion,
+                kills: player.kills,
+                deaths: player.deaths,
+                assists: player.assists,
+                damage: player.damage,
+                cs: player.cs
+            }))
+        );
 
 
-            if (error) {
+    if (error) {
 
-                console.error(
-                    "Fehler beim Speichern der Spieler:",
-                    error
-                );
+        console.error(
+            "Fehler beim Speichern der Spieler:",
+            error
+        );
 
-                alert(
-                    "Die Spielerdaten konnten nicht gespeichert werden."
-                );
+        alert(
+            "Die Spielerdaten konnten nicht gespeichert werden."
+        );
 
-                return;
-            }
+        return;
+    }
 
-        }
+}
 
     }
 
