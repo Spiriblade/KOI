@@ -1496,76 +1496,80 @@ async function saveCurrentMatch() {
             KOI
         */
 
-        currentGame.koi.forEach(player => {
+        currentGame.koi.forEach((player, index) => {
 
-            playerRows.push({
+    playerRows.push({
 
-                game_id: gameId,
+        game_id: gameId,
 
-                team: "koi",
+        player_order: index,
 
-                player_name:
-                    player.name,
+        team: "koi",
 
-                champion:
-                    player.champion || null,
+        player_name:
+            player.name,
 
-                kills:
-                    Number(player.kills) || 0,
+        champion:
+            player.champion || null,
 
-                deaths:
-                    Number(player.deaths) || 0,
+        kills:
+            Number(player.kills) || 0,
 
-                assists:
-                    Number(player.assists) || 0,
+        deaths:
+            Number(player.deaths) || 0,
 
-                damage:
-                    Number(player.damage) || 0,
+        assists:
+            Number(player.assists) || 0,
 
-                cs:
-                    Number(player.cs) || 0
+        damage:
+            Number(player.damage) || 0,
 
-            });
+        cs:
+            Number(player.cs) || 0
 
-        });
+    });
+
+});
 
 
         /*
             Gegner
         */
 
-        currentGame.enemy.forEach(player => {
+        currentGame.enemy.forEach((player, index) => {
 
-            playerRows.push({
+    playerRows.push({
 
-                game_id: gameId,
+        game_id: gameId,
 
-                team: "enemy",
+        player_order: index,
 
-                player_name:
-                    player.name,
+        team: "enemy",
 
-                champion:
-                    player.champion || null,
+        player_name:
+            player.name,
 
-                kills:
-                    Number(player.kills) || 0,
+        champion:
+            player.champion || null,
 
-                deaths:
-                    Number(player.deaths) || 0,
+        kills:
+            Number(player.kills) || 0,
 
-                assists:
-                    Number(player.assists) || 0,
+        deaths:
+            Number(player.deaths) || 0,
 
-                damage:
-                    Number(player.damage) || 0,
+        assists:
+            Number(player.assists) || 0,
 
-                cs:
-                    Number(player.cs) || 0
+        damage:
+            Number(player.damage) || 0,
 
-            });
+        cs:
+            Number(player.cs) || 0
 
-        });
+    });
+
+});
 
 
         /*
