@@ -3658,6 +3658,21 @@ function renderRecentSummary(
 
         </div>
 
+        ${
+            match.drafterLink
+                ? `
+                    <div class="summary-drafter">
+                        <a
+                            href="${escapeHtml(match.drafterLink)}"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            Drafter öffnen →
+                        </a>
+                    </div>
+                  `
+                : ""
+        }
 
         <div class="preview-actions">
 
