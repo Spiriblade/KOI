@@ -2175,13 +2175,16 @@ function renderDetailGame(match) {
 
     const container =
         document.getElementById("detail-game");
-        if (currentGameIndex === -1) {
+
+
+    if (currentGameIndex === -1) {
 
         container.innerHTML =
             renderDetailSummary(match);
 
         return;
     }
+
 
     const game =
         match.games?.[currentGameIndex];
@@ -2258,6 +2261,16 @@ function renderDetailGame(match) {
                     <div class="detail-game-title">
                         Game ${currentGameIndex + 1}
                     </div>
+
+                    ${
+                        game.gametime
+                            ? `
+                                <div class="detail-game-time">
+                                    GameTime: ${escapeHtml(game.gametime)}
+                                </div>
+                              `
+                            : ""
+                    }
 
                 </div>
 

@@ -1783,3 +1783,9 @@ nav {
     font-weight: 700;
     white-space: nowrap;
 }
+
+.detail-game-time {
+    margin-top: 5px;
+    color: #9aa0aa;
+    font-size: 14px;
+}
