@@ -872,7 +872,6 @@ function createPlayerFormsHtml(team, players) {
     return players.map((player, index) => {
 
         return `
-
             <div class="player-form">
 
                 <div class="player-role">
@@ -883,7 +882,6 @@ function createPlayerFormsHtml(team, players) {
                 <div class="player-grid">
 
                     <div class="form-group">
-
                         <label>
                             Spieler
                         </label>
@@ -894,33 +892,33 @@ function createPlayerFormsHtml(team, players) {
                             data-index="${index}"
                             value="${escapeHtml(player.name)}"
                         >
-
                     </div>
 
 
                     <div class="form-group champion-form-group">
 
-    <label>Champion</label>
+                        <label>
+                            Champion
+                        </label>
 
-    <input
-        type="text"
-        class="${team}-champion"
-        data-index="${index}"
-        placeholder="Champion suchen..."
-        value="${escapeHtml(player.champion || "")}"
-        autocomplete="off"
-    >
+                        <input
+                            type="text"
+                            class="${team}-champion"
+                            data-index="${index}"
+                            placeholder="Champion suchen..."
+                            value="${escapeHtml(player.champion || "")}"
+                            autocomplete="off"
+                        >
 
-    <div
-        class="champion-preview"
-        id="${team}-champion-preview-${index}"
-    ></div>
+                        <div
+                            class="champion-preview"
+                            id="${team}-champion-preview-${index}"
+                        ></div>
 
-</div>
+                    </div>
 
 
                     <div class="form-group">
-
                         <label>
                             Kills
                         </label>
@@ -932,12 +930,10 @@ function createPlayerFormsHtml(team, players) {
                             data-index="${index}"
                             value="${Number(player.kills) || 0}"
                         >
-
                     </div>
 
 
                     <div class="form-group">
-
                         <label>
                             Deaths
                         </label>
@@ -949,12 +945,10 @@ function createPlayerFormsHtml(team, players) {
                             data-index="${index}"
                             value="${Number(player.deaths) || 0}"
                         >
-
                     </div>
 
 
                     <div class="form-group">
-
                         <label>
                             Assists
                         </label>
@@ -966,12 +960,25 @@ function createPlayerFormsHtml(team, players) {
                             data-index="${index}"
                             value="${Number(player.assists) || 0}"
                         >
-
                     </div>
 
 
                     <div class="form-group">
+                        <label>
+                            CS
+                        </label>
 
+                        <input
+                            type="number"
+                            min="0"
+                            class="${team}-cs"
+                            data-index="${index}"
+                            value="${Number(player.cs) || 0}"
+                        >
+                    </div>
+
+
+                    <div class="form-group">
                         <label>
                             Damage
                         </label>
@@ -983,17 +990,14 @@ function createPlayerFormsHtml(team, players) {
                             data-index="${index}"
                             value="${Number(player.damage) || 0}"
                         >
-
                     </div>
 
                 </div>
 
             </div>
-
         `;
 
     }).join("");
-
 }
 
 
@@ -1004,7 +1008,6 @@ function createPlayerFormsHtml(team, players) {
 function getPlayersFromEditor(team) {
 
     const players = [];
-
 
     for (let i = 0; i < 5; i++) {
 
@@ -1041,19 +1044,23 @@ function getPlayersFromEditor(team) {
                     ).value
                 ),
 
+            cs:
+                Number(
+                    document.querySelector(
+                        `.${team}-cs[data-index="${i}"]`
+                    ).value
+                ),
+
             damage:
                 Number(
                     document.querySelector(
                         `.${team}-damage[data-index="${i}"]`
                     ).value
-                ),
-
-            cs: 0
+                )
 
         });
 
     }
-
 
     return players;
 }
@@ -3086,6 +3093,7 @@ function renderRecentSummary(match) {
             let totalKills = 0;
             let totalDeaths = 0;
             let totalAssists = 0;
+            let totalCS = 0;
             let totalDamage = 0;
 
             const champions = [];
@@ -3106,6 +3114,7 @@ function renderRecentSummary(match) {
                 totalKills += Number(player.kills) || 0;
                 totalDeaths += Number(player.deaths) || 0;
                 totalAssists += Number(player.assists) || 0;
+                totalCS += Number(player.cs) || 0;
                 totalDamage += Number(player.damage) || 0;
 
 
@@ -3127,6 +3136,7 @@ function renderRecentSummary(match) {
                 kills: totalKills,
                 deaths: totalDeaths,
                 assists: totalAssists,
+                cs: totalCS,
                 damage: totalDamage
             };
 
@@ -3184,6 +3194,13 @@ function renderRecentSummary(match) {
                 </div>
 
 
+                <div class="preview-cs">
+
+                    ${player.cs}
+
+                </div>
+
+
                 <div class="preview-damage">
 
                     ${formatNumber(player.damage)}
@@ -3236,6 +3253,10 @@ function renderRecentSummary(match) {
                 </div>
 
                 <div>
+                    CS
+                </div>
+
+                <div>
                     Damage
                 </div>
 
@@ -3268,6 +3289,10 @@ function renderRecentSummary(match) {
 
                 <div>
                     K/D/A
+                </div>
+
+                <div>
+                    CS
                 </div>
 
                 <div>
@@ -3348,6 +3373,7 @@ function renderRecentSummary(
             let totalKills = 0;
             let totalDeaths = 0;
             let totalAssists = 0;
+            let totalCS = 0;
             let totalDamage = 0;
 
 
@@ -3373,6 +3399,9 @@ function renderRecentSummary(
 
                 totalAssists +=
                     Number(player.assists) || 0;
+
+                totalCS +=
+                    Number(player.cs) || 0;
 
                 totalDamage +=
                     Number(player.damage) || 0;
@@ -3438,6 +3467,11 @@ function renderRecentSummary(
                     </div>
 
 
+                    <div class="preview-cs">
+                        ${totalCS}
+                    </div>
+
+
                     <div class="preview-damage">
                         ${formatNumber(totalDamage)}
                     </div>
@@ -3488,6 +3522,10 @@ function renderRecentSummary(
                 </div>
 
                 <div>
+                    CS
+                </div>
+
+                <div>
                     Damage
                 </div>
 
@@ -3518,6 +3556,10 @@ function renderRecentSummary(
 
                 <div>
                     K/D/A
+                </div>
+
+                <div>
+                    CS
                 </div>
 
                 <div>
@@ -3655,23 +3697,27 @@ function renderRecentGamePreview(
 
             <div class="preview-player-row preview-player-header">
 
-                <div>
-                    Spieler
-                </div>
+    <div>
+        Spieler
+    </div>
 
-                <div>
-                    Champion
-                </div>
+    <div>
+        Champion
+    </div>
 
-                <div>
-                    K/D/A
-                </div>
+    <div>
+        K/D/A
+    </div>
 
-                <div>
-                    Damage
-                </div>
+    <div>
+        CS
+    </div>
 
-            </div>
+    <div>
+        Damage
+    </div>
+
+</div>
 
 
             ${renderPreviewPlayers(game.koi)}
@@ -3690,23 +3736,27 @@ function renderRecentGamePreview(
 
             <div class="preview-player-row preview-player-header">
 
-                <div>
-                    Spieler
-                </div>
+    <div>
+        Spieler
+    </div>
 
-                <div>
-                    Champion
-                </div>
+    <div>
+        Champion
+    </div>
 
-                <div>
-                    K/D/A
-                </div>
+    <div>
+        K/D/A
+    </div>
 
-                <div>
-                    Damage
-                </div>
+    <div>
+        CS
+    </div>
 
-            </div>
+    <div>
+        Damage
+    </div>
+
+</div>
 
 
             ${renderPreviewPlayers(game.enemy)}
@@ -3762,27 +3812,43 @@ function renderPreviewPlayers(players) {
                 ${escapeHtml(player.name)}
             </div>
 
-            <div class="preview-champion">
-    ${
-        getChampionImage(player.champion)
-            ? `
-                <img
-                    src="${getChampionImage(player.champion)}"
-                    alt="${escapeHtml(player.champion)}"
-                    class="champion-icon"
-                >
-            `
-            : ""
-    }
 
-    <span>
-        ${escapeHtml(player.champion || "—")}
-    </span>
-</div>
+            <div class="preview-champion">
+
+                ${
+                    getChampionImage(player.champion)
+                        ? `
+                            <img
+                                src="${getChampionImage(player.champion)}"
+                                alt="${escapeHtml(player.champion)}"
+                                class="champion-icon"
+                            >
+                        `
+                        : ""
+                }
+
+                <span>
+                    ${escapeHtml(player.champion || "—")}
+                </span>
+
+            </div>
+
 
             <div class="preview-kda">
                 ${player.kills}/${player.deaths}/${player.assists}
             </div>
+
+
+            <div class="preview-cs">
+                ${
+                    player.cs !== undefined &&
+                    player.cs !== null &&
+                    player.cs !== ""
+                        ? player.cs
+                        : "—"
+                }
+            </div>
+
 
             <div class="preview-damage">
                 ${formatNumber(player.damage)}
@@ -3791,7 +3857,6 @@ function renderPreviewPlayers(players) {
         </div>
 
     `).join("");
-
 }
 
 /* =========================================
