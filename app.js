@@ -357,6 +357,7 @@ async function loadMatches() {
             opponent: matchRow.opponent,
             type: matchRow.type,
             mode: matchRow.mode,
+            drafterLink: matchRow.drafter_link || "",
             games: games
         };
 
@@ -470,7 +471,8 @@ function startNewMatch() {
 
     document.getElementById("match-mode")
         .value = "bo5";
-
+    document.getElementById("match-drafter-link")
+        .value = "";
 
     /*
         Game-Tabs neu aufbauen.
@@ -582,7 +584,8 @@ function editMatch(id) {
 
     document.getElementById("match-mode").value =
         match.mode;
-
+    document.getElementById("match-drafter-link").value =
+        match.drafterLink || "";
 
     updateGameTabs();
     renderGameEditor();
@@ -1112,7 +1115,10 @@ async function saveCurrentMatch() {
 
     const mode =
         document.getElementById("match-mode").value;
-
+    const drafterLink =
+        document.getElementById("match-drafter-link")
+            .value
+            .trim();
 
     /*
         Pflichtfelder prüfen
@@ -1207,7 +1213,8 @@ async function saveCurrentMatch() {
                 date: date,
                 opponent: opponent,
                 type: type,
-                mode: mode
+                mode: mode,
+                drafter_link: drafterLink || null
             })
             .eq("id", currentMatchId)
             .select()
@@ -1250,7 +1257,8 @@ async function saveCurrentMatch() {
                 date: date,
                 opponent: opponent,
                 type: type,
-                mode: mode
+                mode: mode,
+                drafter_link: drafterLink || null
             })
             .select()
             .single();
@@ -2180,6 +2188,23 @@ let totalDamage = 0;
                 ${createSummaryPlayers("enemy")}
 
             </div>
+
+
+            ${
+                match.drafterLink
+                    ? `
+                        <div class="summary-drafter">
+                            <a
+                                href="${escapeHtml(match.drafterLink)}"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
+                                Drafter öffnen →
+                            </a>
+                        </div>
+                      `
+                    : ""
+            }
 
         </div>
     `;

@@ -1789,3 +1789,31 @@ nav {
     color: #9aa0aa;
     font-size: 14px;
 }
+
+/* =========================================
+   DRAFTER LINK IM MATCH SUMMARY
+========================================= */
+
+.summary-drafter {
+    margin-top: 18px;
+}
+
+.summary-drafter a {
+    display: inline-flex;
+    align-items: center;
+    padding: 9px 14px;
+    border: 1px solid #30333b;
+    border-radius: 6px;
+    background: #15171c;
+    color: #d7b56d;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: border-color 0.15s ease,
+                background 0.15s ease;
+}
+
+.summary-drafter a:hover {
+    border-color: #d7b56d;
+    background: #1b1d23;
+}
