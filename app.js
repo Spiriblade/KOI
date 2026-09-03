@@ -1,5 +1,23 @@
-const STORAGE_KEY = "koi-stats-matches";
-const OLD_STORAGE_KEY = "koi-stats-games";
+/* =========================================
+   SUPABASE
+========================================= */
+
+const SUPABASE_URL =
+    "https://pnuxrcqsxcvioxfnysos.supabase.co";
+
+const SUPABASE_KEY =
+    "sb_publishable_sFTGk1jlOD7b6ZsaHA2wmw_b1oavWQ_";
+
+const supabaseClient =
+    window.supabase.createClient(
+        SUPABASE_URL,
+        SUPABASE_KEY
+    );
+
+
+/* =========================================
+   APP DATEN
+========================================= */
 
 let matches = [];
 let currentMatchId = null;
@@ -95,10 +113,16 @@ createChampionDatalist();
    INITIALISIERUNG
 ========================================= */
 
-loadMatches();
+async function initializeApp() {
 
-renderOverview();
-renderMatches();
+    await loadMatches();
+
+    renderOverview();
+    renderMatches();
+
+}
+
+initializeApp();
 
 
 document.addEventListener("championsLoaded", () => {
@@ -125,98 +149,217 @@ document.addEventListener("championsLoaded", () => {
    DATEN LADEN
 ========================================= */
 
-function loadMatches() {
+/* =========================================
+   DATEN AUS SUPABASE LADEN
+========================================= */
 
-    const savedMatches =
-        localStorage.getItem(STORAGE_KEY);
+async function loadMatches() {
 
-    if (savedMatches) {
+    const {
+        data: matchRows,
+        error: matchError
+    } = await supabaseClient
+        .from("matches")
+        .select("*")
+        .order("date", {
+            ascending: false
+        });
 
-        matches = JSON.parse(savedMatches);
+    if (matchError) {
+
+        console.error(
+            "Fehler beim Laden der Matches:",
+            matchError
+        );
+
+        alert(
+            "Die Matchdaten konnten nicht geladen werden."
+        );
+
+        matches = [];
 
         return;
+    }
+
+
+    if (!matchRows || matchRows.length === 0) {
+
+        matches = [];
+
+        return;
+    }
+
+
+    const matchIds =
+        matchRows.map(match => match.id);
+
+
+    const {
+        data: gameRows,
+        error: gameError
+    } = await supabaseClient
+        .from("games")
+        .select("*")
+        .in("match_id", matchIds)
+        .order("game_number", {
+            ascending: true
+        });
+
+
+    if (gameError) {
+
+        console.error(
+            "Fehler beim Laden der Games:",
+            gameError
+        );
+
+        alert(
+            "Die Games konnten nicht geladen werden."
+        );
+
+        matches = [];
+
+        return;
+    }
+
+
+    const gameIds =
+        (gameRows || []).map(game => game.id);
+
+
+    let playerRows = [];
+
+
+    if (gameIds.length > 0) {
+
+        const {
+            data,
+            error: playerError
+        } = await supabaseClient
+            .from("game_players")
+            .select("*")
+            .in("game_id", gameIds);
+
+
+        if (playerError) {
+
+            console.error(
+                "Fehler beim Laden der Spielerdaten:",
+                playerError
+            );
+
+            alert(
+                "Die Spielerdaten konnten nicht geladen werden."
+            );
+
+            matches = [];
+
+            return;
+        }
+
+
+        playerRows = data || [];
     }
 
 
     /*
-        Alte Einzelspiel-Daten migrieren.
-        Dadurch gehen deine bisherigen Spiele
-        nicht verloren.
+        Supabase-Daten wieder in die bisherige
+        Match-Struktur umwandeln.
+
+        Dadurch müssen wir den großen Rest
+        deiner App nicht umbauen.
     */
 
-    const oldGames =
-        localStorage.getItem(OLD_STORAGE_KEY);
+    matches = matchRows.map(matchRow => {
 
-    if (!oldGames) {
-        matches = [];
-        return;
-    }
-
-
-    const games = JSON.parse(oldGames);
-
-    const grouped = {};
-
-
-    games.forEach(game => {
-
-        const key =
-            `${game.date}_${game.opponent}`;
+        const matchGames =
+            (gameRows || [])
+                .filter(
+                    game =>
+                        game.match_id === matchRow.id
+                )
+                .sort(
+                    (a, b) =>
+                        a.game_number -
+                        b.game_number
+                );
 
 
-        if (!grouped[key]) {
+        const games = [];
 
-            grouped[key] = {
 
-                id: Date.now().toString() +
-                    Math.random().toString(36).substring(2),
+        matchGames.forEach(gameRow => {
 
-                date: game.date,
+            const players =
+                playerRows.filter(
+                    player =>
+                        player.game_id === gameRow.id
+                );
 
-                opponent: game.opponent,
 
-                type: "scrim",
+            const koi =
+                players
+                    .filter(
+                        player =>
+                            player.team === "koi"
+                    )
+                    .sort(
+                        (a, b) =>
+                            a.id.localeCompare(b.id)
+                    )
+                    .map(player => ({
+                        name: player.player_name,
+                        champion: player.champion || "",
+                        kills: Number(player.kills) || 0,
+                        deaths: Number(player.deaths) || 0,
+                        assists: Number(player.assists) || 0,
+                        damage: Number(player.damage) || 0,
+                        cs: Number(player.cs) || 0
+                    }));
 
-                mode: "bo5",
 
-                games: []
+            const enemy =
+                players
+                    .filter(
+                        player =>
+                            player.team === "enemy"
+                    )
+                    .sort(
+                        (a, b) =>
+                            a.id.localeCompare(b.id)
+                    )
+                    .map(player => ({
+                        name: player.player_name,
+                        champion: player.champion || "",
+                        kills: Number(player.kills) || 0,
+                        deaths: Number(player.deaths) || 0,
+                        assists: Number(player.assists) || 0,
+                        damage: Number(player.damage) || 0,
+                        cs: Number(player.cs) || 0
+                    }));
 
+
+            games[gameRow.game_number - 1] = {
+                result: gameRow.result,
+                koi: koi,
+                enemy: enemy
             };
-
-        }
-
-
-        grouped[key].games.push({
-
-            result: game.result,
-
-            koi: game.koi,
-
-            enemy: game.enemy
 
         });
 
+
+        return {
+            id: matchRow.id,
+            date: matchRow.date,
+            opponent: matchRow.opponent,
+            type: matchRow.type,
+            mode: matchRow.mode,
+            games: games
+        };
+
     });
 
-
-    matches = Object.values(grouped);
-
-    saveMatches();
 }
-
-
-/* =========================================
-   SPEICHERN
-========================================= */
-
-function saveMatches() {
-
-    localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(matches)
-    );
-}
-
 
 /* =========================================
    NAVIGATION
@@ -923,13 +1066,16 @@ document.getElementById("save-match")
     .addEventListener("click", saveCurrentMatch);
 
 
-function saveCurrentMatch() {
+async function saveCurrentMatch() {
 
     const date =
         document.getElementById("match-date").value;
 
     const opponent =
-        document.getElementById("match-opponent").value.trim();
+        document
+            .getElementById("match-opponent")
+            .value
+            .trim();
 
     const type =
         document.getElementById("match-type").value;
@@ -952,6 +1098,12 @@ function saveCurrentMatch() {
     }
 
 
+    /*
+        =========================================
+        MATCH BESTIMMEN
+        =========================================
+    */
+
     let match;
 
 
@@ -970,7 +1122,13 @@ function saveCurrentMatch() {
                     match.id === currentMatchId
             );
 
+
         if (!match) {
+
+            alert(
+                "Das Match konnte nicht gefunden werden."
+            );
+
             return;
         }
 
@@ -978,35 +1136,122 @@ function saveCurrentMatch() {
 
 
     /*
-        Neues Match erstellen
+        Neues Match
     */
 
     else {
 
         match = {
-
-            id:
-                Date.now().toString() +
-                Math.random()
-                    .toString(36)
-                    .substring(2),
-
-            date:
-                date,
-
-            opponent:
-                opponent,
-
-            type:
-                type,
-
-            mode:
-                mode,
-
-            games:
-                []
-
+            id: null,
+            date: date,
+            opponent: opponent,
+            type: type,
+            mode: mode,
+            games: []
         };
+
+    }
+
+
+    /*
+        =========================================
+        MATCH IN SUPABASE SPEICHERN
+        =========================================
+    */
+
+    let matchId;
+
+
+    /*
+        Bestehendes Match aktualisieren
+    */
+
+    if (currentMatchId !== null) {
+
+        const {
+            data,
+            error
+        } = await supabaseClient
+            .from("matches")
+            .update({
+                date: date,
+                opponent: opponent,
+                type: type,
+                mode: mode
+            })
+            .eq("id", currentMatchId)
+            .select()
+            .single();
+
+
+        if (error) {
+
+            console.error(
+                "Fehler beim Aktualisieren des Matches:",
+                error
+            );
+
+            alert(
+                "Das Match konnte nicht gespeichert werden."
+            );
+
+            return;
+        }
+
+
+        matchId =
+            data.id;
+
+    }
+
+
+    /*
+        Neues Match anlegen
+    */
+
+    else {
+
+        const {
+            data,
+            error
+        } = await supabaseClient
+            .from("matches")
+            .insert({
+                date: date,
+                opponent: opponent,
+                type: type,
+                mode: mode
+            })
+            .select()
+            .single();
+
+
+        if (error) {
+
+            console.error(
+                "Fehler beim Erstellen des Matches:",
+                error
+            );
+
+            alert(
+                "Das Match konnte nicht gespeichert werden."
+            );
+
+            return;
+        }
+
+
+        matchId =
+            data.id;
+
+
+        /*
+            Neues Match auch lokal in unserer
+            bisherigen App-Struktur anlegen.
+        */
+
+        match.id =
+            matchId;
 
         matches.push(match);
 
@@ -1014,25 +1259,9 @@ function saveCurrentMatch() {
 
 
     /*
-        Match-Daten aktualisieren
-    */
-
-    match.date =
-        date;
-
-    match.opponent =
-        opponent;
-
-    match.type =
-        type;
-
-    match.mode =
-        mode;
-
-
-    /*
-        Aktuelles Game speichern,
-        falls eines eingetragen wurde.
+        =========================================
+        AKTUELLES GAME AUS DEM EDITOR LESEN
+        =========================================
     */
 
     const resultElement =
@@ -1057,15 +1286,307 @@ function saveCurrentMatch() {
         };
 
 
+        /*
+            Lokale Struktur aktualisieren
+        */
+
         match.games[currentGameIndex] =
             currentGame;
+
+
+        /*
+            =========================================
+            GAME IN SUPABASE SPEICHERN
+            =========================================
+        */
+
+        const gameNumber =
+            currentGameIndex + 1;
+
+
+        /*
+            Prüfen, ob dieses Game bereits existiert.
+        */
+
+        const {
+            data: existingGame,
+            error: existingGameError
+        } = await supabaseClient
+            .from("games")
+            .select("id")
+            .eq("match_id", matchId)
+            .eq("game_number", gameNumber)
+            .maybeSingle();
+
+
+        if (existingGameError) {
+
+            console.error(
+                "Fehler beim Prüfen des Games:",
+                existingGameError
+            );
+
+            alert(
+                "Das Game konnte nicht gespeichert werden."
+            );
+
+            return;
+        }
+
+
+        let gameId;
+
+
+        /*
+            Game aktualisieren
+        */
+
+        if (existingGame) {
+
+            const {
+                data,
+                error
+            } = await supabaseClient
+                .from("games")
+                .update({
+                    result:
+                        currentGame.result
+                })
+                .eq("id", existingGame.id)
+                .select()
+                .single();
+
+
+            if (error) {
+
+                console.error(
+                    "Fehler beim Aktualisieren des Games:",
+                    error
+                );
+
+                alert(
+                    "Das Game konnte nicht gespeichert werden."
+                );
+
+                return;
+            }
+
+
+            gameId =
+                data.id;
+
+
+            /*
+                Alte Spielerdaten löschen.
+                Danach werden die aktuellen Daten
+                wieder sauber eingetragen.
+            */
+
+            const {
+                error: deletePlayersError
+            } = await supabaseClient
+                .from("game_players")
+                .delete()
+                .eq("game_id", gameId);
+
+
+            if (deletePlayersError) {
+
+                console.error(
+                    "Fehler beim Löschen alter Spielerdaten:",
+                    deletePlayersError
+                );
+
+                alert(
+                    "Die Spielerdaten konnten nicht aktualisiert werden."
+                );
+
+                return;
+            }
+
+        }
+
+
+        /*
+            Neues Game anlegen
+        */
+
+        else {
+
+            const {
+                data,
+                error
+            } = await supabaseClient
+                .from("games")
+                .insert({
+                    match_id: matchId,
+                    game_number: gameNumber,
+                    result: currentGame.result
+                })
+                .select()
+                .single();
+
+
+            if (error) {
+
+                console.error(
+                    "Fehler beim Erstellen des Games:",
+                    error
+                );
+
+                alert(
+                    "Das Game konnte nicht gespeichert werden."
+                );
+
+                return;
+            }
+
+
+            gameId =
+                data.id;
+
+        }
+
+
+        /*
+            =========================================
+            SPIELER SPEICHERN
+            =========================================
+        */
+
+        const playerRows = [];
+
+
+        /*
+            KOI
+        */
+
+        currentGame.koi.forEach(player => {
+
+            playerRows.push({
+
+                game_id: gameId,
+
+                team: "koi",
+
+                player_name:
+                    player.name,
+
+                champion:
+                    player.champion || null,
+
+                kills:
+                    Number(player.kills) || 0,
+
+                deaths:
+                    Number(player.deaths) || 0,
+
+                assists:
+                    Number(player.assists) || 0,
+
+                damage:
+                    Number(player.damage) || 0,
+
+                cs:
+                    Number(player.cs) || 0
+
+            });
+
+        });
+
+
+        /*
+            Gegner
+        */
+
+        currentGame.enemy.forEach(player => {
+
+            playerRows.push({
+
+                game_id: gameId,
+
+                team: "enemy",
+
+                player_name:
+                    player.name,
+
+                champion:
+                    player.champion || null,
+
+                kills:
+                    Number(player.kills) || 0,
+
+                deaths:
+                    Number(player.deaths) || 0,
+
+                assists:
+                    Number(player.assists) || 0,
+
+                damage:
+                    Number(player.damage) || 0,
+
+                cs:
+                    Number(player.cs) || 0
+
+            });
+
+        });
+
+
+        /*
+            Spieler gesammelt einfügen
+        */
+
+        if (playerRows.length > 0) {
+
+            const {
+                error
+            } = await supabaseClient
+                .from("game_players")
+                .insert(playerRows);
+
+
+            if (error) {
+
+                console.error(
+                    "Fehler beim Speichern der Spieler:",
+                    error
+                );
+
+                alert(
+                    "Die Spielerdaten konnten nicht gespeichert werden."
+                );
+
+                return;
+            }
+
+        }
 
     }
 
 
     /*
-        Games auf die Größe des
-        gewählten Modus begrenzen.
+        =========================================
+        LOKALE DATEN AKTUALISIEREN
+        =========================================
+    */
+
+    match.date =
+        date;
+
+    match.opponent =
+        opponent;
+
+    match.type =
+        type;
+
+    match.mode =
+        mode;
+
+
+    /*
+        Games auf die Größe des gewählten
+        Modus begrenzen.
     */
 
     const gameCount =
@@ -1079,11 +1600,10 @@ function saveCurrentMatch() {
 
 
     /*
-        Match dauerhaft speichern
+        =========================================
+        ERFOLG
+        =========================================
     */
-
-    saveMatches();
-
 
     alert(
         "Match wurde gespeichert."
@@ -1091,15 +1611,9 @@ function saveCurrentMatch() {
 
 
     /*
-        =========================================
-        SEITE KOMPLETT NEU LADEN
-        =========================================
-
-        Dadurch bekommen wir exakt den gleichen
-        Ausgangszustand wie bei F5.
-
-        localStorage bleibt erhalten, sodass das
-        gerade gespeicherte Match nicht verloren geht.
+        Seite neu laden.
+        Die Daten kommen danach direkt
+        aus Supabase.
     */
 
     window.location.reload();
@@ -1954,39 +2468,54 @@ document.addEventListener("click", () => {
    MATCH LÖSCHEN
 ========================================= */
 
-function deleteMatch(id) {
+async function deleteMatch(id) {
 
     const match =
-        matches.find(match => match.id === id);
-
+        matches.find(
+            match => match.id === id
+        );
 
     if (!match) {
         return;
     }
-
 
     const confirmed =
         confirm(
             `Möchtest du KOI vs ${match.opponent} wirklich löschen?`
         );
 
-
     if (!confirmed) {
         return;
     }
 
+    const {
+        error
+    } = await supabaseClient
+        .from("matches")
+        .delete()
+        .eq("id", id);
+
+    if (error) {
+
+        console.error(
+            "Fehler beim Löschen des Matches:",
+            error
+        );
+
+        alert(
+            "Das Match konnte nicht gelöscht werden."
+        );
+
+        return;
+    }
 
     matches =
         matches.filter(
             match => match.id !== id
         );
 
-
-    saveMatches();
-
     renderMatches();
     renderOverview();
-
 }
 
 
