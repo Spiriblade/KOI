@@ -1649,7 +1649,7 @@ nav {
 .summary-column-header,
 .summary-player-row {
     display: grid;
-    grid-template-columns: 1.5fr 2fr 1fr 1fr;
+    grid-template-columns: 1.5fr 2fr 1fr 70px 1fr;
     align-items: center;
     column-gap: 20px;
 }
