@@ -435,6 +435,62 @@ function showPage(page) {
 }
 
 
+function resetMatchEditor() {
+
+    /*
+        Zustand zurücksetzen
+    */
+    currentMatchId = null;
+    currentGameIndex = 0;
+
+
+    /*
+        Überschrift zurücksetzen
+    */
+    document.getElementById("editor-title")
+        .textContent = "Match hinzufügen";
+
+    document.getElementById("editor-subtitle")
+        .textContent =
+        "Erstelle einen neuen Scrim- oder Prime-League-Eintrag";
+
+
+    /*
+        Match-Grunddaten zurücksetzen
+    */
+    document.getElementById("match-date")
+        .value =
+        new Date()
+            .toISOString()
+            .split("T")[0];
+
+    document.getElementById("match-opponent")
+        .value = "";
+
+    document.getElementById("match-type")
+        .value = "scrim";
+
+    document.getElementById("match-mode")
+        .value = "bo5";
+
+    document.getElementById("match-drafter-link")
+        .value = "";
+
+
+    /*
+        Game-Tabs zurücksetzen
+    */
+    updateGameTabs();
+
+
+    /*
+        Game-Editor mit leeren Standarddaten
+        neu aufbauen
+    */
+    renderGameEditor();
+
+}
+
 /* =========================================
    NEUES MATCH
 ========================================= */
@@ -447,7 +503,7 @@ document.getElementById("new-match-btn")
     });
 
 
-function startNewMatch(showEditor = true) {
+function startNewMatch() {
 
     /*
         Sicherstellen, dass wir wirklich ein
@@ -508,9 +564,7 @@ function startNewMatch(showEditor = true) {
     /*
         Match hinzufügen anzeigen
     */
-    if (showEditor) {
     showPage("match-editor");
-}
 
 }
 
