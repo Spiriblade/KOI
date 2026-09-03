@@ -304,9 +304,10 @@ async function loadMatches() {
                             player.team === "koi"
                     )
                     .sort(
-                        (a, b) =>
-                            a.id.localeCompare(b.id)
-                    )
+    (a, b) =>
+        (a.player_order ?? 999) -
+        (b.player_order ?? 999)
+)
                     .map(player => ({
                         name: player.player_name,
                         champion: player.champion || "",
@@ -325,9 +326,10 @@ async function loadMatches() {
                             player.team === "enemy"
                     )
                     .sort(
-                        (a, b) =>
-                            a.id.localeCompare(b.id)
-                    )
+    (a, b) =>
+        (a.player_order ?? 999) -
+        (b.player_order ?? 999)
+)
                     .map(player => ({
                         name: player.player_name,
                         champion: player.champion || "",
