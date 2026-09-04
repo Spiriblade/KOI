@@ -2510,7 +2510,9 @@ function editCurrentGame(matchId, gameIndex) {
 
     document.getElementById("match-mode").value =
         match.mode;
-
+        
+    document.getElementById("match-drafter-link").value =
+        match.drafterLink || "";
 
     /*
         Game-Auswahl aktualisieren
