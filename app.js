@@ -2844,11 +2844,10 @@ function renderOverview() {
 
 
     document.getElementById("total-wins")
-        .textContent = wins;
-
+    .textContent = seriesWins;
 
     document.getElementById("total-losses")
-        .textContent = losses;
+    .textContent = seriesLosses;
 
 
     document.getElementById("winrate")
@@ -4985,6 +4984,8 @@ function startGameEntry(matchId, gameIndex) {
     document.getElementById("match-mode").value =
         match.mode;
 
+    document.getElementById("match-drafter-link").value =
+    match.drafterLink || "";
 
     updateGameTabs();
 
