@@ -817,11 +817,28 @@ function renderGameEditor() {
         );
 
 
-    const enemyPlayers =
-        game?.enemy ||
-        createDefaultPlayers(
-            defaultEnemyPlayers
-        );
+   const enemyPlayers =
+    game?.enemy ||
+    (
+        currentGameIndex > 0 &&
+        matches.find(
+            match => match.id === currentMatchId
+        )?.games?.[currentGameIndex - 1]?.enemy
+            ? matches.find(
+                match => match.id === currentMatchId
+            ).games[currentGameIndex - 1].enemy.map(player => ({
+                name: player.name,
+                champion: "",
+                kills: 0,
+                deaths: 0,
+                assists: 0,
+                damage: 0,
+                cs: 0
+            }))
+            : createDefaultPlayers(
+                defaultEnemyPlayers
+            )
+    );
 
 
     container.innerHTML = `
