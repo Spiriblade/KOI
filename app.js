@@ -633,24 +633,250 @@ if (screenshotUploadButton && screenshotFileInput) {
 
 
                 console.log(
-                    "Screenshot erfolgreich analysiert:",
-                    data.game
-                );
+    "Screenshot erfolgreich analysiert:",
+    data.game
+);
 
 
-                console.log(
-                    "ERKANNTES GAME:",
-                    JSON.stringify(
-                        data.game,
-                        null,
-                        4
-                    )
-                );
+console.log(
+    "ERKANNTES GAME:",
+    JSON.stringify(
+        data.game,
+        null,
+        4
+    )
+);
 
 
-                alert(
-                    "Screenshot wurde erfolgreich analysiert."
-                );
+/*
+ * =========================================
+ * ERKANNTES GAME IN DEN GAME-EDITOR LADEN
+ * =========================================
+ */
+
+const game = data.game;
+
+
+/*
+ * Neues Match starten.
+ *
+ * Der Benutzer kann danach weiterhin
+ * Datum, Gegner, Matchart usw. eintragen.
+ */
+startNewMatch();
+
+
+/*
+ * Game 1 auswählen.
+ */
+currentGameIndex = 0;
+
+updateGameTabs();
+renderGameEditor();
+
+
+/*
+ * Ergebnis setzen.
+ */
+const resultInput =
+    document.getElementById(
+        "current-game-result"
+    );
+
+if (resultInput) {
+
+    resultInput.value =
+        game.result === "loss"
+            ? "loss"
+            : "win";
+
+}
+
+
+/*
+ * GameTime setzen.
+ */
+const gametimeInput =
+    document.getElementById(
+        "current-game-time"
+    );
+
+if (gametimeInput) {
+
+    gametimeInput.value =
+        game.gametime || "";
+
+}
+
+
+/*
+ * Spielerwerte in den Editor schreiben.
+ *
+ * Nicht erkannte Zahlen werden bewusst
+ * mit 0 gefüllt.
+ */
+function fillScreenshotTeam(team, players) {
+
+    const teamPlayers =
+        Array.isArray(players)
+            ? players
+            : [];
+
+
+    for (let i = 0; i < 5; i++) {
+
+        const player =
+            teamPlayers[i] || {};
+
+
+        const nameInput =
+            document.querySelector(
+                `.${team}-name[data-index="${i}"]`
+            );
+
+        const championInput =
+            document.querySelector(
+                `.${team}-champion[data-index="${i}"]`
+            );
+
+        const killsInput =
+            document.querySelector(
+                `.${team}-kills[data-index="${i}"]`
+            );
+
+        const deathsInput =
+            document.querySelector(
+                `.${team}-deaths[data-index="${i}"]`
+            );
+
+        const assistsInput =
+            document.querySelector(
+                `.${team}-assists[data-index="${i}"]`
+            );
+
+        const csInput =
+            document.querySelector(
+                `.${team}-cs[data-index="${i}"]`
+            );
+
+        const damageInput =
+            document.querySelector(
+                `.${team}-damage[data-index="${i}"]`
+            );
+
+
+        if (nameInput) {
+
+            nameInput.value =
+                player.name || "";
+
+        }
+
+
+        if (championInput) {
+
+            championInput.value =
+                player.champion || "";
+
+            updateChampionPreview(
+                championInput
+            );
+
+        }
+
+
+        if (killsInput) {
+
+            killsInput.value =
+                Number.isFinite(
+                    Number(player.kills)
+                )
+                    ? Number(player.kills)
+                    : 0;
+
+        }
+
+
+        if (deathsInput) {
+
+            deathsInput.value =
+                Number.isFinite(
+                    Number(player.deaths)
+                )
+                    ? Number(player.deaths)
+                    : 0;
+
+        }
+
+
+        if (assistsInput) {
+
+            assistsInput.value =
+                Number.isFinite(
+                    Number(player.assists)
+                )
+                    ? Number(player.assists)
+                    : 0;
+
+        }
+
+
+        if (csInput) {
+
+            csInput.value =
+                Number.isFinite(
+                    Number(player.cs)
+                )
+                    ? Number(player.cs)
+                    : 0;
+
+        }
+
+
+        if (damageInput) {
+
+            damageInput.value =
+                Number.isFinite(
+                    Number(player.damage)
+                )
+                    ? Number(player.damage)
+                    : 0;
+
+        }
+
+    }
+
+}
+
+
+/*
+ * KOI-Spieler füllen.
+ */
+fillScreenshotTeam(
+    "koi",
+    game.koi
+);
+
+
+/*
+ * Gegner füllen.
+ */
+fillScreenshotTeam(
+    "enemy",
+    game.enemy
+);
+
+
+/*
+ * Match-Editor anzeigen.
+ */
+showPage("match-editor");
+
+
+alert(
+    "Screenshot wurde analysiert und in den Game-Editor übernommen.\n\n" +
+    "Bitte die Werte kontrollieren und das Match anschließend speichern."
+);
 
 
             } catch (error) {
