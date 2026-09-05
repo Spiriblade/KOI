@@ -501,38 +501,187 @@ document.getElementById("new-match-btn")
 
     });
     
-    document.getElementById("overview-new-match-btn")
+document.getElementById("overview-new-match-btn")
     .addEventListener("click", () => {
+
         startNewMatch();
+
     });
 
-    const screenshotUploadButton =
+
+const screenshotUploadButton =
     document.getElementById("overview-upload-btn");
 
 const screenshotFileInput =
     document.getElementById("screenshot-file-input");
 
+
 if (screenshotUploadButton && screenshotFileInput) {
 
     screenshotUploadButton.addEventListener("click", () => {
+
         screenshotFileInput.click();
+
     });
 
-    screenshotFileInput.addEventListener("change", () => {
 
-        const file =
-            screenshotFileInput.files?.[0];
+    screenshotFileInput.addEventListener(
+        "change",
+        async () => {
 
-        if (!file) {
-            return;
+            const file =
+                screenshotFileInput.files?.[0];
+
+            if (!file) {
+                return;
+            }
+
+
+            if (!file.type.startsWith("image/")) {
+
+                alert(
+                    "Bitte eine Bilddatei auswählen."
+                );
+
+                screenshotFileInput.value = "";
+
+                return;
+            }
+
+
+            console.log(
+                "Analysiere Screenshot:",
+                file.name
+            );
+
+
+            try {
+
+                /*
+                 * Screenshot als Base64 einlesen.
+                 */
+                const imageData =
+                    await new Promise(
+                        (resolve, reject) => {
+
+                            const reader =
+                                new FileReader();
+
+
+                            reader.onload = () => {
+
+                                resolve(
+                                    reader.result
+                                );
+
+                            };
+
+
+                            reader.onerror = () => {
+
+                                reject(
+                                    new Error(
+                                        "Screenshot konnte nicht gelesen werden."
+                                    )
+                                );
+
+                            };
+
+
+                            reader.readAsDataURL(
+                                file
+                            );
+
+                        }
+                    );
+
+
+                /*
+                 * Screenshot an unsere
+                 * Supabase Edge Function schicken.
+                 */
+                const {
+                    data,
+                    error
+                } =
+                    await supabaseClient.functions.invoke(
+                        "analyze-lol-screenshot",
+                        {
+                            body: {
+                                image: imageData
+                            }
+                        }
+                    );
+
+
+                if (error) {
+                    throw error;
+                }
+
+
+                if (
+                    !data?.success ||
+                    !data?.game
+                ) {
+
+                    throw new Error(
+                        data?.error ||
+                        "Die Screenshot-Analyse hat keine Game-Daten zurückgegeben."
+                    );
+
+                }
+
+
+                console.log(
+                    "Screenshot erfolgreich analysiert:",
+                    data.game
+                );
+
+
+                console.log(
+                    "ERKANNTES GAME:",
+                    JSON.stringify(
+                        data.game,
+                        null,
+                        4
+                    )
+                );
+
+
+                alert(
+                    "Screenshot wurde erfolgreich analysiert."
+                );
+
+
+            } catch (error) {
+
+                console.error(
+                    "Fehler bei der Screenshot-Analyse:",
+                    error
+                );
+
+
+                alert(
+                    "Der Screenshot konnte nicht analysiert werden.\n\n" +
+                    (
+                        error?.message ||
+                        "Unbekannter Fehler."
+                    )
+                );
+
+            } finally {
+
+                /*
+                 * Ermöglicht, denselben Screenshot
+                 * erneut auszuwählen.
+                 */
+                screenshotFileInput.value = "";
+
+            }
+
         }
+    );
 
-        console.log(
-            "Screenshot ausgewählt:",
-            file.name
-        );
-
-    });
 }
 
 function startNewMatch() {
