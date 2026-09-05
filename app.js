@@ -506,6 +506,34 @@ document.getElementById("new-match-btn")
         startNewMatch();
     });
 
+    const screenshotUploadButton =
+    document.getElementById("overview-upload-btn");
+
+const screenshotFileInput =
+    document.getElementById("screenshot-file-input");
+
+if (screenshotUploadButton && screenshotFileInput) {
+
+    screenshotUploadButton.addEventListener("click", () => {
+        screenshotFileInput.click();
+    });
+
+    screenshotFileInput.addEventListener("change", () => {
+
+        const file =
+            screenshotFileInput.files?.[0];
+
+        if (!file) {
+            return;
+        }
+
+        console.log(
+            "Screenshot ausgewählt:",
+            file.name
+        );
+
+    });
+}
 
 function startNewMatch() {
 
