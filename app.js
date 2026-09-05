@@ -500,6 +500,11 @@ document.getElementById("new-match-btn")
         startNewMatch();
 
     });
+    
+    document.getElementById("overview-new-match-btn")
+    .addEventListener("click", () => {
+        startNewMatch();
+    });
 
 
 function startNewMatch() {
