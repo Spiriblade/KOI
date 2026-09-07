@@ -408,11 +408,11 @@ const teamData = {
         name: "KOI Kohaku",
 
         players: [
-            "KOI Kohaku Top",
+            "tarrossilver#EUW",
             "KOI Kohaku Jungle",
-            "KOI Kohaku Mid",
-            "KOI Kohaku ADC",
-            "KOI Kohaku Support"
+            "DönerohneTomate#69420",
+            "Stay aggressive#KAISA",
+            "CrueLOr#EUW"
         ]
     }
 
