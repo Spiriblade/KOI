@@ -709,28 +709,38 @@ async function loadMatches() {
    NAVIGATION
 ========================================= */
 
-document.querySelectorAll(".nav-btn")
-    .forEach(button => {
+document.addEventListener("DOMContentLoaded", () => {
+
+    document.querySelectorAll(".nav-btn").forEach(button => {
 
         button.addEventListener("click", () => {
 
-            showPage(button.dataset.page);
+            const page = button.dataset.page;
 
+            if (!page) {
+                console.warn(
+                    "Navigationsbutton hat kein data-page:",
+                    button
+                );
+                return;
+            }
+
+            showPage(page);
         });
 
     });
 
+});
+
 
 function showPage(page) {
 
-    /*
-        Wenn der Match-Editor verlassen wird,
-        setzen wir ihn komplett zurück.
+    if (!page) {
+        return;
+    }
 
-        Wichtig:
-        Das passiert NICHT beim Wechsel innerhalb
-        des Editors, sondern nur wenn eine andere
-        Seite geöffnet wird.
+    /*
+        Prüfen, ob wir den Match-Editor verlassen.
     */
 
     const leavingMatchEditor =
@@ -741,47 +751,90 @@ function showPage(page) {
             .contains("active");
 
 
-    document.querySelectorAll(".page")
+    /*
+        Alle Seiten deaktivieren.
+    */
+
+    document
+        .querySelectorAll(".page")
         .forEach(element => {
+
             element.classList.remove("active");
+
         });
 
+
+    /*
+        Gewünschte Seite aktivieren.
+    */
 
     const pageElement =
         document.getElementById(`${page}-page`);
 
-    if (pageElement) {
-        pageElement.classList.add("active");
+    if (!pageElement) {
+
+        console.warn(
+            `Navigationsseite nicht gefunden: ${page}-page`
+        );
+
+        return;
     }
 
+    pageElement.classList.add("active");
 
-    document.querySelectorAll(".nav-btn")
+
+    /*
+        Aktiven Navigationspunkt markieren.
+    */
+
+    document
+        .querySelectorAll(".nav-btn")
         .forEach(button => {
+
             button.classList.toggle(
                 "active",
                 button.dataset.page === page
             );
+
         });
 
 
+    /*
+        Seitenabhängige Inhalte aktualisieren.
+    */
+
     if (page === "overview") {
+
         renderOverview();
+
     }
 
 
     if (page === "matches") {
+
         renderMatches();
+
     }
 
 
     if (page === "google-docs") {
+
         renderGoogleDocs();
+
     }
 
+
+    /*
+        Match-Editor zurücksetzen,
+        wenn wir ihn verlassen.
+    */
 
     if (leavingMatchEditor) {
+
         resetMatchEditor();
+
     }
+
 }
 
 
