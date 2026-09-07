@@ -251,6 +251,45 @@ createChampionDatalist();
 
 async function initializeApp() {
 
+    /*
+     * Prüfen, ob bereits eine Supabase-Session
+     * vorhanden ist.
+     */
+    const user =
+        await getCurrentUser();
+
+    const loginScreen =
+        document.getElementById(
+            "login-screen"
+        );
+
+    /*
+     * Keine Session vorhanden:
+     * Login anzeigen und App nicht laden.
+     */
+    if (!user) {
+
+        if (loginScreen) {
+            loginScreen.style.display =
+                "flex";
+        }
+
+        return;
+    }
+
+    /*
+     * Session vorhanden:
+     * Login ausblenden.
+     */
+    if (loginScreen) {
+        loginScreen.style.display =
+            "none";
+    }
+
+    /*
+     * Daten erst laden, wenn wir
+     * authentifiziert sind.
+     */
     await loadMatches();
 
     renderOverview();
@@ -1745,10 +1784,12 @@ async function saveCurrentMatch() {
 
     const mode =
         document.getElementById("match-mode").value;
+
     const drafterLink =
         document.getElementById("match-drafter-link")
             .value
             .trim();
+
 
     /*
         Pflichtfelder prüfen
@@ -1878,6 +1919,60 @@ async function saveCurrentMatch() {
 
     else {
 
+        /*
+            Aktuell eingeloggten Benutzer holen
+        */
+
+        const user = await getCurrentUser();
+
+        if (!user) {
+
+            alert(
+                "Du bist nicht eingeloggt."
+            );
+
+            return;
+        }
+
+
+        /*
+            Team des Benutzers ermitteln
+        */
+
+        const {
+            data: teamIds,
+            error: teamError
+        } = await supabaseClient
+            .rpc("get_my_team_ids");
+
+
+        if (
+            teamError ||
+            !teamIds ||
+            teamIds.length === 0
+        ) {
+
+            console.error(
+                "Team konnte nicht ermittelt werden:",
+                teamError
+            );
+
+            alert(
+                "Deinem Benutzer ist kein Team zugeordnet."
+            );
+
+            return;
+        }
+
+
+        const teamId =
+            teamIds[0];
+
+
+        /*
+            Match mit Team-Zuordnung erstellen
+        */
+
         const {
             data,
             error
@@ -1888,7 +1983,8 @@ async function saveCurrentMatch() {
                 opponent: opponent,
                 type: type,
                 mode: mode,
-                drafter_link: drafterLink || null
+                drafter_link: drafterLink || null,
+                team_id: teamId
             })
             .select()
             .single();
@@ -1941,20 +2037,22 @@ async function saveCurrentMatch() {
     if (resultElement) {
 
         const currentGame = {
-    result:
-        resultElement.value,
 
-    gametime:
-        document.getElementById(
-            "current-game-time"
-        )?.value.trim() || "",
+            result:
+                resultElement.value,
 
-    koi:
-        getPlayersFromEditor("koi"),
+            gametime:
+                document.getElementById(
+                    "current-game-time"
+                )?.value.trim() || "",
 
-    enemy:
-        getPlayersFromEditor("enemy")
-};
+            koi:
+                getPlayersFromEditor("koi"),
+
+            enemy:
+                getPlayersFromEditor("enemy")
+
+        };
 
 
         /*
@@ -2019,13 +2117,13 @@ async function saveCurrentMatch() {
                 error
             } = await supabaseClient
                 .from("games")
-               .update({
-    result:
-        currentGame.result,
+                .update({
+                    result:
+                        currentGame.result,
 
-    gametime:
-        currentGame.gametime
-})
+                    gametime:
+                        currentGame.gametime
+                })
                 .eq("id", existingGame.id)
                 .select()
                 .single();
@@ -2067,7 +2165,7 @@ async function saveCurrentMatch() {
             if (deletePlayersError) {
 
                 console.error(
-                    "Fehler beim Löschen alter Spielerdaten:",
+                    "Fehler beim Löschen der alten Spielerdaten:",
                     deletePlayersError
                 );
 
@@ -2093,11 +2191,11 @@ async function saveCurrentMatch() {
             } = await supabaseClient
                 .from("games")
                 .insert({
-    match_id: matchId,
-    game_number: gameNumber,
-    result: currentGame.result,
-    gametime: currentGame.gametime
-})
+                    match_id: matchId,
+                    game_number: gameNumber,
+                    result: currentGame.result,
+                    gametime: currentGame.gametime
+                })
                 .select()
                 .single();
 
@@ -2125,141 +2223,88 @@ async function saveCurrentMatch() {
 
         /*
             =========================================
-            SPIELER SPEICHERN
+            SPIELER IN SUPABASE SPEICHERN
             =========================================
         */
 
-        const playerRows = [];
+        const playersToInsert = [];
 
 
-        /*
-            KOI
-        */
+        currentGame.koi.forEach(
+            (player, index) => {
 
-        currentGame.koi.forEach((player, index) => {
+                playersToInsert.push({
 
-    playerRows.push({
+                    game_id: gameId,
+                    team: "koi",
+                    player_name: player.name,
+                    champion: player.champion,
+                    kills: Number(player.kills) || 0,
+                    deaths: Number(player.deaths) || 0,
+                    assists: Number(player.assists) || 0,
+                    damage: Number(player.damage) || 0,
+                    cs: Number(player.cs) || 0,
+                    player_order: index
 
-        game_id: gameId,
+                });
 
-        player_order: index,
-
-        team: "koi",
-
-        player_name:
-            player.name,
-
-        champion:
-            player.champion || null,
-
-        kills:
-            Number(player.kills) || 0,
-
-        deaths:
-            Number(player.deaths) || 0,
-
-        assists:
-            Number(player.assists) || 0,
-
-        damage:
-            Number(player.damage) || 0,
-
-        cs:
-            Number(player.cs) || 0
-
-    });
-
-});
-
-
-        /*
-            Gegner
-        */
-
-        currentGame.enemy.forEach((player, index) => {
-
-    playerRows.push({
-
-        game_id: gameId,
-
-        player_order: index,
-
-        team: "enemy",
-
-        player_name:
-            player.name,
-
-        champion:
-            player.champion || null,
-
-        kills:
-            Number(player.kills) || 0,
-
-        deaths:
-            Number(player.deaths) || 0,
-
-        assists:
-            Number(player.assists) || 0,
-
-        damage:
-            Number(player.damage) || 0,
-
-        cs:
-            Number(player.cs) || 0
-
-    });
-
-});
-
-
-        /*
-            Spieler gesammelt einfügen
-        */
-
-        if (playerRows.length > 0) {
-
-    const {
-        error
-    } = await supabaseClient
-        .from("game_players")
-        .insert(
-            playerRows.map((player, index) => ({
-                game_id: player.game_id,
-                player_order: index % 5,
-                team: player.team,
-                player_name: player.player_name,
-                champion: player.champion,
-                kills: player.kills,
-                deaths: player.deaths,
-                assists: player.assists,
-                damage: player.damage,
-                cs: player.cs
-            }))
+            }
         );
 
 
-    if (error) {
+        currentGame.enemy.forEach(
+            (player, index) => {
 
-        console.error(
-            "Fehler beim Speichern der Spieler:",
-            error
+                playersToInsert.push({
+
+                    game_id: gameId,
+                    team: "enemy",
+                    player_name: player.name,
+                    champion: player.champion,
+                    kills: Number(player.kills) || 0,
+                    deaths: Number(player.deaths) || 0,
+                    assists: Number(player.assists) || 0,
+                    damage: Number(player.damage) || 0,
+                    cs: Number(player.cs) || 0,
+                    player_order: index
+
+                });
+
+            }
         );
 
-        alert(
-            "Die Spielerdaten konnten nicht gespeichert werden."
-        );
 
-        return;
-    }
+        if (playersToInsert.length > 0) {
 
-}
+            const {
+                error: playersError
+            } = await supabaseClient
+                .from("game_players")
+                .insert(playersToInsert);
+
+
+            if (playersError) {
+
+                console.error(
+                    "Fehler beim Speichern der Spielerdaten:",
+                    playersError
+                );
+
+                alert(
+                    "Die Spielerdaten konnten nicht gespeichert werden."
+                );
+
+                return;
+            }
+
+        }
 
     }
 
 
     /*
         =========================================
-        LOKALE DATEN AKTUALISIEREN
+        MATCH LOKAL AKTUALISIEREN
         =========================================
     */
 
@@ -2275,40 +2320,24 @@ async function saveCurrentMatch() {
     match.mode =
         mode;
 
-
-    /*
-        Games auf die Größe des gewählten
-        Modus begrenzen.
-    */
-
-    const gameCount =
-        getGameCount(mode);
-
-    match.games =
-        match.games.slice(
-            0,
-            gameCount
-        );
+    match.drafterLink =
+        drafterLink;
 
 
     /*
         =========================================
-        ERFOLG
+        ANSICHT AKTUALISIEREN
         =========================================
     */
+
+    await loadMatches();
+
+    renderOverview();
+    renderMatches();
 
     alert(
-        "Match wurde gespeichert."
+        "Match erfolgreich gespeichert."
     );
-
-
-    /*
-        Seite neu laden.
-        Die Daten kommen danach direkt
-        aus Supabase.
-    */
-
-    window.location.reload();
 
 }
 
