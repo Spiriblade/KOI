@@ -2612,3 +2612,18 @@ nav {
     stroke-width: 4;
     stroke-linecap: round;
 }
+
+.map-marker-item .map-x-icon {
+    display: block !important;
+    width: auto !important;
+    height: auto !important;
+
+    color: #e04b4b !important;
+    font-family: Arial, sans-serif !important;
+    font-size: 38px !important;
+    font-weight: 900 !important;
+    line-height: 1 !important;
+
+    text-shadow:
+        0 2px 5px rgba(0, 0, 0, 0.85) !important;
+}
