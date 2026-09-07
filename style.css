@@ -2774,3 +2774,28 @@ nav {
     border-color: #3a3e47;
     color: #e07878;
 }
+
+/* =========================================
+   GOOGLE DOCS
+========================================= */
+
+.google-docs-card {
+    background: #15171c;
+    border: 1px solid #272a31;
+    border-radius: 8px;
+    padding: 24px;
+    margin-bottom: 24px;
+}
+
+.google-docs-card small {
+    display: block;
+    margin-top: 8px;
+    color: #777d87;
+    font-size: 12px;
+}
+
+.google-docs-status {
+    margin-top: 12px;
+    color: #8f949e;
+    font-size: 13px;
+}

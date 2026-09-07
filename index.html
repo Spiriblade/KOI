@@ -88,6 +88,15 @@
                 Map
             </button>
 
+            <button
+                type="button"
+                class="nav-item"
+                data-page="google-docs"
+            >
+                <span>📄</span>
+                <span>Google Docs</span>
+            </button>
+
             <button type="button" id="logout-btn" class="logout-btn">
                 <span>↪</span>
                 <span>Abmelden</span>
@@ -201,6 +210,47 @@
         </section>
 
 
+        <section id="page-google-docs" class="page">
+
+            <div class="page-header">
+                <div>
+                    <h1>Google Docs</h1>
+                    <p>Team-Dokument</p>
+                </div>
+            </div>
+
+            <div class="google-docs-card">
+
+                <div class="form-group">
+                    <label for="google-docs-url">
+                        Google Docs Link
+                    </label>
+
+                    <input
+                        type="url"
+                        id="google-docs-url"
+                        placeholder="https://docs.google.com/..."
+                        autocomplete="off"
+                    >
+
+                    <small>
+                        Füge hier den Link zu deinem Google-Dokument ein.
+                    </small>
+                </div>
+
+                <button
+                    type="button"
+                    id="save-google-docs-btn"
+                    class="primary-btn"
+                >
+                    Link speichern
+                </button>
+
+                <div id="google-docs-status" class="google-docs-status"></div>
+
+            </div>
+
+        </section>
 
         <!-- =========================
              MATCHES
