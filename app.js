@@ -32,6 +32,81 @@ async function getCurrentUser() {
     return data.user;
 }
 
+async function loadCurrentTeam() {
+
+    const user = await getCurrentUser();
+
+    if (!user) {
+
+        currentTeam = null;
+
+        return null;
+    }
+
+
+    /*
+        Admins und technische Team-Accounts können
+        über user_teams einem oder mehreren Teams zugeordnet sein.
+    */
+
+    const {
+        data,
+        error
+    } = await supabaseClient
+        .from("user_teams")
+        .select(`
+            team_id,
+            teams (
+                id,
+                name
+            )
+        `)
+        .eq("user_id", user.id);
+
+
+    if (error) {
+
+        console.error(
+            "Fehler beim Laden des aktuellen Teams:",
+            error
+        );
+
+        currentTeam = null;
+
+        return null;
+    }
+
+
+    if (!data || data.length === 0) {
+
+        console.warn(
+            "Der aktuelle Benutzer ist keinem Team zugeordnet."
+        );
+
+        currentTeam = null;
+
+        return null;
+    }
+
+
+    /*
+        Für den normalen Team-Login nehmen wir
+        das erste zugeordnete Team.
+    */
+
+    currentTeam =
+        data[0].teams;
+
+
+    console.log(
+        "Aktuelles Team geladen:",
+        currentTeam
+    );
+
+
+    return currentTeam;
+}
+
 /* =========================================
    TEAM LOGIN
 ========================================= */
@@ -416,48 +491,84 @@ createChampionDatalist();
 
 async function initializeApp() {
 
-    /*
-     * Prüfen, ob bereits eine Supabase-Session
-     * vorhanden ist.
-     */
     const user =
         await getCurrentUser();
+
 
     const loginScreen =
         document.getElementById(
             "login-screen"
         );
 
+
     /*
-     * Keine Session vorhanden:
-     * Login anzeigen und App nicht laden.
-     */
+        Keine Supabase-Session vorhanden
+        → Login anzeigen.
+    */
+
     if (!user) {
 
+        currentTeam = null;
+
         if (loginScreen) {
+
             loginScreen.style.display =
                 "flex";
+
         }
 
         return;
     }
 
+
     /*
-     * Session vorhanden:
-     * Login ausblenden.
-     */
-    if (loginScreen) {
-        loginScreen.style.display =
-            "none";
+        Bestehende Session vorhanden
+        → aktuelles Team laden.
+    */
+
+    const team =
+        await loadCurrentTeam();
+
+
+    /*
+        Session vorhanden, aber kein Team
+        → Sicherheitshalber wieder Login anzeigen.
+    */
+
+    if (!team) {
+
+        if (loginScreen) {
+
+            loginScreen.style.display =
+                "flex";
+
+        }
+
+        return;
     }
 
+
     /*
-     * Daten erst laden, wenn wir
-     * authentifiziert sind.
-     */
+        Login ausblenden.
+    */
+
+    if (loginScreen) {
+
+        loginScreen.style.display =
+            "none";
+
+    }
+
+
+    /*
+        Daten laden.
+    */
+
     await loadMatches();
 
+
     renderOverview();
+
     renderMatches();
 
 }
