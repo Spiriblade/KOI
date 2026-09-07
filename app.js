@@ -5581,3 +5581,776 @@ document.addEventListener("click", event => {
             dropdown.classList.remove("active");
         });
 });
+
+/* =========================================
+   MAP EDITOR
+========================================= */
+
+let currentMapTeam = "koi";
+
+let mapObjectId = 0;
+
+
+/* =========================================
+   MAP INITIALISIEREN
+========================================= */
+
+function initializeMapEditor() {
+
+    const map =
+        document.getElementById(
+            "summoners-rift-map"
+        );
+
+    const championList =
+        document.getElementById(
+            "map-champion-list"
+        );
+
+    if (!map || !championList) {
+        return;
+    }
+
+
+    renderMapChampions();
+
+
+    /*
+        Team-Auswahl
+    */
+
+    document
+        .querySelectorAll(
+            ".map-team-btn"
+        )
+        .forEach(button => {
+
+            button.addEventListener(
+                "click",
+                () => {
+
+                    currentMapTeam =
+                        button.dataset.mapTeam;
+
+                    document
+                        .querySelectorAll(
+                            ".map-team-btn"
+                        )
+                        .forEach(teamButton => {
+
+                            teamButton.classList.toggle(
+                                "active",
+                                teamButton === button
+                            );
+
+                        });
+
+                }
+            );
+
+        });
+
+
+    /*
+        Champion-Suche
+    */
+
+    const search =
+        document.getElementById(
+            "map-champion-search"
+        );
+
+    if (search) {
+
+        search.addEventListener(
+            "input",
+            () => {
+
+                renderMapChampions(
+                    search.value
+                );
+
+            }
+        );
+
+    }
+
+
+    /*
+        Drag & Drop auf die Map
+    */
+
+    map.addEventListener(
+        "dragover",
+        event => {
+
+            event.preventDefault();
+
+            map.classList.add(
+                "map-drag-over"
+            );
+
+        }
+    );
+
+
+    map.addEventListener(
+        "dragleave",
+        event => {
+
+            if (
+                event.target === map
+            ) {
+
+                map.classList.remove(
+                    "map-drag-over"
+                );
+
+            }
+
+        }
+    );
+
+
+    map.addEventListener(
+        "drop",
+        event => {
+
+            event.preventDefault();
+
+            map.classList.remove(
+                "map-drag-over"
+            );
+
+
+            const objectType =
+                event.dataTransfer.getData(
+                    "map-object"
+                );
+
+
+            if (
+                objectType === "champion"
+            ) {
+
+                const championName =
+                    event.dataTransfer.getData(
+                        "champion-name"
+                    );
+
+                if (!championName) {
+                    return;
+                }
+
+                const position =
+                    getMapDropPosition(
+                        map,
+                        event
+                    );
+
+                createMapChampion(
+                    championName,
+                    currentMapTeam,
+                    position.x,
+                    position.y
+                );
+
+            }
+
+
+            if (
+                objectType === "ward"
+            ) {
+
+                const wardType =
+                    event.dataTransfer.getData(
+                        "ward-type"
+                    ) || "normal";
+
+                const position =
+                    getMapDropPosition(
+                        map,
+                        event
+                    );
+
+                createMapWard(
+                    wardType,
+                    currentMapTeam,
+                    position.x,
+                    position.y
+                );
+
+            }
+
+        }
+    );
+
+
+    /*
+        Wards draggable machen
+    */
+
+    document
+        .querySelectorAll(
+            ".map-ward-item"
+        )
+        .forEach(item => {
+
+            item.addEventListener(
+                "dragstart",
+                event => {
+
+                    event.dataTransfer.setData(
+                        "map-object",
+                        "ward"
+                    );
+
+                    event.dataTransfer.setData(
+                        "ward-type",
+                        item.dataset.wardType
+                    );
+
+                    event.dataTransfer.effectAllowed =
+                        "copy";
+
+                }
+            );
+
+        });
+
+}
+
+
+/* =========================================
+   CHAMPIONS RENDERN
+========================================= */
+
+function renderMapChampions(
+    searchTerm = ""
+) {
+
+    const container =
+        document.getElementById(
+            "map-champion-list"
+        );
+
+    if (!container) {
+        return;
+    }
+
+
+    if (
+        !Array.isArray(champions)
+    ) {
+
+        container.innerHTML = `
+            <div class="muted">
+                Champions werden geladen...
+            </div>
+        `;
+
+        return;
+
+    }
+
+
+    const search =
+        searchTerm
+            .trim()
+            .toLowerCase();
+
+
+    const filtered =
+        champions.filter(
+            champion =>
+                !search ||
+                champion.name
+                    .toLowerCase()
+                    .includes(search)
+        );
+
+
+    container.innerHTML =
+        filtered
+            .map(champion => {
+
+                const image =
+                    getChampionImage(
+                        champion.name
+                    );
+
+
+                return `
+                    <div
+                        class="map-champion-item"
+                        draggable="true"
+                        data-map-object="champion"
+                        data-champion="${escapeHtml(
+                            champion.name
+                        )}"
+                        title="${escapeHtml(
+                            champion.name
+                        )}"
+                    >
+
+                        ${
+                            image
+                                ? `
+                                    <img
+                                        src="${image}"
+                                        alt="${escapeHtml(
+                                            champion.name
+                                        )}"
+                                        draggable="false"
+                                    >
+                                `
+                                : `
+                                    <div
+                                        style="
+                                            width: 100%;
+                                            aspect-ratio: 1;
+                                            background: #252830;
+                                            border-radius: 4px;
+                                        "
+                                    ></div>
+                                `
+                        }
+
+                        <span class="map-champion-name">
+                            ${escapeHtml(
+                                champion.name
+                            )}
+                        </span>
+
+                    </div>
+                `;
+
+            })
+            .join("");
+
+
+    /*
+        Champion Drag & Drop
+    */
+
+    container
+        .querySelectorAll(
+            ".map-champion-item"
+        )
+        .forEach(item => {
+
+            item.addEventListener(
+                "dragstart",
+                event => {
+
+                    event.dataTransfer.setData(
+                        "map-object",
+                        "champion"
+                    );
+
+                    event.dataTransfer.setData(
+                        "champion-name",
+                        item.dataset.champion
+                    );
+
+                    event.dataTransfer.effectAllowed =
+                        "copy";
+
+                }
+            );
+
+        });
+
+}
+
+
+/* =========================================
+   DROP POSITION
+========================================= */
+
+function getMapDropPosition(
+    map,
+    event
+) {
+
+    const rect =
+        map.getBoundingClientRect();
+
+
+    const x =
+        (
+            (event.clientX - rect.left) /
+            rect.width
+        ) * 100;
+
+
+    const y =
+        (
+            (event.clientY - rect.top) /
+            rect.height
+        ) * 100;
+
+
+    return {
+        x: Math.max(
+            2,
+            Math.min(
+                98,
+                x
+            )
+        ),
+
+        y: Math.max(
+            2,
+            Math.min(
+                98,
+                y
+            )
+        )
+    };
+
+}
+
+
+/* =========================================
+   CHAMPION AUF MAP
+========================================= */
+
+function createMapChampion(
+    championName,
+    team,
+    x,
+    y
+) {
+
+    const map =
+        document.getElementById(
+            "summoners-rift-map"
+        );
+
+    if (!map) {
+        return;
+    }
+
+
+    const image =
+        getChampionImage(
+            championName
+        );
+
+    if (!image) {
+        return;
+    }
+
+
+    const object =
+        document.createElement(
+            "div"
+        );
+
+
+    object.className =
+        `map-object ${team}`;
+
+
+    object.dataset.mapObjectId =
+        `map-${++mapObjectId}`;
+
+
+    object.dataset.x = x;
+    object.dataset.y = y;
+
+
+    object.style.left =
+        `${x}%`;
+
+    object.style.top =
+        `${y}%`;
+
+
+    object.innerHTML = `
+
+        <div
+            class="
+                map-object-champion
+                ${team}
+            "
+        >
+
+            <img
+                src="${image}"
+                alt="${escapeHtml(
+                    championName
+                )}"
+                draggable="false"
+            >
+
+        </div>
+
+
+        <div class="map-object-label">
+            ${escapeHtml(
+                championName
+            )}
+        </div>
+
+    `;
+
+
+    map.appendChild(
+        object
+    );
+
+
+    makeMapObjectDraggable(
+        object
+    );
+
+
+    map.classList.add(
+        "has-objects"
+    );
+
+}
+
+
+/* =========================================
+   WARD AUF MAP
+========================================= */
+
+function createMapWard(
+    wardType,
+    team,
+    x,
+    y
+) {
+
+    const map =
+        document.getElementById(
+            "summoners-rift-map"
+        );
+
+    if (!map) {
+        return;
+    }
+
+
+    const object =
+        document.createElement(
+            "div"
+        );
+
+
+    object.className =
+        `map-object ${team}`;
+
+
+    object.dataset.mapObjectId =
+        `map-${++mapObjectId}`;
+
+
+    object.dataset.x = x;
+    object.dataset.y = y;
+
+
+    object.style.left =
+        `${x}%`;
+
+    object.style.top =
+        `${y}%`;
+
+
+    const letter =
+        wardType === "control"
+            ? "C"
+            : "W";
+
+
+    object.innerHTML = `
+
+        <div
+            class="
+                map-object-ward
+                ${wardType}
+            "
+        >
+            ${letter}
+        </div>
+
+    `;
+
+
+    map.appendChild(
+        object
+    );
+
+
+    makeMapObjectDraggable(
+        object
+    );
+
+
+    map.classList.add(
+        "has-objects"
+    );
+
+}
+
+
+/* =========================================
+   PLATZIERTES OBJEKT VERSCHIEBEN
+========================================= */
+
+function makeMapObjectDraggable(
+    object
+) {
+
+    let dragging = false;
+
+
+    object.addEventListener(
+        "pointerdown",
+        event => {
+
+            event.preventDefault();
+
+            event.stopPropagation();
+
+            dragging = true;
+
+            object.setPointerCapture(
+                event.pointerId
+            );
+
+            object.style.zIndex = "100";
+
+        }
+    );
+
+
+    object.addEventListener(
+        "pointermove",
+        event => {
+
+            if (!dragging) {
+                return;
+            }
+
+
+            const map =
+                document.getElementById(
+                    "summoners-rift-map"
+                );
+
+            if (!map) {
+                return;
+            }
+
+
+            const rect =
+                map.getBoundingClientRect();
+
+
+            let x =
+                (
+                    (event.clientX - rect.left) /
+                    rect.width
+                ) * 100;
+
+
+            let y =
+                (
+                    (event.clientY - rect.top) /
+                    rect.height
+                ) * 100;
+
+
+            x =
+                Math.max(
+                    2,
+                    Math.min(
+                        98,
+                        x
+                    )
+                );
+
+
+            y =
+                Math.max(
+                    2,
+                    Math.min(
+                        98,
+                        y
+                    )
+                );
+
+
+            object.style.left =
+                `${x}%`;
+
+            object.style.top =
+                `${y}%`;
+
+
+            object.dataset.x = x;
+            object.dataset.y = y;
+
+        }
+    );
+
+
+    object.addEventListener(
+        "pointerup",
+        event => {
+
+            if (!dragging) {
+                return;
+            }
+
+            dragging = false;
+
+            object.releasePointerCapture?.(
+                event.pointerId
+            );
+
+            object.style.zIndex = "10";
+
+        }
+    );
+
+
+    object.addEventListener(
+        "contextmenu",
+        event => {
+
+            event.preventDefault();
+
+            event.stopPropagation();
+
+            object.remove();
+
+        }
+    );
+
+}
+
+
+/* =========================================
+   CHAMPIONS GELADEN
+========================================= */
+
+document.addEventListener(
+    "championsLoaded",
+    () => {
+
+        renderMapChampions();
+
+    }
+);
+
+
+/* =========================================
+   MAP STARTEN
+========================================= */
+
+initializeMapEditor();

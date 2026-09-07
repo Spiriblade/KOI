@@ -172,36 +172,200 @@
 
 
         <!-- =========================
+     MAP
+========================= -->
+
+<section id="map-page" class="page">
+
+    <div class="page-header">
+
+        <div>
+            <h1>Map</h1>
+            <p>Summoner's Rift – Draft und Positionierung</p>
+        </div>
+
+    </div>
+
+
+    <div class="map-editor">
+
+        <!-- =========================
              MAP
         ========================== -->
 
-        <section id="map-page" class="page">
+        <div class="map-board">
 
-            <div class="page-header">
+            <div
+                id="summoners-rift-map"
+                class="summoners-rift-map"
+            >
 
-                <div>
-                    <h1>Map</h1>
-                    <p>Summoner's Rift – Draft und Positionierung</p>
+                <!--
+                    Platzierte Champions und Wards
+                    werden hier eingefügt.
+                -->
+
+                <div
+                    id="map-drop-hint"
+                    class="map-drop-hint"
+                >
+                    Champion oder Ward hier platzieren
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- =========================
+             SIDEBAR
+        ========================== -->
+
+        <aside class="map-sidebar">
+
+            <div class="map-sidebar-header">
+
+                <h2>Objekte</h2>
+
+                <p>
+                    Ziehe ein Objekt auf die Map.
+                </p>
+
+            </div>
+
+
+            <!-- TEAM -->
+
+            <div class="map-tool-section">
+
+                <div class="map-tool-title">
+                    Team
+                </div>
+
+                <div class="map-team-switch">
+
+                    <button
+                        type="button"
+                        class="map-team-btn koi active"
+                        data-map-team="koi"
+                    >
+                        KOI
+                    </button>
+
+                    <button
+                        type="button"
+                        class="map-team-btn enemy"
+                        data-map-team="enemy"
+                    >
+                        Enemy
+                    </button>
+
                 </div>
 
             </div>
 
 
-            <div class="section-card">
+            <!-- CHAMPIONS -->
 
-                <div id="map-container">
+            <div class="map-tool-section">
 
-                    <!--
-                        Die eigentliche Summoner's Rift Map
-                        und die Champion-/Ward-Auswahl
-                        kommen im nächsten Schritt hier hinein.
-                    -->
+                <div class="map-tool-title">
+                    Champions
+                </div>
+
+                <input
+                    type="text"
+                    id="map-champion-search"
+                    class="map-search"
+                    placeholder="Champion suchen..."
+                    autocomplete="off"
+                >
+
+                <div
+                    id="map-champion-list"
+                    class="map-champion-list"
+                ></div>
+
+            </div>
+
+
+            <!-- WARDS -->
+
+            <div class="map-tool-section">
+
+                <div class="map-tool-title">
+                    Wards
+                </div>
+
+                <div class="map-ward-list">
+
+                    <button
+                        type="button"
+                        class="map-ward-item"
+                        draggable="true"
+                        data-map-object="ward"
+                        data-ward-type="normal"
+                    >
+
+                        <span class="ward-icon normal">
+                            W
+                        </span>
+
+                        <span>
+                            Ward
+                        </span>
+
+                    </button>
+
+
+                    <button
+                        type="button"
+                        class="map-ward-item"
+                        draggable="true"
+                        data-map-object="ward"
+                        data-ward-type="control"
+                    >
+
+                        <span class="ward-icon control">
+                            C
+                        </span>
+
+                        <span>
+                            Control Ward
+                        </span>
+
+                    </button>
 
                 </div>
 
             </div>
 
-        </section>
+
+            <!-- HINWEIS -->
+
+            <div class="map-sidebar-info">
+
+                <strong>Steuerung</strong>
+
+                <span>
+                    Objekte auf die Map ziehen
+                </span>
+
+                <span>
+                    Platzierte Objekte frei verschieben
+                </span>
+
+                <span>
+                    Rechtsklick entfernt ein Objekt
+                </span>
+
+            </div>
+
+        </aside>
+
+    </div>
+
+</section>
 
 
 
