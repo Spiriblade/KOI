@@ -37,15 +37,21 @@ async function getCurrentUser() {
 ========================================= */
 
 async function loginWithTeamCode(teamCode) {
+
     const loginError =
         document.getElementById("login-error");
 
+
     if (loginError) {
+
         loginError.hidden = true;
         loginError.textContent = "";
+
     }
 
+
     try {
+
         const {
             data,
             error
@@ -60,73 +66,87 @@ async function loginWithTeamCode(teamCode) {
                 }
             );
 
+
         if (error) {
             throw error;
         }
+
 
         if (
             !data ||
             !data.success ||
             !data.session
         ) {
+
             throw new Error(
                 data?.error ||
                 "Anmeldung fehlgeschlagen."
             );
+
         }
 
-        /*
-         * Supabase-Session im Browser speichern
-         */
+
         const {
-            error:
-                sessionError
+            error: sessionError
         } =
             await supabaseClient.auth.setSession({
+
                 access_token:
                     data.session.access_token,
 
                 refresh_token:
                     data.session.refresh_token
+
             });
+
 
         if (sessionError) {
             throw sessionError;
         }
 
-        /*
-         * Login ausblenden
-         */
+
         const loginScreen =
             document.getElementById(
                 "login-screen"
             );
 
+
         if (loginScreen) {
-            loginScreen.style.display =
-                "none";
+            loginScreen.style.display = "none";
         }
 
+
         /*
-         * Daten erst jetzt laden,
-         * da wir nun authentifiziert sind.
-         */
+            Daten laden und Oberfläche
+            direkt aktualisieren
+        */
+
         await loadMatches();
 
+        renderOverview();
+        renderMatches();
+
+
     } catch (error) {
+
         console.error(
             "Login fehlgeschlagen:",
             error
         );
 
+
         if (loginError) {
+
             loginError.textContent =
                 error?.message ||
                 "Ungültiger Zugangscode.";
 
             loginError.hidden = false;
+
         }
+
     }
+
 }
 
 document
