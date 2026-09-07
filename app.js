@@ -5758,7 +5758,6 @@ function initializeMapEditor() {
             }
 
             if (objectType === "dragon") {
-
                 const dragonType =
                     event.dataTransfer.getData(
                         "dragonType"
@@ -5768,21 +5767,16 @@ function initializeMapEditor() {
                     return;
                 }
 
-                const rect =
-                    map.getBoundingClientRect();
-
-                const x =
-                    event.clientX -
-                    rect.left;
-
-                const y =
-                    event.clientY -
-                    rect.top;
+                const position =
+                    getMapDropPosition(
+                        map,
+                        event
+                    );
 
                 createMapDragon(
                     dragonType,
-                    x,
-                    y
+                    position.x,
+                    position.y
                 );
             }
 
@@ -6228,10 +6222,10 @@ function createMapMarker(
         mapObjectId++;
 
     object.style.left =
-        `${x}px`;
+    `${x}%`;
 
     object.style.top =
-        `${y}px`;
+    `${y}%`;
 
     object.title =
         "Markierung";
@@ -6318,8 +6312,8 @@ const dragonNames = {
     object.dataset.dragonType = dragonType;
     object.dataset.mapObjectId = mapObjectId++;
 
-    object.style.left = `${x}px`;
-    object.style.top = `${y}px`;
+    object.style.left = `${x}%`;
+    object.style.top = `${y}%`;
 
     object.title = dragonNames[dragonType] || "Drache";
 
