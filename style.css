@@ -2501,15 +2501,12 @@ nav {
 
 .map-x-icon {
     display: block;
-
     color: #e04b4b;
-
     font-size: 38px;
-    font-weight: 800;
+    font-weight: 900;
     line-height: 1;
-
     text-shadow:
-        0 2px 5px rgba(0, 0, 0, 0.7);
+        0 2px 5px rgba(0, 0, 0, 0.85);
 }
 
 
