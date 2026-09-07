@@ -5759,24 +5759,56 @@ function initializeMapEditor() {
 
             if (objectType === "dragon") {
 
-    const dragonType =
-        event.dataTransfer.getData(
-            "dragonType"
-        );
+                const dragonType =
+                    event.dataTransfer.getData(
+                        "dragonType"
+                    );
 
-    const position =
-        getMapDropPosition(
-            map,
-            event
-        );
+                if (!dragonType) {
+                    return;
+                }
 
-    createMapDragon(
-        dragonType,
-        position.x,
-        position.y
-    );
-}
+                const rect =
+                    map.getBoundingClientRect();
 
+                const x =
+                    event.clientX -
+                    rect.left;
+
+                const y =
+                    event.clientY -
+                    rect.top;
+
+                createMapDragon(
+                    dragonType,
+                    x,
+                    y
+                );
+            }
+
+            if (objectType === "marker") {
+
+                const markerType =
+                    event.dataTransfer.getData(
+                        "markerType"
+                    );
+
+                if (!markerType) {
+                    return;
+                }
+
+                const position =
+                    getMapDropPosition(
+                        map,
+                        event
+                    );
+
+                createMapMarker(
+                    markerType,
+                    position.x,
+                    position.y
+                );
+            }
 
             if (
                 objectType === "ward"
@@ -5992,6 +6024,16 @@ function renderMapChampions(
 
                 }
 
+                if (
+                    item.dataset.mapObject ===
+                    "marker"
+                ) {
+                    event.dataTransfer.setData(
+                        "markerType",
+                        item.dataset.markerType
+                    );
+                }
+
                 event.dataTransfer.effectAllowed =
                     "copy";
 
@@ -6152,6 +6194,63 @@ function createMapChampion(
 
 }
 
+function createMapMarker(
+    markerType,
+    x,
+    y
+) {
+    const map =
+        document.getElementById(
+            "summoners-rift-map"
+        );
+
+    if (!map) {
+        return;
+    }
+
+    if (markerType !== "x") {
+        return;
+    }
+
+    const object =
+        document.createElement("div");
+
+    object.className =
+        "map-object map-marker-item";
+
+    object.dataset.mapObject =
+        "marker";
+
+    object.dataset.markerType =
+        markerType;
+
+    object.dataset.mapObjectId =
+        mapObjectId++;
+
+    object.style.left =
+        `${x}px`;
+
+    object.style.top =
+        `${y}px`;
+
+    object.title =
+        "Markierung";
+
+    const icon =
+        document.createElement("span");
+
+    icon.className =
+        "map-x-icon";
+
+    icon.textContent =
+        "×";
+
+    object.appendChild(icon);
+
+    map.appendChild(object);
+
+    makeMapObjectDraggable(object);
+}
 
 function createMapDragon(dragonType, x, y) {
     const map = document.getElementById("summoners-rift-map");
@@ -6445,3 +6544,597 @@ document.addEventListener(
 ========================================= */
 
 initializeMapEditor();
+initializeMapArrowTool();
+
+
+
+/* =========================================
+   Pfeil frei zeichnen
+========================================= */
+
+function initializeMapArrowTool() {
+
+    const map =
+        document.getElementById(
+            "summoners-rift-map"
+        );
+
+    const button =
+        document.getElementById(
+            "map-arrow-tool"
+        );
+
+    if (!map || !button) {
+        return;
+    }
+
+    let arrowMode = false;
+    let drawing = false;
+
+    let startX = 0;
+    let startY = 0;
+
+    let preview = null;
+
+    button.addEventListener(
+        "click",
+        () => {
+
+            arrowMode =
+                !arrowMode;
+
+            button.classList.toggle(
+                "active",
+                arrowMode
+            );
+
+            map.style.cursor =
+                arrowMode
+                    ? "crosshair"
+                    : "";
+
+        }
+    );
+
+
+    map.addEventListener(
+        "pointerdown",
+        event => {
+
+            if (!arrowMode) {
+                return;
+            }
+
+            if (
+                event.target.closest(
+                    ".map-object"
+                )
+            ) {
+                return;
+            }
+
+            drawing = true;
+
+            const rect =
+                map.getBoundingClientRect();
+
+            startX =
+                event.clientX -
+                rect.left;
+
+            startY =
+                event.clientY -
+                rect.top;
+
+            preview =
+                document.createElementNS(
+                    "http://www.w3.org/2000/svg",
+                    "svg"
+                );
+
+            preview.classList.add(
+                "map-arrow-drawing"
+            );
+
+            const defs =
+                document.createElementNS(
+                    "http://www.w3.org/2000/svg",
+                    "defs"
+                );
+
+            const marker =
+                document.createElementNS(
+                    "http://www.w3.org/2000/svg",
+                    "marker"
+                );
+
+            marker.setAttribute(
+                "id",
+                "map-arrow-head-preview"
+            );
+
+            marker.setAttribute(
+                "markerWidth",
+                "8"
+            );
+
+            marker.setAttribute(
+                "markerHeight",
+                "8"
+            );
+
+            marker.setAttribute(
+                "refX",
+                "7"
+            );
+
+            marker.setAttribute(
+                "refY",
+                "4"
+            );
+
+            marker.setAttribute(
+                "orient",
+                "auto"
+            );
+
+            const polygon =
+                document.createElementNS(
+                    "http://www.w3.org/2000/svg",
+                    "polygon"
+                );
+
+            polygon.setAttribute(
+                "points",
+                "0 0, 8 4, 0 8"
+            );
+
+            polygon.setAttribute(
+                "fill",
+                "#d7b56d"
+            );
+
+            marker.appendChild(
+                polygon
+            );
+
+            defs.appendChild(
+                marker
+            );
+
+            preview.appendChild(
+                defs
+            );
+
+            const line =
+                document.createElementNS(
+                    "http://www.w3.org/2000/svg",
+                    "line"
+                );
+
+            line.setAttribute(
+                "x1",
+                startX
+            );
+
+            line.setAttribute(
+                "y1",
+                startY
+            );
+
+            line.setAttribute(
+                "x2",
+                startX
+            );
+
+            line.setAttribute(
+                "y2",
+                startY
+            );
+
+            line.setAttribute(
+                "marker-end",
+                "url(#map-arrow-head-preview)"
+            );
+
+            preview.appendChild(
+                line
+            );
+
+            map.appendChild(
+                preview
+            );
+
+            map.setPointerCapture(
+                event.pointerId
+            );
+
+        }
+    );
+
+
+    map.addEventListener(
+        "pointermove",
+        event => {
+
+            if (
+                !drawing ||
+                !preview
+            ) {
+                return;
+            }
+
+            const rect =
+                map.getBoundingClientRect();
+
+            const currentX =
+                event.clientX -
+                rect.left;
+
+            const currentY =
+                event.clientY -
+                rect.top;
+
+            const line =
+                preview.querySelector(
+                    "line"
+                );
+
+            line.setAttribute(
+                "x2",
+                currentX
+            );
+
+            line.setAttribute(
+                "y2",
+                currentY
+            );
+
+        }
+    );
+
+
+    map.addEventListener(
+        "pointerup",
+        event => {
+
+            if (!drawing) {
+                return;
+            }
+
+            drawing = false;
+
+            const rect =
+                map.getBoundingClientRect();
+
+            const endX =
+                event.clientX -
+                rect.left;
+
+            const endY =
+                event.clientY -
+                rect.top;
+
+            if (preview) {
+                preview.remove();
+                preview = null;
+            }
+
+            const distance =
+                Math.hypot(
+                    endX - startX,
+                    endY - startY
+                );
+
+            if (distance < 15) {
+                return;
+            }
+
+            createMapArrow(
+                startX,
+                startY,
+                endX,
+                endY
+            );
+
+        }
+    );
+
+}
+
+function createMapArrow(
+    startX,
+    startY,
+    endX,
+    endY
+) {
+
+    const map =
+        document.getElementById(
+            "summoners-rift-map"
+        );
+
+    if (!map) {
+        return;
+    }
+
+    const padding = 10;
+
+    const left =
+        Math.min(
+            startX,
+            endX
+        ) - padding;
+
+    const top =
+        Math.min(
+            startY,
+            endY
+        ) - padding;
+
+    const width =
+        Math.abs(
+            endX - startX
+        ) + padding * 2;
+
+    const height =
+        Math.abs(
+            endY - startY
+        ) + padding * 2;
+
+    const object =
+        document.createElement("div");
+
+    object.className =
+        "map-arrow-object";
+
+    object.dataset.mapObject =
+        "arrow";
+
+    object.dataset.mapObjectId =
+        mapObjectId++;
+
+    object.style.left =
+        `${left}px`;
+
+    object.style.top =
+        `${top}px`;
+
+    object.style.width =
+        `${width}px`;
+
+    object.style.height =
+        `${height}px`;
+
+    const svg =
+        document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "svg"
+        );
+
+    svg.setAttribute(
+        "viewBox",
+        `0 0 ${width} ${height}`
+    );
+
+    const defs =
+        document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "defs"
+        );
+
+    const marker =
+        document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "marker"
+        );
+
+    marker.setAttribute(
+        "id",
+        `arrow-head-${mapObjectId}`
+    );
+
+    marker.setAttribute(
+        "markerWidth",
+        "10"
+    );
+
+    marker.setAttribute(
+        "markerHeight",
+        "10"
+    );
+
+    marker.setAttribute(
+        "refX",
+        "8"
+    );
+
+    marker.setAttribute(
+        "refY",
+        "5"
+    );
+
+    marker.setAttribute(
+        "orient",
+        "auto"
+    );
+
+    const polygon =
+        document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "polygon"
+        );
+
+    polygon.setAttribute(
+        "points",
+        "0 0, 10 5, 0 10"
+    );
+
+    polygon.setAttribute(
+        "fill",
+        "#d7b56d"
+    );
+
+    marker.appendChild(
+        polygon
+    );
+
+    defs.appendChild(
+        marker
+    );
+
+    svg.appendChild(
+        defs
+    );
+
+    const line =
+        document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "line"
+        );
+
+    line.setAttribute(
+        "x1",
+        startX - left
+    );
+
+    line.setAttribute(
+        "y1",
+        startY - top
+    );
+
+    line.setAttribute(
+        "x2",
+        endX - left
+    );
+
+    line.setAttribute(
+        "y2",
+        endY - top
+    );
+
+    line.setAttribute(
+        "marker-end",
+        `url(#arrow-head-${mapObjectId - 1})`
+    );
+
+    svg.appendChild(
+        line
+    );
+
+    object.appendChild(
+        svg
+    );
+
+    map.appendChild(
+        object
+    );
+
+    makeMapArrowDraggable(
+        object
+    );
+}
+
+function makeMapArrowDraggable(
+    object
+) {
+
+    let dragging = false;
+
+    let startMouseX = 0;
+    let startMouseY = 0;
+
+    let startLeft = 0;
+    let startTop = 0;
+
+
+    object.addEventListener(
+        "pointerdown",
+        event => {
+
+            if (
+                event.button !== 0
+            ) {
+                return;
+            }
+
+            dragging = true;
+
+            startMouseX =
+                event.clientX;
+
+            startMouseY =
+                event.clientY;
+
+            startLeft =
+                parseFloat(
+                    object.style.left
+                ) || 0;
+
+            startTop =
+                parseFloat(
+                    object.style.top
+                ) || 0;
+
+            object.setPointerCapture(
+                event.pointerId
+            );
+
+            event.stopPropagation();
+
+        }
+    );
+
+
+    object.addEventListener(
+        "pointermove",
+        event => {
+
+            if (!dragging) {
+                return;
+            }
+
+            const deltaX =
+                event.clientX -
+                startMouseX;
+
+            const deltaY =
+                event.clientY -
+                startMouseY;
+
+            object.style.left =
+                `${startLeft + deltaX}px`;
+
+            object.style.top =
+                `${startTop + deltaY}px`;
+
+        }
+    );
+
+
+    object.addEventListener(
+        "pointerup",
+        event => {
+
+            dragging = false;
+
+            object.releasePointerCapture(
+                event.pointerId
+            );
+
+        }
+    );
+
+
+    object.addEventListener(
+        "contextmenu",
+        event => {
+
+            event.preventDefault();
+
+            object.remove();
+
+        }
+    );
+
+}

@@ -2066,13 +2066,14 @@ nav {
 .map-champion-list {
     display: grid;
 
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
 
     gap: 6px;
 
-    max-height: 430px;
+    max-height: 360px;
 
     overflow-y: auto;
+    overflow-x: hidden;
 
     padding-right: 3px;
 }
@@ -2488,43 +2489,129 @@ nav {
     cursor: grabbing;
 }
 
-/* Kompakte Champion-Auswahl für den Map-Editor */
+/* =========================================
+   MAP MARKER
+========================================= */
 
-.map-champion-list {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 5px;
-
-    width: 100%;
-    min-width: 0;
-    max-width: 100%;
-
-    max-height: 310px;
-    overflow-x: hidden;
+.map-marker-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.map-champion-item {
-    min-width: 0;
-    width: 100%;
-    padding: 4px;
-    border-radius: 6px;
-    overflow: hidden;
-}
-
-.map-champion-item img {
-    width: 42px;
-    height: 42px;
-    max-width: 100%;
-}
-
-.map-champion-item span {
+.map-x-icon {
     display: block;
+
+    color: #e04b4b;
+
+    font-size: 38px;
+    font-weight: 800;
+    line-height: 1;
+
+    text-shadow:
+        0 2px 5px rgba(0, 0, 0, 0.7);
+}
+
+
+/* =========================================
+   MAP ARROW TOOL
+========================================= */
+
+.map-arrow-tool {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+
     width: 100%;
 
-    font-size: 9px;
-    line-height: 1.1;
+    padding: 9px 10px;
 
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+
+    color: #d8dbe2;
+
+    font-size: 12px;
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition:
+        background 0.15s ease,
+        border-color 0.15s ease,
+        color 0.15s ease;
+}
+
+.map-arrow-tool:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(215, 181, 109, 0.4);
+}
+
+.map-arrow-tool.active {
+    background: rgba(215, 181, 109, 0.12);
+    border-color: #d7b56d;
+    color: #d7b56d;
+}
+
+.map-arrow-tool-icon {
+    font-size: 18px;
+    line-height: 1;
+}
+
+
+/* =========================================
+   MAP ARROWS
+========================================= */
+
+.map-arrow-object {
+    position: absolute;
+
+    z-index: 12;
+
+    cursor: grab;
+
+    user-select: none;
+    touch-action: none;
+}
+
+.map-arrow-object:active {
+    cursor: grabbing;
+}
+
+.map-arrow-object svg {
+    display: block;
+
+    width: 100%;
+    height: 100%;
+
+    overflow: visible;
+
+    pointer-events: none;
+}
+
+.map-arrow-object line {
+    stroke: #d7b56d;
+    stroke-width: 4;
+    stroke-linecap: round;
+}
+
+.map-arrow-drawing {
+    position: absolute;
+
+    inset: 0;
+
+    width: 100%;
+    height: 100%;
+
+    z-index: 100;
+
+    pointer-events: none;
+}
+
+.map-arrow-drawing line {
+    stroke: #d7b56d;
+    stroke-width: 4;
+    stroke-linecap: round;
 }
