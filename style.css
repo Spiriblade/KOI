@@ -2487,3 +2487,26 @@ nav {
 .map-object-dragon:active {
     cursor: grabbing;
 }
+
+/* Kompakte Champion-Auswahl für den Map-Editor */
+
+.map-champion-list {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5px;
+    max-height: 310px;
+}
+
+.map-champion-item {
+    padding: 4px;
+    border-radius: 6px;
+}
+
+.map-champion-item img {
+    width: 42px;
+    height: 42px;
+}
+
+.map-champion-item span {
+    font-size: 9px;
+    line-height: 1.1;
+}
