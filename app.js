@@ -5953,7 +5953,7 @@ function renderMapChampions(
         Champion Drag & Drop
     */
 
-    container
+    document
     .querySelectorAll(
         ".map-champion-item, .map-dragon-item"
     )
@@ -5972,20 +5972,24 @@ function renderMapChampions(
                     item.dataset.mapObject ===
                     "champion"
                 ) {
+
                     event.dataTransfer.setData(
                         "champion-name",
                         item.dataset.champion
                     );
+
                 }
 
                 if (
                     item.dataset.mapObject ===
                     "dragon"
                 ) {
+
                     event.dataTransfer.setData(
                         "dragonType",
                         item.dataset.dragonType
                     );
+
                 }
 
                 event.dataTransfer.effectAllowed =
@@ -6156,38 +6160,50 @@ function createMapDragon(dragonType, x, y) {
         return;
     }
 
-    const dragonIcons = {
-        infernal:
-            "https://raw.communitydragon.org/latest/game/assets/ux/minimap/icons/dragon_infernal.png",
+const dragonIcons = {
+    infernal:
+        "https://raw.communitydragon.org/latest/game/assets/ux/minimap/icons/dragon_infernal.png",
 
-        mountain:
-            "https://raw.communitydragon.org/latest/game/assets/ux/minimap/icons/dragon_mountain.png",
+    mountain:
+        "https://raw.communitydragon.org/latest/game/assets/ux/minimap/icons/dragon_mountain.png",
 
-        ocean:
-            "https://raw.communitydragon.org/latest/game/assets/ux/minimap/icons/dragon_ocean.png",
+    ocean:
+        "https://raw.communitydragon.org/latest/game/assets/ux/minimap/icons/dragon_ocean.png",
 
-        cloud:
-            "https://raw.communitydragon.org/latest/game/assets/ux/minimap/icons/dragon_cloud.png",
+    cloud:
+        "https://raw.communitydragon.org/latest/game/assets/ux/minimap/icons/dragon_cloud.png",
 
-        hextech:
-            "https://raw.communitydragon.org/latest/game/assets/ux/minimap/icons/dragon_hextech.png",
+    hextech:
+        "https://raw.communitydragon.org/latest/game/assets/ux/minimap/icons/dragon_hextech.png",
 
-        chemtech:
-            "https://raw.communitydragon.org/latest/game/assets/ux/minimap/icons/dragon_chemtech.png",
+    chemtech:
+        "https://raw.communitydragon.org/latest/game/assets/ux/minimap/icons/dragon_chemtech.png",
 
-        elder:
-            "https://raw.communitydragon.org/latest/game/assets/ux/minimap/icons/dragon_elder.png"
-    };
+    elder:
+        "https://raw.communitydragon.org/latest/game/assets/ux/minimap/icons/dragon_elder.png",
 
-    const dragonNames = {
-        infernal: "Infernal",
-        mountain: "Berg",
-        ocean: "Ozean",
-        cloud: "Wolke",
-        hextech: "Hextech",
-        chemtech: "Chemtech",
-        elder: "Elder"
-    };
+    grub:
+        "https://raw.communitydragon.org/latest/game/assets/ux/minimap/icons/grub.png",
+
+    herald:
+        "https://raw.communitydragon.org/latest/game/assets/ux/minimap/icons/riftherald.png",
+
+    baron:
+        "https://raw.communitydragon.org/latest/game/assets/ux/minimap/icons/baron.png"
+};
+
+const dragonNames = {
+    infernal: "Infernaldrache",
+    mountain: "Bergdrache",
+    ocean: "Ozeandrache",
+    cloud: "Wolkendrache",
+    hextech: "Hextechdrache",
+    chemtech: "Chemtechdrache",
+    elder: "Elderdrache",
+    grub: "Void Grubs",
+    herald: "Rift Herald",
+    baron: "Baron Nashor"
+};
 
     const icon = dragonIcons[dragonType];
 
