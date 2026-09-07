@@ -6554,7 +6554,6 @@ initializeMapArrowTool();
 ========================================= */
 
 function initializeMapArrowTool() {
-
     const map =
         document.getElementById(
             "summoners-rift-map"
@@ -6571,37 +6570,26 @@ function initializeMapArrowTool() {
 
     let arrowMode = false;
     let drawing = false;
-
-    let startX = 0;
-    let startY = 0;
-
+    let points = [];
     let preview = null;
 
-    button.addEventListener(
-        "click",
-        () => {
+    button.addEventListener("click", () => {
+        arrowMode = !arrowMode;
 
-            arrowMode =
-                !arrowMode;
+        button.classList.toggle(
+            "active",
+            arrowMode
+        );
 
-            button.classList.toggle(
-                "active",
-                arrowMode
-            );
-
-            map.style.cursor =
-                arrowMode
-                    ? "crosshair"
-                    : "";
-
-        }
-    );
-
+        map.style.cursor =
+            arrowMode
+                ? "crosshair"
+                : "";
+    });
 
     map.addEventListener(
         "pointerdown",
         event => {
-
             if (!arrowMode) {
                 return;
             }
@@ -6615,17 +6603,23 @@ function initializeMapArrowTool() {
             }
 
             drawing = true;
+            points = [];
 
             const rect =
                 map.getBoundingClientRect();
 
-            startX =
+            const startX =
                 event.clientX -
                 rect.left;
 
-            startY =
+            const startY =
                 event.clientY -
                 rect.top;
+
+            points.push({
+                x: startX,
+                y: startY
+            });
 
             preview =
                 document.createElementNS(
@@ -6637,127 +6631,29 @@ function initializeMapArrowTool() {
                 "map-arrow-drawing"
             );
 
-            const defs =
+            const path =
                 document.createElementNS(
                     "http://www.w3.org/2000/svg",
-                    "defs"
+                    "path"
                 );
 
-            const marker =
-                document.createElementNS(
-                    "http://www.w3.org/2000/svg",
-                    "marker"
-                );
-
-            marker.setAttribute(
-                "id",
-                "map-arrow-head-preview"
+            path.classList.add(
+                "map-arrow-preview-path"
             );
 
-            marker.setAttribute(
-                "markerWidth",
-                "8"
-            );
+            preview.appendChild(path);
 
-            marker.setAttribute(
-                "markerHeight",
-                "8"
-            );
-
-            marker.setAttribute(
-                "refX",
-                "7"
-            );
-
-            marker.setAttribute(
-                "refY",
-                "4"
-            );
-
-            marker.setAttribute(
-                "orient",
-                "auto"
-            );
-
-            const polygon =
-                document.createElementNS(
-                    "http://www.w3.org/2000/svg",
-                    "polygon"
-                );
-
-            polygon.setAttribute(
-                "points",
-                "0 0, 8 4, 0 8"
-            );
-
-            polygon.setAttribute(
-                "fill",
-                "#d7b56d"
-            );
-
-            marker.appendChild(
-                polygon
-            );
-
-            defs.appendChild(
-                marker
-            );
-
-            preview.appendChild(
-                defs
-            );
-
-            const line =
-                document.createElementNS(
-                    "http://www.w3.org/2000/svg",
-                    "line"
-                );
-
-            line.setAttribute(
-                "x1",
-                startX
-            );
-
-            line.setAttribute(
-                "y1",
-                startY
-            );
-
-            line.setAttribute(
-                "x2",
-                startX
-            );
-
-            line.setAttribute(
-                "y2",
-                startY
-            );
-
-            line.setAttribute(
-                "marker-end",
-                "url(#map-arrow-head-preview)"
-            );
-
-            preview.appendChild(
-                line
-            );
-
-            map.appendChild(
-                preview
-            );
+            map.appendChild(preview);
 
             map.setPointerCapture(
                 event.pointerId
             );
-
         }
     );
-
 
     map.addEventListener(
         "pointermove",
         event => {
-
             if (
                 !drawing ||
                 !preview
@@ -6768,37 +6664,51 @@ function initializeMapArrowTool() {
             const rect =
                 map.getBoundingClientRect();
 
-            const currentX =
+            const x =
                 event.clientX -
                 rect.left;
 
-            const currentY =
+            const y =
                 event.clientY -
                 rect.top;
 
-            const line =
-                preview.querySelector(
-                    "line"
+            const lastPoint =
+                points[
+                    points.length - 1
+                ];
+
+            const distance =
+                Math.hypot(
+                    x - lastPoint.x,
+                    y - lastPoint.y
                 );
 
-            line.setAttribute(
-                "x2",
-                currentX
-            );
+            if (distance < 3) {
+                return;
+            }
 
-            line.setAttribute(
-                "y2",
-                currentY
-            );
+            points.push({
+                x,
+                y
+            });
 
+            const path =
+                preview.querySelector(
+                    "path"
+                );
+
+            path.setAttribute(
+                "d",
+                createSmoothMapPath(
+                    points
+                )
+            );
         }
     );
-
 
     map.addEventListener(
         "pointerup",
         event => {
-
             if (!drawing) {
                 return;
             }
@@ -6808,80 +6718,178 @@ function initializeMapArrowTool() {
             const rect =
                 map.getBoundingClientRect();
 
-            const endX =
+            const x =
                 event.clientX -
                 rect.left;
 
-            const endY =
+            const y =
                 event.clientY -
                 rect.top;
+
+            const lastPoint =
+                points[
+                    points.length - 1
+                ];
+
+            if (
+                !lastPoint ||
+                Math.hypot(
+                    x - lastPoint.x,
+                    y - lastPoint.y
+                ) >= 3
+            ) {
+                points.push({
+                    x,
+                    y
+                });
+            }
 
             if (preview) {
                 preview.remove();
                 preview = null;
             }
 
-            const distance =
-                Math.hypot(
-                    endX - startX,
-                    endY - startY
-                );
-
-            if (distance < 15) {
+            if (points.length < 2) {
+                points = [];
                 return;
             }
 
-            createMapArrow(
-                startX,
-                startY,
-                endX,
-                endY
-            );
+            let totalDistance = 0;
 
+            for (
+                let i = 1;
+                i < points.length;
+                i++
+            ) {
+                totalDistance +=
+                    Math.hypot(
+                        points[i].x -
+                            points[i - 1].x,
+                        points[i].y -
+                            points[i - 1].y
+                    );
+            }
+
+            if (totalDistance < 15) {
+                points = [];
+                return;
+            }
+
+            createMapArrow(points);
+
+            points = [];
         }
     );
-
 }
 
-function createMapArrow(
-    startX,
-    startY,
-    endX,
-    endY
-) {
+function createSmoothMapPath(points) {
+    if (!points.length) {
+        return "";
+    }
 
+    if (points.length === 1) {
+        return `M ${points[0].x} ${points[0].y}`;
+    }
+
+    let path =
+        `M ${points[0].x} ${points[0].y}`;
+
+    for (
+        let i = 1;
+        i < points.length - 1;
+        i++
+    ) {
+        const current =
+            points[i];
+
+        const next =
+            points[i + 1];
+
+        const middleX =
+            (current.x + next.x) / 2;
+
+        const middleY =
+            (current.y + next.y) / 2;
+
+        path +=
+            ` Q ${current.x} ${current.y} ${middleX} ${middleY}`;
+    }
+
+    const last =
+        points[points.length - 1];
+
+    const secondLast =
+        points[points.length - 2];
+
+    path +=
+        ` Q ${secondLast.x} ${secondLast.y} ${last.x} ${last.y}`;
+
+    return path;
+}
+
+function createMapArrow(points) {
     const map =
         document.getElementById(
             "summoners-rift-map"
         );
 
-    if (!map) {
+    if (
+        !map ||
+        !points ||
+        points.length < 2
+    ) {
         return;
     }
 
-    const padding = 10;
+    const padding = 15;
+
+    const minX =
+        Math.min(
+            ...points.map(
+                point => point.x
+            )
+        );
+
+    const maxX =
+        Math.max(
+            ...points.map(
+                point => point.x
+            )
+        );
+
+    const minY =
+        Math.min(
+            ...points.map(
+                point => point.y
+            )
+        );
+
+    const maxY =
+        Math.max(
+            ...points.map(
+                point => point.y
+            )
+        );
 
     const left =
-        Math.min(
-            startX,
-            endX
-        ) - padding;
+        minX - padding;
 
     const top =
-        Math.min(
-            startY,
-            endY
-        ) - padding;
+        minY - padding;
 
     const width =
-        Math.abs(
-            endX - startX
-        ) + padding * 2;
+        Math.max(
+            maxX - minX +
+                padding * 2,
+            30
+        );
 
     const height =
-        Math.abs(
-            endY - startY
-        ) + padding * 2;
+        Math.max(
+            maxY - minY +
+                padding * 2,
+            30
+        );
 
     const object =
         document.createElement("div");
@@ -6930,9 +6938,12 @@ function createMapArrow(
             "marker"
         );
 
+    const markerId =
+        `arrow-head-${mapObjectId}`;
+
     marker.setAttribute(
         "id",
-        `arrow-head-${mapObjectId}`
+        markerId
     );
 
     marker.setAttribute(
@@ -6988,39 +6999,40 @@ function createMapArrow(
         defs
     );
 
-    const line =
+    const relativePoints =
+        points.map(point => ({
+            x:
+                point.x -
+                left,
+            y:
+                point.y -
+                top
+        }));
+
+    const path =
         document.createElementNS(
             "http://www.w3.org/2000/svg",
-            "line"
+            "path"
         );
 
-    line.setAttribute(
-        "x1",
-        startX - left
+    path.setAttribute(
+        "d",
+        createSmoothMapPath(
+            relativePoints
+        )
     );
 
-    line.setAttribute(
-        "y1",
-        startY - top
-    );
-
-    line.setAttribute(
-        "x2",
-        endX - left
-    );
-
-    line.setAttribute(
-        "y2",
-        endY - top
-    );
-
-    line.setAttribute(
+    path.setAttribute(
         "marker-end",
-        `url(#arrow-head-${mapObjectId - 1})`
+        `url(#${markerId})`
+    );
+
+    path.classList.add(
+        "map-arrow-path"
     );
 
     svg.appendChild(
-        line
+        path
     );
 
     object.appendChild(

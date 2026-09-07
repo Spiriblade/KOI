@@ -2588,29 +2588,29 @@ nav {
     pointer-events: none;
 }
 
-.map-arrow-object line {
+.map-arrow-object path {
+    fill: none;
     stroke: #d7b56d;
     stroke-width: 4;
     stroke-linecap: round;
+    stroke-linejoin: round;
 }
 
 .map-arrow-drawing {
     position: absolute;
-
     inset: 0;
-
     width: 100%;
     height: 100%;
-
     z-index: 100;
-
     pointer-events: none;
 }
 
-.map-arrow-drawing line {
+.map-arrow-drawing path {
+    fill: none;
     stroke: #d7b56d;
     stroke-width: 4;
     stroke-linecap: round;
+    stroke-linejoin: round;
 }
 
 .map-marker-item .map-x-icon {
