@@ -2491,22 +2491,40 @@ nav {
 /* Kompakte Champion-Auswahl für den Map-Editor */
 
 .map-champion-list {
-    grid-template-columns: repeat(4, 1fr);
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 5px;
+
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+
     max-height: 310px;
+    overflow-x: hidden;
 }
 
 .map-champion-item {
+    min-width: 0;
+    width: 100%;
     padding: 4px;
     border-radius: 6px;
+    overflow: hidden;
 }
 
 .map-champion-item img {
     width: 42px;
     height: 42px;
+    max-width: 100%;
 }
 
 .map-champion-item span {
+    display: block;
+    width: 100%;
+
     font-size: 9px;
     line-height: 1.1;
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
