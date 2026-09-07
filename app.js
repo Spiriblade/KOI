@@ -5781,11 +5781,12 @@ function initializeMapEditor() {
             }
 
             if (objectType === "marker") {
-
                 const markerType =
                     event.dataTransfer.getData(
                         "markerType"
                     );
+
+                console.log("Marker Drop:", markerType);
 
                 if (!markerType) {
                     return;
@@ -5796,6 +5797,12 @@ function initializeMapEditor() {
                         map,
                         event
                     );
+
+                console.log(
+                    "Marker Position:",
+                    position.x,
+                    position.y
+                );
 
                 createMapMarker(
                     markerType,
