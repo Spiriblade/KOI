@@ -6539,16 +6539,6 @@ document.addEventListener(
     }
 );
 
-
-/* =========================================
-   MAP STARTEN
-========================================= */
-
-initializeMapEditor();
-initializeMapArrowTool();
-
-
-
 /* =========================================
    Pfeil frei zeichnen
 ========================================= */
@@ -6778,6 +6768,38 @@ function initializeMapArrowTool() {
             createMapArrow(points);
 
             points = [];
+        }
+    );
+}
+
+function initializeMapClearTool() {
+    const map =
+        document.getElementById(
+            "summoners-rift-map"
+        );
+
+    const button =
+        document.getElementById(
+            "map-clear-tool"
+        );
+
+    if (!map || !button) {
+        return;
+    }
+
+    button.addEventListener(
+        "click",
+        () => {
+            const objects =
+                map.querySelectorAll(
+                    ".map-object, .map-arrow-object"
+                );
+
+            objects.forEach(
+                object => {
+                    object.remove();
+                }
+            );
         }
     );
 }
@@ -7151,3 +7173,13 @@ function makeMapArrowDraggable(
     );
 
 }
+
+
+
+/* =========================================
+   MAP STARTEN
+========================================= */
+
+initializeMapEditor();
+initializeMapArrowTool();
+initializeMapClearTool();

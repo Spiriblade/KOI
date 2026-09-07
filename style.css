@@ -2627,3 +2627,29 @@ nav {
     text-shadow:
         0 2px 5px rgba(0, 0, 0, 0.85) !important;
 }
+
+.map-clear-tool {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    width: 100%;
+    padding: 9px 10px;
+    background: rgba(220, 70, 70, 0.08);
+    border: 1px solid rgba(220, 70, 70, 0.25);
+    border-radius: 8px;
+    color: #e08a8a;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+        background 0.15s ease,
+        border-color 0.15s ease,
+        color 0.15s ease;
+}
+
+.map-clear-tool:hover {
+    background: rgba(220, 70, 70, 0.15);
+    border-color: #e04b4b;
+    color: #f09a9a;
+}
