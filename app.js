@@ -6124,7 +6124,6 @@ function createMapWard(
     x,
     y
 ) {
-
     const map =
         document.getElementById(
             "summoners-rift-map"
@@ -6134,66 +6133,36 @@ function createMapWard(
         return;
     }
 
+    const ward =
+        document.createElement("div");
 
-    const object =
-        document.createElement(
-            "div"
-        );
+    ward.className =
+        `map-object map-ward ${team}`;
 
+    ward.dataset.type = "ward";
+    ward.dataset.wardType = wardType;
 
-    object.className =
-        `map-object ${team}`;
+    ward.style.left = `${x}%`;
+    ward.style.top = `${y}%`;
 
+    const icon =
+        document.createElement("img");
 
-    object.dataset.mapObjectId =
-        `map-${++mapObjectId}`;
-
-
-    object.dataset.x = x;
-    object.dataset.y = y;
-
-
-    object.style.left =
-        `${x}%`;
-
-    object.style.top =
-        `${y}%`;
-
-
-    const letter =
+    icon.src =
         wardType === "control"
-            ? "C"
-            : "W";
+            ? "https://ddragon.leagueoflegends.com/cdn/16.17.1/img/item/2055.png"
+            : "https://ddragon.leagueoflegends.com/cdn/16.17.1/img/item/3340.png";
 
+    icon.alt =
+        wardType === "control"
+            ? "Control Ward"
+            : "Stealth Ward";
 
-    object.innerHTML = `
+    ward.appendChild(icon);
 
-        <div
-            class="
-                map-object-ward
-                ${wardType}
-            "
-        >
-            ${letter}
-        </div>
+    map.appendChild(ward);
 
-    `;
-
-
-    map.appendChild(
-        object
-    );
-
-
-    makeMapObjectDraggable(
-        object
-    );
-
-
-    map.classList.add(
-        "has-objects"
-    );
-
+    makeMapObjectDraggable(ward);
 }
 
 
