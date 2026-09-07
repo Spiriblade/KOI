@@ -1857,7 +1857,7 @@ nav {
     aspect-ratio: 1 / 1;
 
     background-image:
-        url("https://ddragon.leagueoflegends.com/cdn/16.17.1/img/map/map11.png");
+        url("./assets/map/summoners-rift.png");
 
     background-size: cover;
     background-position: center;
