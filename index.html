@@ -9,6 +9,62 @@
 
 <body>
 
+    <!-- =========================
+     LOGIN
+========================= -->
+
+<div
+    id="login-screen"
+    class="login-screen"
+>
+    <div class="login-card">
+
+        <div class="login-logo">
+            <span>KOI</span>
+            <small>STATS</small>
+        </div>
+
+        <h1>Team-Zugang</h1>
+
+        <p class="login-subtitle">
+            Zugangscode eingeben
+        </p>
+
+        <form id="team-login-form">
+
+            <div class="form-group">
+                <label for="team-access-code">
+                    Zugangscode
+                </label>
+
+                <input
+                    type="password"
+                    id="team-access-code"
+                    placeholder="Zugangscode"
+                    autocomplete="off"
+                    required
+                >
+            </div>
+
+            <button
+                type="submit"
+                class="primary-btn login-btn"
+            >
+                Anmelden
+            </button>
+
+            <div
+                id="login-error"
+                class="login-error"
+                hidden
+            ></div>
+
+        </form>
+
+    </div>
+</div>
+
+
 <div class="app">
 
     <!-- SIDEBAR -->
