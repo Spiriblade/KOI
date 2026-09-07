@@ -86,6 +86,18 @@ async function loginWithTeamCode(teamCode) {
         }
 
 
+        /*
+            Team merken
+        */
+
+        currentTeam =
+            data.team;
+
+
+        /*
+            Supabase-Session im Browser speichern
+        */
+
         const {
             error: sessionError
         } =
@@ -105,6 +117,10 @@ async function loginWithTeamCode(teamCode) {
         }
 
 
+        /*
+            Login ausblenden
+        */
+
         const loginScreen =
             document.getElementById(
                 "login-screen"
@@ -112,13 +128,15 @@ async function loginWithTeamCode(teamCode) {
 
 
         if (loginScreen) {
-            loginScreen.style.display = "none";
+
+            loginScreen.style.display =
+                "none";
+
         }
 
 
         /*
-            Daten laden und Oberfläche
-            direkt aktualisieren
+            Daten laden
         */
 
         await loadMatches();
@@ -287,6 +305,7 @@ document
 let matches = [];
 let currentMatchId = null;
 let currentGameIndex = 0;
+let currentTeam = null;
 
 const roles = [
     "Top",
@@ -296,13 +315,34 @@ const roles = [
     "Support"
 ];
 
-const defaultKoiPlayers = [
-    "Dietrich Aden#48268",
-    "KOI eraZer#kat",
-    "SlimShady#Bazed",
-    "Shinki Hiiro#EUW",
-    "BrokenPromises#1887"
-];
+const teamData = {
+
+    "KOI Gaming": {
+        name: "KOI Gaming",
+
+        players: [
+            "Dietrich Aden#48268",
+            "KOI eraZer#kat",
+            "SlimShady#Bazed",
+            "Shinki Hiiro#EUW",
+            "BrokenPromises#1887"
+        ]
+    },
+
+    "KOI Kohaku": {
+        name: "KOI Kohaku",
+
+        players: [
+            "KOI Kohaku Top",
+            "KOI Kohaku Jungle",
+            "KOI Kohaku Mid",
+            "KOI Kohaku ADC",
+            "KOI Kohaku Support"
+        ]
+    }
+
+};
+
 
 const defaultEnemyPlayers = [
     "ENEMY TOP",
@@ -311,10 +351,6 @@ const defaultEnemyPlayers = [
     "ENEMY ADC",
     "ENEMY SUPPORT"
 ];
-
-/* =========================================
-   CHAMPION FUNKTIONEN
-========================================= */
 
 /* =========================================
    CHAMPION FUNKTIONEN
@@ -1502,15 +1538,18 @@ function renderGameEditor() {
         ein bereits gespeichertes Game laden.
 
         Bei einem neuen Match bleibt game = null,
-        damit immer ein komplett leerer Editor
+        damit immer ein komplett neuer Editor
         mit den Standard-Spielern erzeugt wird.
     */
+
     if (currentMatchId !== null) {
 
         const match =
             matches.find(
-                match => match.id === currentMatchId
+                match =>
+                    match.id === currentMatchId
             );
+
 
         if (match && match.games) {
 
@@ -1522,35 +1561,71 @@ function renderGameEditor() {
     }
 
 
+    /*
+        Teamabhängige Spieler bestimmen
+    */
+
+    const teamName =
+        currentTeam?.name || "KOI Gaming";
+
+
+    const currentTeamData =
+        teamData[teamName] ||
+        teamData["KOI Gaming"];
+
+
     const koiPlayers =
         game?.koi ||
         createDefaultPlayers(
-            defaultKoiPlayers
+            currentTeamData.players
         );
 
 
-   const enemyPlayers =
-    game?.enemy ||
-    (
-        currentGameIndex > 0 &&
-        matches.find(
-            match => match.id === currentMatchId
-        )?.games?.[currentGameIndex - 1]?.enemy
-            ? matches.find(
-                match => match.id === currentMatchId
-            ).games[currentGameIndex - 1].enemy.map(player => ({
-                name: player.name,
-                champion: "",
-                kills: 0,
-                deaths: 0,
-                assists: 0,
-                damage: 0,
-                cs: 0
-            }))
-            : createDefaultPlayers(
-                defaultEnemyPlayers
-            )
-    );
+    /*
+        Gegner bestimmen
+    */
+
+    const enemyPlayers =
+        game?.enemy ||
+        (
+            currentGameIndex > 0 &&
+            matches.find(
+                match =>
+                    match.id === currentMatchId
+            )?.games?.[currentGameIndex - 1]?.enemy
+                ? matches.find(
+                    match =>
+                        match.id === currentMatchId
+                ).games[currentGameIndex - 1].enemy.map(
+                    player => ({
+
+                        name:
+                            player.name,
+
+                        champion:
+                            "",
+
+                        kills:
+                            0,
+
+                        deaths:
+                            0,
+
+                        assists:
+                            0,
+
+                        damage:
+                            0,
+
+                        cs:
+                            0
+
+                    })
+                )
+                : createDefaultPlayers(
+                    defaultEnemyPlayers
+                )
+        );
 
 
     container.innerHTML = `
@@ -1620,8 +1695,11 @@ function renderGameEditor() {
 
 
             <h2>
-                KOI
+                ${escapeHtml(
+                    currentTeamData.name
+                )}
             </h2>
+
 
             <div id="editor-koi-players">
 
@@ -1634,8 +1712,11 @@ function renderGameEditor() {
 
 
             <h2 style="margin-top:30px;">
+
                 Gegner
+
             </h2>
+
 
             <div id="editor-enemy-players">
 
