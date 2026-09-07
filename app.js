@@ -7560,7 +7560,121 @@ function makeMapArrowDraggable(
 
 }
 
+/* =========================================
+   GOOGLE DOCS
+========================================= */
 
+async function loadGoogleDocsLink() {
+
+    const input =
+        document.getElementById("google-docs-url");
+
+    const status =
+        document.getElementById("google-docs-status");
+
+    if (!input || !currentTeam?.id) {
+        return;
+    }
+
+    const {
+        data,
+        error
+    } = await supabaseClient
+        .from("team_documents")
+        .select("document_url")
+        .eq("team_id", currentTeam.id)
+        .maybeSingle();
+
+    if (error) {
+        console.error(
+            "Fehler beim Laden des Google-Docs-Links:",
+            error
+        );
+        return;
+    }
+
+    if (data?.document_url) {
+        input.value = data.document_url;
+    } else {
+        input.value = "";
+    }
+
+    if (status) {
+        status.textContent = "";
+    }
+}
+
+
+async function saveGoogleDocsLink() {
+
+    const input =
+        document.getElementById("google-docs-url");
+
+    const status =
+        document.getElementById("google-docs-status");
+
+    if (!input || !currentTeam?.id) {
+        return;
+    }
+
+    const url = input.value.trim();
+
+    if (!url) {
+        alert("Bitte einen Google-Docs-Link eingeben.");
+        return;
+    }
+
+    if (!url.startsWith("https://docs.google.com/")) {
+        alert("Bitte einen gültigen Google-Docs-Link eingeben.");
+        return;
+    }
+
+    const {
+        error
+    } = await supabaseClient
+        .from("team_documents")
+        .upsert(
+            {
+                team_id: currentTeam.id,
+                document_url: url,
+                updated_at: new Date().toISOString()
+            },
+            {
+                onConflict: "team_id"
+            }
+        );
+
+    if (error) {
+        console.error(
+            "Fehler beim Speichern des Google-Docs-Links:",
+            error
+        );
+
+        alert(
+            "Der Google-Docs-Link konnte nicht gespeichert werden."
+        );
+
+        return;
+    }
+
+    if (status) {
+        status.textContent =
+            "Link erfolgreich gespeichert.";
+    }
+}
+
+function renderGoogleDocs() {
+
+    loadGoogleDocsLink();
+
+}
+
+document
+    .getElementById("save-google-docs-btn")
+    ?.addEventListener(
+        "click",
+        saveGoogleDocsLink
+    );
 
 /* =========================================
    MAP STARTEN
