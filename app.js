@@ -726,15 +726,19 @@ function showPage(page) {
     /*
         Wenn der Match-Editor verlassen wird,
         setzen wir ihn komplett zurück.
-        
+
         Wichtig:
         Das passiert NICHT beim Wechsel innerhalb
         des Editors, sondern nur wenn eine andere
         Seite geöffnet wird.
     */
+
     const leavingMatchEditor =
-    page !== "match-editor" &&
-    document.getElementById("match-editor-page")?.classList.contains("active");
+        page !== "match-editor" &&
+        document
+            .getElementById("match-editor-page")
+            ?.classList
+            .contains("active");
 
 
     document.querySelectorAll(".page")
@@ -768,9 +772,16 @@ function showPage(page) {
     if (page === "matches") {
         renderMatches();
     }
-if (leavingMatchEditor) {
-    resetMatchEditor();
-}
+
+
+    if (page === "google-docs") {
+        renderGoogleDocs();
+    }
+
+
+    if (leavingMatchEditor) {
+        resetMatchEditor();
+    }
 }
 
 
