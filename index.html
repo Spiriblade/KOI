@@ -212,45 +212,70 @@
 
         <section id="google-docs-page" class="page">
 
-            <div class="page-header">
-                <div>
-                    <h1>Google Docs</h1>
-                    <p>Team-Dokument</p>
-                </div>
-            </div>
+    <div class="page-header">
 
-            <div class="google-docs-card">
+        <div>
+            <h1>Google Docs</h1>
+            <p>Team-Dokument</p>
+        </div>
 
-                <div class="form-group">
-                    <label for="google-docs-url">
-                        Google Docs Link
-                    </label>
+    </div>
 
-                    <input
-                        type="url"
-                        id="google-docs-url"
-                        placeholder="https://docs.google.com/..."
-                        autocomplete="off"
-                    >
 
-                    <small>
-                        Füge hier den Link zu deinem Google-Dokument ein.
-                    </small>
-                </div>
+    <div class="google-docs-card">
 
-                <button
-                    type="button"
-                    id="save-google-docs-btn"
-                    class="primary-btn"
-                >
-                    Link speichern
-                </button>
+        <div class="form-group">
 
-                <div id="google-docs-status" class="google-docs-status"></div>
+            <label for="google-docs-url">
+                Google Docs Link
+            </label>
 
-            </div>
+            <input
+                type="url"
+                id="google-docs-url"
+                placeholder="https://docs.google.com/..."
+                autocomplete="off"
+            >
 
-        </section>
+            <small>
+                Füge hier den Link zu deinem Google-Dokument ein.
+            </small>
+
+        </div>
+
+
+        <button
+            type="button"
+            id="save-google-docs-btn"
+            class="primary-btn"
+        >
+            Link speichern
+        </button>
+
+
+        <div
+            id="google-docs-status"
+            class="google-docs-status"
+        ></div>
+
+
+        <div
+            id="google-docs-viewer"
+            class="google-docs-viewer"
+            hidden
+        >
+
+            <iframe
+                id="google-docs-iframe"
+                title="Google Docs"
+                frameborder="0"
+            ></iframe>
+
+        </div>
+
+    </div>
+
+</section>
 
         <!-- =========================
              MATCHES

@@ -7731,41 +7731,132 @@ function makeMapArrowDraggable(
 async function loadGoogleDocsLink() {
 
     const input =
-        document.getElementById("google-docs-url");
+        document.getElementById(
+            "google-docs-url"
+        );
 
     const status =
-        document.getElementById("google-docs-status");
+        document.getElementById(
+            "google-docs-status"
+        );
+
+    const viewer =
+        document.getElementById(
+            "google-docs-viewer"
+        );
+
+    const iframe =
+        document.getElementById(
+            "google-docs-iframe"
+        );
+
 
     if (!input || !currentTeam?.id) {
         return;
     }
 
+
     const {
         data,
         error
     } = await supabaseClient
+
         .from("team_documents")
+
         .select("document_url")
-        .eq("team_id", currentTeam.id)
+
+        .eq(
+            "team_id",
+            currentTeam.id
+        )
+
         .maybeSingle();
 
+
     if (error) {
+
         console.error(
             "Fehler beim Laden des Google-Docs-Links:",
             error
         );
+
         return;
     }
 
-    if (data?.document_url) {
-        input.value = data.document_url;
-    } else {
+
+    if (!data?.document_url) {
+
         input.value = "";
+
+        if (viewer) {
+            viewer.hidden = true;
+        }
+
+        if (iframe) {
+            iframe.src = "";
+        }
+
+        if (status) {
+            status.textContent = "";
+        }
+
+        return;
+    }
+
+
+    /*
+        Gespeicherten Link anzeigen
+    */
+
+    input.value =
+        data.document_url;
+
+
+    /*
+        Google-Docs-URL für Einbettung vorbereiten
+    */
+
+    let embedUrl =
+        data.document_url;
+
+
+    if (
+        embedUrl.includes(
+            "docs.google.com/document/"
+        )
+    ) {
+
+        embedUrl =
+            embedUrl.split("/edit")[0] +
+            "/edit?embedded=true";
+
+    }
+
+
+    /*
+        Google Doc anzeigen
+    */
+
+    if (iframe) {
+
+        iframe.src =
+            embedUrl;
+
+    }
+
+    if (viewer) {
+
+        viewer.hidden = false;
+
     }
 
     if (status) {
-        status.textContent = "";
+
+        status.textContent =
+            "Gespeichertes Team-Dokument";
+
     }
+
 }
 
 
@@ -7919,6 +8010,7 @@ async function saveGoogleDocsLink() {
                 "Link erfolgreich gespeichert.";
 
         }
+        await loadGoogleDocsLink();
 
     } catch (error) {
 
