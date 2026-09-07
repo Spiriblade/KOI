@@ -14,6 +14,27 @@ const supabaseClient =
         SUPABASE_KEY
     );
 
+async function getCurrentUser() {
+    const {
+        data,
+        error
+    } = await supabaseClient.auth.getUser();
+
+    if (error) {
+        console.error(
+            "Fehler beim Abrufen des Benutzers:",
+            error
+        );
+
+        return null;
+    }
+
+    return data.user;
+}
+
+getCurrentUser().then(user => {
+    console.log("Aktueller Benutzer:", user);
+});
 
 /* =========================================
    APP DATEN
