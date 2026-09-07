@@ -5757,6 +5757,26 @@ function initializeMapEditor() {
 
             }
 
+            if (objectType === "dragon") {
+
+    const dragonType =
+        event.dataTransfer.getData(
+            "dragonType"
+        );
+
+    const position =
+        getMapDropPosition(
+            map,
+            event
+        );
+
+    createMapDragon(
+        dragonType,
+        position.x,
+        position.y
+    );
+}
+
 
             if (
                 objectType === "ward"
@@ -5934,32 +5954,47 @@ function renderMapChampions(
     */
 
     container
-        .querySelectorAll(
-            ".map-champion-item"
-        )
-        .forEach(item => {
+    .querySelectorAll(
+        ".map-champion-item, .map-dragon-item"
+    )
+    .forEach(item => {
 
-            item.addEventListener(
-                "dragstart",
-                event => {
+        item.addEventListener(
+            "dragstart",
+            event => {
 
-                    event.dataTransfer.setData(
-                        "map-object",
-                        "champion"
-                    );
+                event.dataTransfer.setData(
+                    "map-object",
+                    item.dataset.mapObject
+                );
 
+                if (
+                    item.dataset.mapObject ===
+                    "champion"
+                ) {
                     event.dataTransfer.setData(
                         "champion-name",
                         item.dataset.champion
                     );
-
-                    event.dataTransfer.effectAllowed =
-                        "copy";
-
                 }
-            );
 
-        });
+                if (
+                    item.dataset.mapObject ===
+                    "dragon"
+                ) {
+                    event.dataTransfer.setData(
+                        "dragonType",
+                        item.dataset.dragonType
+                    );
+                }
+
+                event.dataTransfer.effectAllowed =
+                    "copy";
+
+            }
+        );
+
+    });
 
 }
 
@@ -6113,6 +6148,77 @@ function createMapChampion(
 
 }
 
+
+function createMapDragon(dragonType, x, y) {
+    const map = document.getElementById("summoners-rift-map");
+
+    if (!map) {
+        return;
+    }
+
+    const dragonIcons = {
+        infernal:
+            "https://raw.communitydragon.org/latest/game/assets/ux/minimap/icons/dragon_infernal.png",
+
+        mountain:
+            "https://raw.communitydragon.org/latest/game/assets/ux/minimap/icons/dragon_mountain.png",
+
+        ocean:
+            "https://raw.communitydragon.org/latest/game/assets/ux/minimap/icons/dragon_ocean.png",
+
+        cloud:
+            "https://raw.communitydragon.org/latest/game/assets/ux/minimap/icons/dragon_cloud.png",
+
+        hextech:
+            "https://raw.communitydragon.org/latest/game/assets/ux/minimap/icons/dragon_hextech.png",
+
+        chemtech:
+            "https://raw.communitydragon.org/latest/game/assets/ux/minimap/icons/dragon_chemtech.png",
+
+        elder:
+            "https://raw.communitydragon.org/latest/game/assets/ux/minimap/icons/dragon_elder.png"
+    };
+
+    const dragonNames = {
+        infernal: "Infernal",
+        mountain: "Berg",
+        ocean: "Ozean",
+        cloud: "Wolke",
+        hextech: "Hextech",
+        chemtech: "Chemtech",
+        elder: "Elder"
+    };
+
+    const icon = dragonIcons[dragonType];
+
+    if (!icon) {
+        return;
+    }
+
+    const object = document.createElement("div");
+
+    object.className = "map-object map-object-dragon";
+
+    object.dataset.mapObject = "dragon";
+    object.dataset.dragonType = dragonType;
+    object.dataset.mapObjectId = mapObjectId++;
+
+    object.style.left = `${x}px`;
+    object.style.top = `${y}px`;
+
+    object.title = dragonNames[dragonType] || "Drache";
+
+    const image = document.createElement("img");
+
+    image.src = icon;
+    image.alt = dragonNames[dragonType] || "Drache";
+
+    object.appendChild(image);
+
+    map.appendChild(object);
+
+    makeMapObjectDraggable(object);
+}
 
 /* =========================================
    WARD AUF MAP
