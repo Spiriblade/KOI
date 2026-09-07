@@ -7666,54 +7666,162 @@ async function saveGoogleDocsLink() {
     const status =
         document.getElementById("google-docs-status");
 
-    if (!input || !currentTeam?.id) {
+    if (!input) {
+        console.error(
+            "Google-Docs-Eingabefeld wurde nicht gefunden."
+        );
         return;
     }
 
-    const url = input.value.trim();
+    if (!currentTeam?.id) {
+
+        console.error(
+            "Kein aktuelles Team vorhanden:",
+            currentTeam
+        );
+
+        alert(
+            "Es ist kein Team angemeldet."
+        );
+
+        return;
+    }
+
+    const url =
+        input.value.trim();
 
     if (!url) {
-        alert("Bitte einen Google-Docs-Link eingeben.");
+
+        alert(
+            "Bitte einen Google-Docs-Link eingeben."
+        );
+
         return;
     }
 
     if (!url.startsWith("https://docs.google.com/")) {
-        alert("Bitte einen gültigen Google-Docs-Link eingeben.");
+
+        alert(
+            "Bitte einen gültigen Google-Docs-Link eingeben."
+        );
+
         return;
     }
 
-    const {
-        error
-    } = await supabaseClient
-        .from("team_documents")
-        .upsert(
+
+    console.log(
+        "Google-Docs-Link wird gespeichert..."
+    );
+
+    console.log(
+        "Team:",
+        currentTeam
+    );
+
+    console.log(
+        "Team-ID:",
+        currentTeam.id
+    );
+
+    console.log(
+        "URL:",
+        url
+    );
+
+
+    try {
+
+        const {
+            data,
+            error
+        } = await supabaseClient
+
+            .from("team_documents")
+
+            .upsert(
+                {
+                    team_id:
+                        currentTeam.id,
+
+                    document_url:
+                        url,
+
+                    updated_at:
+                        new Date().toISOString()
+                },
+                {
+                    onConflict:
+                        "team_id"
+                }
+            )
+
+            .select();
+
+
+        console.log(
+            "Google-Docs-Speicherergebnis:",
             {
-                team_id: currentTeam.id,
-                document_url: url,
-                updated_at: new Date().toISOString()
-            },
-            {
-                onConflict: "team_id"
+                data,
+                error
             }
         );
 
-    if (error) {
+
+        if (error) {
+
+            console.error(
+                "Fehler beim Speichern des Google-Docs-Links:",
+                error
+            );
+
+            alert(
+                `Der Google-Docs-Link konnte nicht gespeichert werden.\n\n${error.message || "Unbekannter Fehler"}`
+            );
+
+            return;
+        }
+
+
+        if (!data || data.length === 0) {
+
+            console.warn(
+                "Supabase meldet keinen Fehler, aber es wurde keine Zeile zurückgegeben."
+            );
+
+            alert(
+                "Der Link wurde nicht bestätigt. Bitte Konsole prüfen."
+            );
+
+            return;
+        }
+
+
+        console.log(
+            "Google-Docs-Link erfolgreich gespeichert:",
+            data[0]
+        );
+
+
+        if (status) {
+
+            status.textContent =
+                "Link erfolgreich gespeichert.";
+
+        }
+
+    } catch (error) {
+
         console.error(
-            "Fehler beim Speichern des Google-Docs-Links:",
+            "Unerwarteter Fehler beim Speichern:",
             error
         );
 
         alert(
-            "Der Google-Docs-Link konnte nicht gespeichert werden."
+            "Beim Speichern ist ein unerwarteter Fehler aufgetreten."
         );
 
-        return;
     }
 
-    if (status) {
-        status.textContent =
-            "Link erfolgreich gespeichert.";
-    }
 }
 
 function renderGoogleDocs() {
