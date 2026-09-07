@@ -149,6 +149,115 @@ async function loginWithTeamCode(teamCode) {
 
 }
 
+/* =========================================
+   LOGOUT
+========================================= */
+
+async function logout() {
+
+    try {
+
+        const {
+            error
+        } = await supabaseClient.auth.signOut();
+
+
+        if (error) {
+            throw error;
+        }
+
+
+        /*
+            Lokale Daten zurücksetzen
+        */
+
+        matches = [];
+        currentMatchId = null;
+        currentGameIndex = 0;
+
+
+        /*
+            Login-Bildschirm wieder anzeigen
+        */
+
+        const loginScreen =
+            document.getElementById(
+                "login-screen"
+            );
+
+
+        if (loginScreen) {
+
+            loginScreen.style.display =
+                "flex";
+
+        }
+
+
+        /*
+            Zugangscode-Feld leeren
+        */
+
+        const accessCodeInput =
+            document.getElementById(
+                "team-access-code"
+            );
+
+
+        if (accessCodeInput) {
+
+            accessCodeInput.value = "";
+            accessCodeInput.focus();
+
+        }
+
+
+        /*
+            Eventuelle alte Login-Fehlermeldung entfernen
+        */
+
+        const loginError =
+            document.getElementById(
+                "login-error"
+            );
+
+
+        if (loginError) {
+
+            loginError.hidden = true;
+            loginError.textContent = "";
+
+        }
+
+
+        /*
+            Übersicht wieder als Startseite anzeigen
+        */
+
+        showPage("overview");
+
+    } catch (error) {
+
+        console.error(
+            "Abmelden fehlgeschlagen:",
+            error
+        );
+
+        alert(
+            "Das Abmelden ist fehlgeschlagen."
+        );
+
+    }
+
+}
+
+document
+    .getElementById("logout-btn")
+    ?.addEventListener(
+        "click",
+        logout
+    );
+
 document
     .getElementById("team-login-form")
     ?.addEventListener(

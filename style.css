@@ -2734,3 +2734,43 @@ nav {
     font-size: 13px;
     text-align: center;
 }
+
+/* =========================================
+   LOGOUT BUTTON
+========================================= */
+
+.logout-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    margin-top: auto;
+
+    background: transparent;
+    border: 1px solid #272a31;
+    border-radius: 6px;
+
+    color: #8f949e;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition:
+        background 0.2s ease,
+        color 0.2s ease,
+        border-color 0.2s ease;
+}
+
+.logout-btn span:first-child {
+    font-size: 18px;
+    line-height: 1;
+}
+
+.logout-btn:hover {
+    background: #1c1f25;
+    border-color: #3a3e47;
+    color: #e07878;
+}
