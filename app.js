@@ -2613,248 +2613,420 @@ async function detectChampionFromPortrait(
  * ============================================================
  */
 
-async function detectChampionsFromScreenshot(
-    imageData
-) {
+async function detectChampionsFromScreenshot(imageData) {
 
-    const image =
-        await loadImageForComparison(
-            imageData
-        );
+    console.log("========================================");
+    console.log("CHAMPION-TEST START");
+    console.log("========================================");
 
+    const image = new Image();
 
-    const imageWidth =
-        image.naturalWidth ||
-        image.width;
+    await new Promise((resolve, reject) => {
+        image.onload = resolve;
+        image.onerror = reject;
+        image.src = imageData;
+    });
 
+    const canvas = document.createElement("canvas");
+    canvas.width = image.naturalWidth;
+    canvas.height = image.naturalHeight;
 
-    const imageHeight =
-        image.naturalHeight ||
-        image.height;
+    const ctx = canvas.getContext("2d", {
+        willReadFrequently: true
+    });
 
+    ctx.drawImage(
+        image,
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
 
     /*
-     * Referenz:
+     * Die Champions, die wir auf deinem Test-Screenshot
+     * bereits kennen.
      *
-     * 960 × 549
+     * Damit vergleichen wir direkt Screenshot-Portrait
+     * gegen Data-Dragon-Portrait.
      */
-    const referenceWidth =
-        960;
 
+    const knownChampions = {
+        koi: [
+            "Nautilus",
+            "Sett",
+            "Zac",
+            "Viktor",
+            "Kai'Sa"
+        ],
 
-    const referenceHeight =
-        549;
-
-
-    const scaleX =
-        imageWidth /
-        referenceWidth;
-
-
-    const scaleY =
-        imageHeight /
-        referenceHeight;
-
-
-    /*
-     * ============================================
-     * PORTRAIT-KOORDINATEN
-     * ============================================
-     *
-     * Diese Werte entsprechen weiterhin deinem
-     * ursprünglichen Screenshot.
-     */
-    const portraitX =
-        102;
-
-
-    const portraitSize =
-        40;
-
-
-    const team1FirstY =
-        52;
-
-
-    const team2FirstY =
-        318;
-
-
-    const rowSpacing =
-        42;
-
-
-    const scaledPortraitX =
-        portraitX *
-        scaleX;
-
-
-    const scaledPortraitSize =
-        portraitSize *
-        Math.min(
-            scaleX,
-            scaleY
-        );
-
-
-    const scaledTeam1FirstY =
-        team1FirstY *
-        scaleY;
-
-
-    const scaledTeam2FirstY =
-        team2FirstY *
-        scaleY;
-
-
-    const scaledRowSpacing =
-        rowSpacing *
-        scaleY;
-
-
-    console.log(
-        "===================================="
-    );
-
-
-    console.log(
-        "LOKALE CHAMPION-ERKENNUNG"
-    );
-
-
-    console.log(
-        "Screenshot:",
-        imageWidth,
-        "x",
-        imageHeight
-    );
-
-
-    console.log(
-        "Portrait X:",
-        scaledPortraitX
-    );
-
-
-    console.log(
-        "Portrait Größe:",
-        scaledPortraitSize
-    );
-
-
-    console.log(
-        "Team 1 Y:",
-        scaledTeam1FirstY
-    );
-
-
-    console.log(
-        "Team 2 Y:",
-        scaledTeam2FirstY
-    );
-
-
-    console.log(
-        "===================================="
-    );
-
-
-    /*
-     * Championbilder vorbereiten.
-     */
-    const preparedChampions =
-        await prepareChampionComparisonImages();
-
-
-    const result = {
-
-        koi:
-            new Array(5).fill(""),
-
-        enemy:
-            new Array(5).fill("")
-
+        enemy: [
+            "Ornn",
+            "Viego",
+            "Xerath",
+            "Zeri",
+            "Taric"
+        ]
     };
 
-
     /*
-     * ============================================
-     * TEAM 1 / KOI
-     * ============================================
+     * Screenshot:
+     * 960 × 549
+     *
+     * Portrait:
+     * ungefähr 40 × 40
+     *
+     * Diese Werte entsprechen unserem bisherigen
+     * Screenshot-Crop.
      */
 
-    for (
-        let i = 0;
-        i < 5;
-        i++
-    ) {
+    const referenceWidth = 960;
+    const referenceHeight = 549;
 
-        const y =
-            scaledTeam1FirstY +
-            i *
-            scaledRowSpacing;
+    const portraitSize = 40;
 
+    const koiX = 102;
+    const koiFirstY = 52;
 
-        result.koi[i] =
-            await detectChampionFromPortrait(
-                image,
-                scaledPortraitX,
-                y,
-                scaledPortraitSize,
-                preparedChampions
+    const enemyX = 102;
+    const enemyFirstY = 318;
+
+    const rowSpacing = 42;
+
+    function getScreenshotPortrait(x, y) {
+
+        const scaleX =
+            canvas.width / referenceWidth;
+
+        const scaleY =
+            canvas.height / referenceHeight;
+
+        const realX =
+            Math.round(x * scaleX);
+
+        const realY =
+            Math.round(y * scaleY);
+
+        const realSize =
+            Math.round(
+                portraitSize *
+                Math.min(scaleX, scaleY)
             );
 
+        const portraitCanvas =
+            document.createElement("canvas");
+
+        portraitCanvas.width =
+            realSize;
+
+        portraitCanvas.height =
+            realSize;
+
+        const portraitCtx =
+            portraitCanvas.getContext("2d", {
+                willReadFrequently: true
+            });
+
+        portraitCtx.drawImage(
+            image,
+            realX,
+            realY,
+            realSize,
+            realSize,
+            0,
+            0,
+            realSize,
+            realSize
+        );
+
+        return portraitCanvas;
     }
 
+    function loadImage(url) {
+
+        return new Promise((resolve, reject) => {
+
+            const img =
+                new Image();
+
+            img.crossOrigin = "anonymous";
+
+            img.onload = () => {
+                resolve(img);
+            };
+
+            img.onerror = () => {
+                reject(
+                    new Error(
+                        "Bild konnte nicht geladen werden: " +
+                        url
+                    )
+                );
+            };
+
+            img.src = url;
+        });
+    }
+
+    function canvasFromImage(
+        img,
+        size = 40
+    ) {
+
+        const c =
+            document.createElement("canvas");
+
+        c.width = size;
+        c.height = size;
+
+        const cctx =
+            c.getContext("2d", {
+                willReadFrequently: true
+            });
+
+        cctx.drawImage(
+            img,
+            0,
+            0,
+            size,
+            size
+        );
+
+        return c;
+    }
+
+    function compareCanvases(
+        canvasA,
+        canvasB
+    ) {
+
+        const size = 40;
+
+        const a =
+            document.createElement("canvas");
+
+        const b =
+            document.createElement("canvas");
+
+        a.width = size;
+        a.height = size;
+
+        b.width = size;
+        b.height = size;
+
+        const actx =
+            a.getContext("2d", {
+                willReadFrequently: true
+            });
+
+        const bctx =
+            b.getContext("2d", {
+                willReadFrequently: true
+            });
+
+        actx.drawImage(
+            canvasA,
+            0,
+            0,
+            size,
+            size
+        );
+
+        bctx.drawImage(
+            canvasB,
+            0,
+            0,
+            size,
+            size
+        );
+
+        const dataA =
+            actx.getImageData(
+                0,
+                0,
+                size,
+                size
+            ).data;
+
+        const dataB =
+            bctx.getImageData(
+                0,
+                0,
+                size,
+                size
+            ).data;
+
+        let difference = 0;
+
+        for (
+            let i = 0;
+            i < dataA.length;
+            i += 4
+        ) {
+
+            const dr =
+                Math.abs(
+                    dataA[i] -
+                    dataB[i]
+                );
+
+            const dg =
+                Math.abs(
+                    dataA[i + 1] -
+                    dataB[i + 1]
+                );
+
+            const db =
+                Math.abs(
+                    dataA[i + 2] -
+                    dataB[i + 2]
+                );
+
+            difference +=
+                (dr + dg + db) / 3;
+        }
+
+        const pixelCount =
+            size * size;
+
+        const averageDifference =
+            difference /
+            pixelCount;
+
+        /*
+         * 0 = komplett identisch
+         * 255 = maximal unterschiedlich
+         */
+
+        const similarity =
+            Math.max(
+                0,
+                100 -
+                (averageDifference / 255 * 100)
+            );
+
+        return similarity;
+    }
+
+    async function testTeam(
+        teamName,
+        champions,
+        x,
+        firstY
+    ) {
+
+        console.log("");
+        console.log(
+            "========== " +
+            teamName +
+            " =========="
+        );
+
+        for (
+            let i = 0;
+            i < champions.length;
+            i++
+        ) {
+
+            const champion =
+                champions[i];
+
+            const y =
+                firstY +
+                (i * rowSpacing);
+
+            const screenshotCanvas =
+                getScreenshotPortrait(
+                    x,
+                    y
+                );
+
+            const championImageUrl =
+                getChampionImage(
+                    champion
+                );
+
+            console.log(
+                `${champion}: Data-Dragon URL`,
+                championImageUrl
+            );
+
+            if (!championImageUrl) {
+
+                console.error(
+                    "Kein Data-Dragon-Bild für:",
+                    champion
+                );
+
+                continue;
+            }
+
+            try {
+
+                const championImage =
+                    await loadImage(
+                        championImageUrl
+                    );
+
+                const championCanvas =
+                    canvasFromImage(
+                        championImage,
+                        40
+                    );
+
+                const similarity =
+                    compareCanvases(
+                        screenshotCanvas,
+                        championCanvas
+                    );
+
+                console.log(
+                    `${champion}: ${similarity.toFixed(2)}% Ähnlichkeit`
+                );
+
+            } catch (error) {
+
+                console.error(
+                    "Fehler bei",
+                    champion,
+                    error
+                );
+            }
+        }
+    }
+
+    await testTeam(
+        "KOI",
+        knownChampions.koi,
+        koiX,
+        koiFirstY
+    );
+
+    await testTeam(
+        "ENEMY",
+        knownChampions.enemy,
+        enemyX,
+        enemyFirstY
+    );
+
+    console.log("");
+    console.log("========================================");
+    console.log("CHAMPION-TEST ENDE");
+    console.log("========================================");
 
     /*
-     * ============================================
-     * TEAM 2 / ENEMY
-     * ============================================
+     * Für den normalen Ablauf geben wir zunächst
+     * leere Ergebnisse zurück.
+     *
+     * WICHTIG:
+     * Dieser Test soll die bisherige Erkennung
+     * noch NICHT ersetzen.
      */
 
-    for (
-        let i = 0;
-        i < 5;
-        i++
-    ) {
-
-        const y =
-            scaledTeam2FirstY +
-            i *
-            scaledRowSpacing;
-
-
-        result.enemy[i] =
-            await detectChampionFromPortrait(
-                image,
-                scaledPortraitX,
-                y,
-                scaledPortraitSize,
-                preparedChampions
-            );
-
-    }
-
-
-    console.log(
-        "===================================="
-    );
-
-
-    console.log(
-        "SELBST ERKANNTE CHAMPIONS:",
-        result
-    );
-
-
-    console.log(
-        "===================================="
-    );
-
-
-    return result;
-
+    return {
+        koi: [],
+        enemy: []
+    };
 }
 
 /* =========================================
