@@ -3257,201 +3257,70 @@ if (gametimeInput) {
  * SCREENSHOT-SPIELER NACH ERKANNTER ROLLE SORTIEREN
  * =========================================
  *
- * Die Edge Function erkennt die tatsächliche
- * Rolle aus dem Role-Quest / Rollenindikator
- * im Screenshot.
+ * Die KI hat für jeden Spieler die tatsächliche
+ * Rolle aus dem Screenshot erkannt.
  *
- * Reihenfolge:
- * Top
- * Jungle
- * Mid
- * ADC
- * Support
+ * Die Champion-Erkennung arbeitet weiterhin mit
+ * der ursprünglichen Screenshot-Reihenfolge.
  *
- * Die Position der Spieler im Screenshot
- * wird NICHT als Rolle interpretiert.
+ * Deshalb werden Spieler und Champion zuerst
+ * miteinander verbunden und anschließend
+ * gemeinsam nach Rolle sortiert.
  */
-
-function sortScreenshotPlayers(players) {
-
-    if (!Array.isArray(players)) {
-        return [];
-    }
-
-    const roleOrder = {
-        "Top": 0,
-        "Jungle": 1,
-        "Mid": 2,
-        "ADC": 3,
-        "Support": 4
-    };
-
-    return players
-        .map((player, originalIndex) => ({
-            player,
-            originalIndex
-        }))
-        .sort((a, b) => {
-
-            const roleA =
-                roleOrder[a.player?.role];
-
-            const roleB =
-                roleOrder[b.player?.role];
-
-
-            /*
-             * Beide Rollen erkannt:
-             * Nach Top → Jungle → Mid → ADC → Support
-             */
-            if (
-                roleA !== undefined &&
-                roleB !== undefined
-            ) {
-                return roleA - roleB;
-            }
-
-
-            /*
-             * Nur A hat eine erkannte Rolle:
-             * A kommt nach vorne.
-             */
-            if (
-                roleA !== undefined &&
-                roleB === undefined
-            ) {
-                return -1;
-            }
-
-
-            /*
-             * Nur B hat eine erkannte Rolle:
-             * B kommt nach vorne.
-             */
-            if (
-                roleA === undefined &&
-                roleB !== undefined
-            ) {
-                return 1;
-            }
-
-
-            /*
-             * Beide Rollen unbekannt:
-             * ursprüngliche Screenshot-Reihenfolge
-             * beibehalten.
-             */
-            return (
-                a.originalIndex -
-                b.originalIndex
-            );
-
-        })
-        .map(item => item.player);
-}
 
 
 /*
- * Spielerwerte in den Editor schreiben.
- *
- * Nicht erkannte Zahlen werden bewusst
- * mit 0 gefüllt.
+ * KOI sortieren
  */
+const sortedKoi =
+    sortScreenshotPlayers(
+        game.koi,
+        detectedChampions.koi
+    );
+
+
+/*
+ * Gegner sortieren
+ */
+const sortedEnemy =
+    sortScreenshotPlayers(
+        game.enemy,
+        detectedChampions.enemy
+    );
+
+
+/*
+ * Kontrolle in der Browser-Konsole.
+ */
+console.log(
+    "KOI nach Rolle sortiert:",
+    sortedKoi
+);
+
+console.log(
+    "Gegner nach Rolle sortiert:",
+    sortedEnemy
+);
+
+
 /*
  * =========================================
- * SCREENSHOT-DATEN IN GAME-EDITOR SCHREIBEN
+ * SORTIERTE SPIELER IN GAME-EDITOR SCHREIBEN
  * =========================================
  */
 
-function fillScreenshotTeam(
-    team,
-    players,
-    detectedChampions = []
-) {
-    if (!Array.isArray(players)) {
-        return;
-    }
+fillScreenshotTeam(
+    "koi",
+    sortedKoi.players,
+    sortedKoi.champions
+);
 
-    players
-        .slice(0, 5)
-        .forEach((player, index) => {
 
-            const prefix =
-                team === "koi"
-                    ? "koi"
-                    : "enemy";
-
-            const nameInput =
-                document.querySelector(
-                    `.${prefix}-name[data-index="${index}"]`
-                );
-
-            const championInput =
-                document.querySelector(
-                    `.${prefix}-champion[data-index="${index}"]`
-                );
-
-            const killsInput =
-                document.querySelector(
-                    `.${prefix}-kills[data-index="${index}"]`
-                );
-
-            const deathsInput =
-                document.querySelector(
-                    `.${prefix}-deaths[data-index="${index}"]`
-                );
-
-            const assistsInput =
-                document.querySelector(
-                    `.${prefix}-assists[data-index="${index}"]`
-                );
-
-            const damageInput =
-                document.querySelector(
-                    `.${prefix}-damage[data-index="${index}"]`
-                );
-
-            const csInput =
-                document.querySelector(
-                    `.${prefix}-cs[data-index="${index}"]`
-                );
-
-            if (nameInput) {
-                nameInput.value =
-                    player?.name || "";
-            }
-
-            if (championInput) {
-                championInput.value =
-                    detectedChampions[index] || "";
-            }
-
-            if (killsInput) {
-                killsInput.value =
-                    player?.kills ?? 0;
-            }
-
-            if (deathsInput) {
-                deathsInput.value =
-                    player?.deaths ?? 0;
-            }
-
-            if (assistsInput) {
-                assistsInput.value =
-                    player?.assists ?? 0;
-            }
-
-            if (damageInput) {
-                damageInput.value =
-                    player?.damage ?? 0;
-            }
-
-            if (csInput) {
-                csInput.value =
-                    player?.cs ?? 0;
-            }
-        });
-}
+fillScreenshotTeam(
+    "enemy",
+    sortedEnemy.players,
+    sortedEnemy.champions
+);
 
 
 /*
