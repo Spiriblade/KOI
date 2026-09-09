@@ -1005,6 +1005,408 @@ function resetMatchEditor() {
 
 }
 
+let screenshotChampionCache = null;
+
+
+/*
+ * ============================================================
+ * Championliste laden
+ * ============================================================
+ */
+
+async function loadScreenshotChampions() {
+    if (screenshotChampionCache) {
+        return screenshotChampionCache;
+    }
+
+    const response = await fetch(
+        "https://ddragon.leagueoflegends.com/cdn/16.17.1/data/en_US/champion.json"
+    );
+
+    if (!response.ok) {
+        throw new Error("Championliste konnte nicht geladen werden.");
+    }
+
+    const data = await response.json();
+
+    screenshotChampionCache = Object.values(data.data || {}).map(champion => ({
+        name: champion.name,
+        image: `https://ddragon.leagueoflegends.com/cdn/16.17.1/img/champion/${champion.image.full}`
+    }));
+
+    return screenshotChampionCache;
+}
+
+
+/*
+ * ============================================================
+ * Bild laden
+ * ============================================================
+ */
+
+function loadImageForComparison(src) {
+    return new Promise((resolve, reject) => {
+        const image = new Image();
+
+        image.crossOrigin = "anonymous";
+
+        image.onload = () => resolve(image);
+
+        image.onerror = () => {
+            reject(
+                new Error(
+                    `Championbild konnte nicht geladen werden: ${src}`
+                )
+            );
+        };
+
+        image.src = src;
+    });
+}
+
+
+/*
+ * ============================================================
+ * Bilddaten eines Championportraits vorbereiten
+ * ============================================================
+ */
+
+function getImagePixels(image, size = 32) {
+    const canvas = document.createElement("canvas");
+
+    canvas.width = size;
+    canvas.height = size;
+
+    const ctx = canvas.getContext("2d", {
+        willReadFrequently: true
+    });
+
+    ctx.drawImage(
+        image,
+        0,
+        0,
+        size,
+        size
+    );
+
+    return ctx.getImageData(
+        0,
+        0,
+        size,
+        size
+    ).data;
+}
+
+
+/*
+ * ============================================================
+ * Ähnlichkeit zweier Bilder berechnen
+ *
+ * Je kleiner der Wert, desto ähnlicher.
+ * ============================================================
+ */
+
+function compareChampionImages(
+    screenshotPixels,
+    championPixels,
+    size = 32
+) {
+    let totalDifference = 0;
+    let usedPixels = 0;
+
+    const center = size / 2;
+    const radius = size * 0.43;
+
+    for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+
+            const dx = x - center;
+            const dy = y - center;
+
+            /*
+             * Nur den inneren Portraitbereich vergleichen.
+             *
+             * Dadurch ignorieren wir den goldenen Rand
+             * des Championportraits.
+             */
+
+            if (
+                Math.sqrt(
+                    dx * dx +
+                    dy * dy
+                ) > radius
+            ) {
+                continue;
+            }
+
+            const index =
+                (y * size + x) * 4;
+
+            const r1 =
+                screenshotPixels[index];
+
+            const g1 =
+                screenshotPixels[index + 1];
+
+            const b1 =
+                screenshotPixels[index + 2];
+
+            const r2 =
+                championPixels[index];
+
+            const g2 =
+                championPixels[index + 1];
+
+            const b2 =
+                championPixels[index + 2];
+
+            const difference =
+                Math.abs(r1 - r2) +
+                Math.abs(g1 - g2) +
+                Math.abs(b1 - b2);
+
+            totalDifference += difference;
+
+            usedPixels++;
+        }
+    }
+
+    if (usedPixels === 0) {
+        return Infinity;
+    }
+
+    return totalDifference / usedPixels;
+}
+
+
+/*
+ * ============================================================
+ * Championbilder vorbereiten
+ * ============================================================
+ */
+
+async function prepareChampionComparisonImages() {
+    const champions =
+        await loadScreenshotChampions();
+
+    const prepared = [];
+
+    for (const champion of champions) {
+        try {
+            const image =
+                await loadImageForComparison(
+                    champion.image
+                );
+
+            prepared.push({
+                name: champion.name,
+                pixels: getImagePixels(
+                    image,
+                    32
+                )
+            });
+
+        } catch (error) {
+            console.warn(
+                "Championbild übersprungen:",
+                champion.name,
+                error
+            );
+        }
+    }
+
+    return prepared;
+}
+
+
+/*
+ * ============================================================
+ * EINEN CHAMPION AUS EINEM PORTRAIT ERKENNEN
+ * ============================================================
+ */
+
+async function detectChampionFromPortrait(
+    portraitCanvas,
+    preparedChampions
+) {
+    const ctx =
+        portraitCanvas.getContext(
+            "2d",
+            {
+                willReadFrequently: true
+            }
+        );
+
+    const screenshotPixels =
+        ctx.getImageData(
+            0,
+            0,
+            portraitCanvas.width,
+            portraitCanvas.height
+        ).data;
+
+    let bestChampion = "";
+    let bestScore = Infinity;
+
+    for (const champion of preparedChampions) {
+        const score =
+            compareChampionImages(
+                screenshotPixels,
+                champion.pixels,
+                portraitCanvas.width
+            );
+
+        if (score < bestScore) {
+            bestScore = score;
+            bestChampion = champion.name;
+        }
+    }
+
+    console.log(
+        "Champion erkannt:",
+        bestChampion,
+        "Score:",
+        bestScore
+    );
+
+    return bestChampion;
+}
+
+
+/*
+ * ============================================================
+ * Championportraits aus dem LoL-Screenshot ausschneiden
+ * ============================================================
+ */
+
+async function detectChampionsFromScreenshot(
+    imageData
+) {
+    const image =
+        await loadImageForComparison(
+            imageData
+        );
+
+    /*
+     * Dein aktueller LoL-Endscreen ist 960 × 549.
+     *
+     * Die Werte werden auf die tatsächliche
+     * Screenshotgröße skaliert.
+     */
+
+    const scaleX =
+        image.width / 960;
+
+    const scaleY =
+        image.height / 549;
+
+    /*
+     * Position des Championportraits.
+     *
+     * Aus deinem Screenshot:
+     *
+     * X ≈ 102
+     * Y erste Zeile ≈ 52
+     *
+     * Die fünf Zeilen haben ca. 42 Pixel Abstand.
+     */
+
+    const portraitX = 102;
+    const portraitSize = 40;
+
+    const team1FirstY = 52;
+    const team2FirstY = 318;
+
+    const rowSpacing = 42;
+
+    const positions = [];
+
+    for (let i = 0; i < 5; i++) {
+        positions.push({
+            team: "koi",
+            index: i,
+            x: portraitX,
+            y:
+                team1FirstY +
+                i * rowSpacing
+        });
+    }
+
+    for (let i = 0; i < 5; i++) {
+        positions.push({
+            team: "enemy",
+            index: i,
+            x: portraitX,
+            y:
+                team2FirstY +
+                i * rowSpacing
+        });
+    }
+
+    console.log(
+        "Bereite Championbilder vor..."
+    );
+
+    const preparedChampions =
+        await prepareChampionComparisonImages();
+
+    const result = {
+        koi: new Array(5).fill(""),
+        enemy: new Array(5).fill("")
+    };
+
+    for (const position of positions) {
+
+        const canvas =
+            document.createElement(
+                "canvas"
+            );
+
+        canvas.width = 32;
+        canvas.height = 32;
+
+        const ctx =
+            canvas.getContext(
+                "2d",
+                {
+                    willReadFrequently: true
+                }
+            );
+
+        ctx.drawImage(
+            image,
+
+            position.x * scaleX,
+            position.y * scaleY,
+            portraitSize * scaleX,
+            portraitSize * scaleY,
+
+            0,
+            0,
+            32,
+            32
+        );
+
+        const champion =
+            await detectChampionFromPortrait(
+                canvas,
+                preparedChampions
+            );
+
+        result[
+            position.team
+        ][position.index] = champion;
+    }
+
+    console.log(
+        "SELBST ERKANNTE CHAMPIONS:",
+        result
+    );
+
+    return result;
+}
+
+
 /* =========================================
    NEUES MATCH
 ========================================= */
@@ -1171,19 +1573,23 @@ console.log(
 
 const game = data.game;
 
+console.log(
+    "KI ERKANNT:",
+    JSON.stringify(game, null, 2)
+);
 
-/*
- * Neues Match starten.
- *
- * Der Benutzer kann danach weiterhin
- * Datum, Gegner, Matchart usw. eintragen.
- */
+const detectedChampions =
+    await detectChampionsFromScreenshot(
+        imageData
+    );
+
+console.log(
+    "CHAMPIONS ERKANNT:",
+    detectedChampions
+);
+
 startNewMatch();
 
-
-/*
- * Game 1 auswählen.
- */
 currentGameIndex = 0;
 
 updateGameTabs();
@@ -1497,68 +1903,107 @@ function sortScreenshotKoiPlayers(players) {
  * =========================================
  */
 
-function fillScreenshotTeam(team, players) {
+function fillScreenshotTeam(
+    team,
+    players,
+    detectedChampions = []
+) {
     if (!Array.isArray(players)) {
         return;
     }
 
-    players.slice(0, 5).forEach((player, index) => {
-        const prefix = team === "koi" ? "koi" : "enemy";
+    players
+        .slice(0, 5)
+        .forEach((player, index) => {
 
-        const nameInput = document.querySelector(`.${prefix}-name[data-index="${index}"]`);
-        const championInput = document.querySelector(`.${prefix}-champion[data-index="${index}"]`);
-        const killsInput = document.querySelector(`.${prefix}-kills[data-index="${index}"]`);
-        const deathsInput = document.querySelector(`.${prefix}-deaths[data-index="${index}"]`);
-        const assistsInput = document.querySelector(`.${prefix}-assists[data-index="${index}"]`);
-        const damageInput = document.querySelector(`.${prefix}-damage[data-index="${index}"]`);
-        const csInput = document.querySelector(`.${prefix}-cs[data-index="${index}"]`);
+            const prefix =
+                team === "koi"
+                    ? "koi"
+                    : "enemy";
 
-        if (nameInput) {
-            nameInput.value = player?.name || "";
-        }
+            const nameInput =
+                document.querySelector(
+                    `.${prefix}-name[data-index="${index}"]`
+                );
 
-        if (championInput) {
-            championInput.value = player?.champion || "";
-        }
+            const championInput =
+                document.querySelector(
+                    `.${prefix}-champion[data-index="${index}"]`
+                );
 
-        if (killsInput) {
-            killsInput.value = player?.kills ?? 0;
-        }
+            const killsInput =
+                document.querySelector(
+                    `.${prefix}-kills[data-index="${index}"]`
+                );
 
-        if (deathsInput) {
-            deathsInput.value = player?.deaths ?? 0;
-        }
+            const deathsInput =
+                document.querySelector(
+                    `.${prefix}-deaths[data-index="${index}"]`
+                );
 
-        if (assistsInput) {
-            assistsInput.value = player?.assists ?? 0;
-        }
+            const assistsInput =
+                document.querySelector(
+                    `.${prefix}-assists[data-index="${index}"]`
+                );
 
-        if (damageInput) {
-            damageInput.value = player?.damage ?? 0;
-        }
+            const damageInput =
+                document.querySelector(
+                    `.${prefix}-damage[data-index="${index}"]`
+                );
 
-        if (csInput) {
-            csInput.value = player?.cs ?? 0;
-        }
-    });
+            const csInput =
+                document.querySelector(
+                    `.${prefix}-cs[data-index="${index}"]`
+                );
+
+            if (nameInput) {
+                nameInput.value =
+                    player?.name || "";
+            }
+
+            if (championInput) {
+                championInput.value =
+                    detectedChampions[index] || "";
+            }
+
+            if (killsInput) {
+                killsInput.value =
+                    player?.kills ?? 0;
+            }
+
+            if (deathsInput) {
+                deathsInput.value =
+                    player?.deaths ?? 0;
+            }
+
+            if (assistsInput) {
+                assistsInput.value =
+                    player?.assists ?? 0;
+            }
+
+            if (damageInput) {
+                damageInput.value =
+                    player?.damage ?? 0;
+            }
+
+            if (csInput) {
+                csInput.value =
+                    player?.cs ?? 0;
+            }
+        });
 }
 
 
-/*
- * KOI-Spieler füllen.
- */
 fillScreenshotTeam(
     "koi",
-    game.koi
+    game.koi,
+    detectedChampions.koi
 );
 
-
-/*
- * Gegner füllen.
- */
 fillScreenshotTeam(
     "enemy",
-    game.enemy
+    game.enemy,
+    detectedChampions.enemy
 );
 
 
