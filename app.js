@@ -3251,6 +3251,107 @@ if (gametimeInput) {
 
 }
 
+function sortScreenshotPlayers(
+    players,
+    detectedChampions = []
+) {
+    if (!Array.isArray(players)) {
+        return {
+            players: [],
+            champions: []
+        };
+    }
+
+    const roleOrder = {
+        "Top": 0,
+        "Jungle": 1,
+        "Mid": 2,
+        "ADC": 3,
+        "Support": 4
+    };
+
+    /*
+     * Spieler und Champion werden zuerst miteinander
+     * verbunden.
+     *
+     * Dadurch bleibt der Champion IMMER beim richtigen
+     * Spieler, auch wenn wir anschließend nach Rolle sortieren.
+     */
+    const combinedPlayers = players
+        .slice(0, 5)
+        .map((player, originalIndex) => {
+            return {
+                player: player,
+
+                champion:
+                    detectedChampions?.[originalIndex] || "",
+
+                originalIndex:
+                    originalIndex
+            };
+        });
+
+    /*
+     * Jetzt nach der von der KI erkannten Rolle sortieren:
+     *
+     * Top
+     * Jungle
+     * Mid
+     * ADC
+     * Support
+     */
+    combinedPlayers.sort((a, b) => {
+        const roleA =
+            roleOrder[a.player?.role];
+
+        const roleB =
+            roleOrder[b.player?.role];
+
+        // Beide haben eine bekannte Rolle
+        if (
+            roleA !== undefined &&
+            roleB !== undefined
+        ) {
+            return roleA - roleB;
+        }
+
+        // A hat Rolle, B nicht
+        if (
+            roleA !== undefined &&
+            roleB === undefined
+        ) {
+            return -1;
+        }
+
+        // B hat Rolle, A nicht
+        if (
+            roleA === undefined &&
+            roleB !== undefined
+        ) {
+            return 1;
+        }
+
+        // Beide unbekannt:
+        // ursprüngliche Reihenfolge behalten
+        return (
+            a.originalIndex -
+            b.originalIndex
+        );
+    });
+
+    return {
+        players:
+            combinedPlayers.map(
+                item => item.player
+            ),
+
+        champions:
+            combinedPlayers.map(
+                item => item.champion
+            )
+    };
+}
+
 
 /*
  * =========================================
