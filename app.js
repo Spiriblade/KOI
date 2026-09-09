@@ -1264,13 +1264,16 @@ function createImageFeatures(
         );
 
 
+    /*
+     * ============================================
+     * GRAUSTUFEN
+     * ============================================
+     */
+
     let averageBrightness =
         0;
 
 
-    /*
-     * RGB -> Graustufe.
-     */
     for (
         let y = 0;
         y < size;
@@ -1327,12 +1330,12 @@ function createImageFeatures(
 
 
     /*
-     * Helligkeit normalisieren.
-     *
-     * Dadurch sind Screenshots mit leicht
-     * anderer Helligkeit weniger problematisch.
+     * ============================================
+     * HELLIGKEIT NORMALISIEREN
+     * ============================================
      */
-    let brightnessVariance =
+
+    let variance =
         0;
 
 
@@ -1347,7 +1350,7 @@ function createImageFeatures(
             averageBrightness;
 
 
-        brightnessVariance +=
+        variance +=
             difference *
             difference;
 
@@ -1356,7 +1359,7 @@ function createImageFeatures(
 
     const standardDeviation =
         Math.sqrt(
-            brightnessVariance /
+            variance /
             grayscale.length
         ) || 1;
 
@@ -1384,11 +1387,18 @@ function createImageFeatures(
 
 
     /*
-     * Kantenbild erzeugen.
-     *
-     * Sobel-ähnlicher Vergleich.
+     * ============================================
+     * GRADIENTEN BERECHNEN
+     * ============================================
      */
-    const edges =
+
+    const gradientMagnitude =
+        new Float32Array(
+            size * size
+        );
+
+
+    const gradientAngle =
         new Float32Array(
             size * size
         );
@@ -1475,13 +1485,58 @@ function createImageFeatures(
                 p22;
 
 
-            edges[
-                y * size + x
-            ] =
+            const magnitude =
                 Math.sqrt(
                     gx * gx +
                     gy * gy
                 );
+
+
+            /*
+             * Für HOG brauchen wir die Richtung
+             * der Kante.
+             *
+             * 0 bis PI, weil eine Kante in
+             * entgegengesetzter Richtung dieselbe
+             * Struktur darstellt.
+             */
+            let angle =
+                Math.atan2(
+                    gy,
+                    gx
+                );
+
+
+            if (
+                angle < 0
+            ) {
+
+                angle +=
+                    Math.PI;
+
+            }
+
+
+            if (
+                angle >= Math.PI
+            ) {
+
+                angle -=
+                    Math.PI;
+
+            }
+
+
+            gradientMagnitude[
+                y * size + x
+            ] =
+                magnitude;
+
+
+            gradientAngle[
+                y * size + x
+            ] =
+                angle;
 
         }
 
@@ -1489,75 +1544,171 @@ function createImageFeatures(
 
 
     /*
-     * Kanten normalisieren.
+     * ============================================
+     * HOG / FORMFEATURES
+     * ============================================
+     *
+     * Das Bild wird in kleine Zellen aufgeteilt.
+     *
+     * Pro Zelle speichern wir, aus welcher Richtung
+     * die Kanten kommen.
+     *
+     * Das ist wesentlich robuster gegenüber:
+     *
+     * - anderer Helligkeit
+     * - leicht anderer Farbe
+     * - kleinen Verschiebungen
      */
-    let edgeAverage =
-        0;
+
+    const cellSize =
+        4;
+
+
+    const bins =
+        9;
+
+
+    const hog =
+        [];
 
 
     for (
-        let i = 0;
-        i < edges.length;
-        i++
+        let cellY = 0;
+        cellY < size;
+        cellY += cellSize
     ) {
 
-        edgeAverage +=
-            edges[i];
+        for (
+            let cellX = 0;
+            cellX < size;
+            cellX += cellSize
+        ) {
 
-    }
-
-
-    edgeAverage /=
-        edges.length;
-
-
-    let edgeVariance =
-        0;
+            const histogram =
+                new Float32Array(
+                    bins
+                );
 
 
-    for (
-        let i = 0;
-        i < edges.length;
-        i++
-    ) {
+            for (
+                let y = cellY;
+                y < Math.min(
+                    cellY + cellSize,
+                    size - 1
+                );
+                y++
+            ) {
 
-        const difference =
-            edges[i] -
-            edgeAverage;
+                for (
+                    let x = cellX;
+                    x < Math.min(
+                        cellX + cellSize,
+                        size - 1
+                    );
+                    x++
+                ) {
 
-
-        edgeVariance +=
-            difference *
-            difference;
-
-    }
-
-
-    const edgeStandardDeviation =
-        Math.sqrt(
-            edgeVariance /
-            edges.length
-        ) || 1;
+                    const index =
+                        y * size +
+                        x;
 
 
-    const normalizedEdges =
-        new Float32Array(
-            size * size
-        );
+                    const magnitude =
+                        gradientMagnitude[
+                            index
+                        ];
 
 
-    for (
-        let i = 0;
-        i < edges.length;
-        i++
-    ) {
+                    const angle =
+                        gradientAngle[
+                            index
+                        ];
 
-        normalizedEdges[i] =
-            (
-                edges[i] -
-                edgeAverage
-            ) /
-            edgeStandardDeviation;
+
+                    if (
+                        magnitude <= 0
+                    ) {
+
+                        continue;
+
+                    }
+
+
+                    const binFloat =
+                        (
+                            angle /
+                            Math.PI
+                        ) *
+                        bins;
+
+
+                    const bin =
+                        Math.min(
+                            bins - 1,
+                            Math.floor(
+                                binFloat
+                            )
+                        );
+
+
+                    histogram[bin] +=
+                        magnitude;
+
+                }
+
+            }
+
+
+            /*
+             * Histogramm normalisieren.
+             */
+            let total =
+                0;
+
+
+            for (
+                let i = 0;
+                i < histogram.length;
+                i++
+            ) {
+
+                total +=
+                    histogram[i];
+
+            }
+
+
+            if (
+                total > 0
+            ) {
+
+                for (
+                    let i = 0;
+                    i < histogram.length;
+                    i++
+                ) {
+
+                    histogram[i] /=
+                        total;
+
+                }
+
+            }
+
+
+            for (
+                let i = 0;
+                i < histogram.length;
+                i++
+            ) {
+
+                hog.push(
+                    histogram[i]
+                );
+
+            }
+
+        }
 
     }
 
@@ -1570,7 +1721,10 @@ function createImageFeatures(
             normalizedGray,
 
         edges:
-            normalizedEdges
+            gradientMagnitude,
+
+        hog:
+            new Float32Array(hog)
 
     };
 
@@ -1914,7 +2068,10 @@ async function prepareChampionComparisonImages() {
                     features.grayscale,
 
                 edges:
-                    features.edges
+                    features.edges,
+
+                hog:
+                    features.hog
 
             });
 
@@ -2140,21 +2297,16 @@ async function detectChampionFromPortrait(
         null;
 
 
-    /*
-     * Wir merken uns zusätzlich die
-     * besten Kandidaten.
-     *
-     * Das hilft uns beim Testen zu sehen,
-     * ob z.B. Zeri nur knapp gegen Vladimir
-     * verliert oder komplett falsch liegt.
-     */
     const candidateScores =
         [];
 
 
     /*
-     * Jeden möglichen Portrait-Ausschnitt testen.
+     * ============================================
+     * ALLE PORTRAIT-ZUSCHNITTE TESTEN
+     * ============================================
      */
+
     for (
         const variant
         of variants
@@ -2185,18 +2337,22 @@ async function detectChampionFromPortrait(
 
 
         /*
-         * Gegen alle Champions vergleichen.
+         * ============================================
+         * GEGEN ALLE CHAMPIONS VERGLEICHEN
+         * ============================================
          */
+
         for (
             const champion
             of preparedChampions
         ) {
 
             /*
-             * ============================================
-             * GRAUSTUFEN / FORM
-             * ============================================
+             * ----------------------------------------
+             * 1. GRAUSTUFEN
+             * ----------------------------------------
              */
+
             const grayCorrelation =
                 calculateFeatureCorrelation(
                     features.grayscale,
@@ -2204,41 +2360,6 @@ async function detectChampionFromPortrait(
                 );
 
 
-            /*
-             * ============================================
-             * KANTEN / FORM
-             * ============================================
-             */
-            const edgeCorrelation =
-                calculateFeatureCorrelation(
-                    features.edges,
-                    champion.edges
-                );
-
-
-            /*
-             * ============================================
-             * FARBE
-             * ============================================
-             */
-            const colorDifference =
-                calculateColorDifference(
-                    pixels,
-                    champion.pixels,
-                    24
-                );
-
-
-            /*
-             * ============================================
-             * SCORE
-             * ============================================
-             *
-             * Jetzt bekommt die Bildstruktur
-             * deutlich mehr Gewicht.
-             *
-             * Farbe ist nur noch ein Zusatz.
-             */
             const safeGray =
                 Math.max(
                     -1,
@@ -2246,6 +2367,27 @@ async function detectChampionFromPortrait(
                         1,
                         grayCorrelation
                     )
+                );
+
+
+            const grayScore =
+                (
+                    1 -
+                    safeGray
+                ) *
+                100;
+
+
+            /*
+             * ----------------------------------------
+             * 2. KANTENSTÄRKE
+             * ----------------------------------------
+             */
+
+            const edgeCorrelation =
+                calculateFeatureCorrelation(
+                    features.edges,
+                    champion.edges
                 );
 
 
@@ -2259,40 +2401,89 @@ async function detectChampionFromPortrait(
                 );
 
 
-            /*
-             * Je höher die Korrelation,
-             * desto kleiner der Score.
-             */
-            const grayScore =
-                (
-                    1 -
-                    safeGray
-                ) * 100;
-
-
             const edgeScore =
                 (
                     1 -
                     safeEdge
-                ) * 100;
+                ) *
+                100;
 
 
             /*
-             * Farbe deutlich schwächer gewichten.
+             * ----------------------------------------
+             * 3. HOG / FORM
+             * ----------------------------------------
+             *
+             * Das ist jetzt unser wichtigstes
+             * zusätzliches Merkmal.
              */
+
+            const hogCorrelation =
+                calculateFeatureCorrelation(
+                    features.hog,
+                    champion.hog
+                );
+
+
+            const safeHog =
+                Math.max(
+                    -1,
+                    Math.min(
+                        1,
+                        hogCorrelation
+                    )
+                );
+
+
+            const hogScore =
+                (
+                    1 -
+                    safeHog
+                ) *
+                100;
+
+
+            /*
+             * ----------------------------------------
+             * 4. FARBE
+             * ----------------------------------------
+             */
+
+            const colorDifference =
+                calculateColorDifference(
+                    pixels,
+                    champion.pixels,
+                    24
+                );
+
+
             const colorScore =
                 colorDifference *
-                0.18;
+                0.12;
 
 
             /*
-             * Gesamtwertung.
+             * ========================================
+             * GESAMTSCORE
+             * ========================================
              *
-             * Form ist jetzt wichtiger als Farbe.
+             * HOG / Form:
+             * 50 %
+             *
+             * Graustufen:
+             * 28 %
+             *
+             * Kanten:
+             * 20 %
+             *
+             * Farbe:
+             * sehr kleiner Zusatz
              */
+
             const finalScore =
-                grayScore * 0.48 +
-                edgeScore * 0.34 +
+                hogScore * 0.50 +
+                grayScore * 0.28 +
+                edgeScore * 0.20 +
                 colorScore;
 
 
@@ -2307,8 +2498,10 @@ async function detectChampionFromPortrait(
                 bestScore =
                     finalScore;
 
+
                 bestChampion =
                     champion.name;
+
 
                 bestVariant =
                     variant;
@@ -2317,10 +2510,8 @@ async function detectChampionFromPortrait(
 
 
             /*
-             * Für Debugging sammeln.
-             *
-             * Wir nehmen später nur den besten
-             * Score dieses Champions.
+             * Besten Score dieses Champions
+             * für Debugging speichern.
              */
             const existing =
                 candidateScores.find(
@@ -2360,7 +2551,7 @@ async function detectChampionFromPortrait(
 
 
     /*
-     * Die besten 5 Kandidaten ausgeben.
+     * Kandidaten sortieren.
      */
     candidateScores.sort(
         (a, b) =>
@@ -2369,6 +2560,12 @@ async function detectChampionFromPortrait(
     );
 
 
+    /*
+     * Nur die besten Kandidaten ausgeben.
+     *
+     * Damit die Konsole nicht mit 170 Champions
+     * zugespammt wird.
+     */
     console.log(
         "Champion erkannt:",
         bestChampion,
@@ -2382,7 +2579,7 @@ async function detectChampionFromPortrait(
     console.log(
         "Beste Champion-Kandidaten:",
         candidateScores
-            .slice(0, 5)
+            .slice(0, 8)
     );
 
 
