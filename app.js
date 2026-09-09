@@ -1380,6 +1380,110 @@ function sortScreenshotKoiPlayers(players) {
 
 }
 
+/*
+ * =========================================
+ * SCREENSHOT-KOI-SPIELER NACH ROLLE SORTIEREN
+ * =========================================
+ *
+ * Die KI erkennt die tatsächliche Rolle
+ * anhand des Role-Quest-Symbols.
+ *
+ * Reihenfolge:
+ * Top
+ * Jungle
+ * Mid
+ * ADC
+ * Support
+ *
+ * Falls eine Rolle nicht erkannt wurde,
+ * bleibt der Spieler am Ende in seiner
+ * ursprünglichen Reihenfolge.
+ */
+
+function sortScreenshotKoiPlayers(players) {
+
+    const roleOrder = {
+        "Top": 0,
+        "Jungle": 1,
+        "Mid": 2,
+        "ADC": 3,
+        "Support": 4
+    };
+
+
+    if (!Array.isArray(players)) {
+        return [];
+    }
+
+
+    return players
+        .map((player, index) => ({
+            player,
+            originalIndex: index
+        }))
+        .sort((a, b) => {
+
+            const roleA =
+                roleOrder[a.player?.role];
+
+            const roleB =
+                roleOrder[b.player?.role];
+
+
+            /*
+             * Beide Rollen bekannt:
+             * normale Rollenreihenfolge.
+             */
+
+            if (
+                roleA !== undefined &&
+                roleB !== undefined
+            ) {
+                return roleA - roleB;
+            }
+
+
+            /*
+             * Nur A bekannt:
+             * A nach vorne.
+             */
+
+            if (
+                roleA !== undefined &&
+                roleB === undefined
+            ) {
+                return -1;
+            }
+
+
+            /*
+             * Nur B bekannt:
+             * B nach vorne.
+             */
+
+            if (
+                roleA === undefined &&
+                roleB !== undefined
+            ) {
+                return 1;
+            }
+
+
+            /*
+             * Beide unbekannt:
+             * ursprüngliche Screenshot-Reihenfolge
+             * beibehalten.
+             */
+
+            return (
+                a.originalIndex -
+                b.originalIndex
+            );
+
+        })
+        .map(item => item.player);
+}
+
 
 /*
  * Spielerwerte in den Editor schreiben.
@@ -1387,21 +1491,27 @@ function sortScreenshotKoiPlayers(players) {
  * Nicht erkannte Zahlen werden bewusst
  * mit 0 gefüllt.
  */
+/*
+ * =========================================
+ * SCREENSHOT-DATEN IN GAME-EDITOR SCHREIBEN
+ * =========================================
+ */
+
 function fillScreenshotTeam(team, players) {
 
     let teamPlayers =
         Array.isArray(players)
-            ? players
+            ? [...players]
             : [];
 
 
     /*
-        Nur das eigene Team anhand
-        des bekannten Rosters sortieren.
-
-        Das Enemy-Team bleibt komplett
-        unverändert.
-    */
+     * Nur KOI sortieren.
+     *
+     * Die Gegner bleiben exakt in der
+     * Reihenfolge, in der die KI sie
+     * aus dem Screenshot erkannt hat.
+     */
 
     if (team === "koi") {
 
@@ -1414,8 +1524,8 @@ function fillScreenshotTeam(team, players) {
 
 
     /*
-        Spielerwerte in den Editor schreiben.
-    */
+     * Genau fünf Spieler anzeigen.
+     */
 
     for (let i = 0; i < 5; i++) {
 
@@ -1465,6 +1575,10 @@ function fillScreenshotTeam(team, players) {
             );
 
 
+        /*
+         * NAME
+         */
+
         if (nameInput) {
 
             nameInput.value =
@@ -1473,11 +1587,14 @@ function fillScreenshotTeam(team, players) {
         }
 
 
+        /*
+         * CHAMPION
+         */
+
         if (championInput) {
 
             championInput.value =
                 player.champion || "";
-
 
             updateChampionPreview(
                 championInput
@@ -1485,6 +1602,10 @@ function fillScreenshotTeam(team, players) {
 
         }
 
+
+        /*
+         * KILLS
+         */
 
         if (killsInput) {
 
@@ -1498,6 +1619,10 @@ function fillScreenshotTeam(team, players) {
         }
 
 
+        /*
+         * DEATHS
+         */
+
         if (deathsInput) {
 
             deathsInput.value =
@@ -1509,6 +1634,10 @@ function fillScreenshotTeam(team, players) {
 
         }
 
+
+        /*
+         * ASSISTS
+         */
 
         if (assistsInput) {
 
@@ -1522,6 +1651,10 @@ function fillScreenshotTeam(team, players) {
         }
 
 
+        /*
+         * CS
+         */
+
         if (csInput) {
 
             csInput.value =
@@ -1533,6 +1666,10 @@ function fillScreenshotTeam(team, players) {
 
         }
 
+
+        /*
+         * DAMAGE
+         */
 
         if (damageInput) {
 
