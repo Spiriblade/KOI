@@ -1498,192 +1498,49 @@ function sortScreenshotKoiPlayers(players) {
  */
 
 function fillScreenshotTeam(team, players) {
-
-    let teamPlayers =
-        Array.isArray(players)
-            ? [...players]
-            : [];
-
-
-    /*
-     * Nur KOI sortieren.
-     *
-     * Die Gegner bleiben exakt in der
-     * Reihenfolge, in der die KI sie
-     * aus dem Screenshot erkannt hat.
-     */
-
-    if (team === "koi") {
-
-        teamPlayers =
-            sortScreenshotKoiPlayers(
-                teamPlayers
-            );
-
+    if (!Array.isArray(players)) {
+        return;
     }
 
+    players.slice(0, 5).forEach((player, index) => {
+        const prefix = team === "koi" ? "koi" : "enemy";
 
-    /*
-     * Genau fünf Spieler anzeigen.
-     */
-
-    for (let i = 0; i < 5; i++) {
-
-        const player =
-            teamPlayers[i] || {};
-
-
-        const nameInput =
-            document.querySelector(
-                `.${team}-name[data-index="${i}"]`
-            );
-
-
-        const championInput =
-            document.querySelector(
-                `.${team}-champion[data-index="${i}"]`
-            );
-
-
-        const killsInput =
-            document.querySelector(
-                `.${team}-kills[data-index="${i}"]`
-            );
-
-
-        const deathsInput =
-            document.querySelector(
-                `.${team}-deaths[data-index="${i}"]`
-            );
-
-
-        const assistsInput =
-            document.querySelector(
-                `.${team}-assists[data-index="${i}"]`
-            );
-
-
-        const csInput =
-            document.querySelector(
-                `.${team}-cs[data-index="${i}"]`
-            );
-
-
-        const damageInput =
-            document.querySelector(
-                `.${team}-damage[data-index="${i}"]`
-            );
-
-
-        /*
-         * NAME
-         */
+        const nameInput = document.querySelector(`.${prefix}-name[data-index="${index}"]`);
+        const championInput = document.querySelector(`.${prefix}-champion[data-index="${index}"]`);
+        const killsInput = document.querySelector(`.${prefix}-kills[data-index="${index}"]`);
+        const deathsInput = document.querySelector(`.${prefix}-deaths[data-index="${index}"]`);
+        const assistsInput = document.querySelector(`.${prefix}-assists[data-index="${index}"]`);
+        const damageInput = document.querySelector(`.${prefix}-damage[data-index="${index}"]`);
+        const csInput = document.querySelector(`.${prefix}-cs[data-index="${index}"]`);
 
         if (nameInput) {
-
-            nameInput.value =
-                player.name || "";
-
+            nameInput.value = player?.name || "";
         }
-
-
-        /*
-         * CHAMPION
-         */
 
         if (championInput) {
-
-            championInput.value =
-                player.champion || "";
-
-            updateChampionPreview(
-                championInput
-            );
-
+            championInput.value = player?.champion || "";
         }
-
-
-        /*
-         * KILLS
-         */
 
         if (killsInput) {
-
-            killsInput.value =
-                Number.isFinite(
-                    Number(player.kills)
-                )
-                    ? Number(player.kills)
-                    : 0;
-
+            killsInput.value = player?.kills ?? 0;
         }
-
-
-        /*
-         * DEATHS
-         */
 
         if (deathsInput) {
-
-            deathsInput.value =
-                Number.isFinite(
-                    Number(player.deaths)
-                )
-                    ? Number(player.deaths)
-                    : 0;
-
+            deathsInput.value = player?.deaths ?? 0;
         }
-
-
-        /*
-         * ASSISTS
-         */
 
         if (assistsInput) {
-
-            assistsInput.value =
-                Number.isFinite(
-                    Number(player.assists)
-                )
-                    ? Number(player.assists)
-                    : 0;
-
+            assistsInput.value = player?.assists ?? 0;
         }
-
-
-        /*
-         * CS
-         */
-
-        if (csInput) {
-
-            csInput.value =
-                Number.isFinite(
-                    Number(player.cs)
-                )
-                    ? Number(player.cs)
-                    : 0;
-
-        }
-
-
-        /*
-         * DAMAGE
-         */
 
         if (damageInput) {
-
-            damageInput.value =
-                Number.isFinite(
-                    Number(player.damage)
-                )
-                    ? Number(player.damage)
-                    : 0;
-
+            damageInput.value = player?.damage ?? 0;
         }
 
-    }
-
+        if (csInput) {
+            csInput.value = player?.cs ?? 0;
+        }
+    });
 }
 
 
