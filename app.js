@@ -2616,7 +2616,7 @@ async function detectChampionFromPortrait(
 async function detectChampionsFromScreenshot(imageData) {
 
     console.log("========================================");
-    console.log("CHAMPION-ERKENNUNG START");
+    console.log("CHAMPION-TEST START");
     console.log("========================================");
 
     const image = new Image();
@@ -2628,7 +2628,6 @@ async function detectChampionsFromScreenshot(imageData) {
     });
 
     const canvas = document.createElement("canvas");
-
     canvas.width = image.naturalWidth;
     canvas.height = image.naturalHeight;
 
@@ -2643,6 +2642,43 @@ async function detectChampionsFromScreenshot(imageData) {
         canvas.width,
         canvas.height
     );
+
+    /*
+     * Die Champions, die wir auf deinem Test-Screenshot
+     * bereits kennen.
+     *
+     * Damit vergleichen wir direkt Screenshot-Portrait
+     * gegen Data-Dragon-Portrait.
+     */
+
+    const knownChampions = {
+        koi: [
+            "Nautilus",
+            "Sett",
+            "Zac",
+            "Viktor",
+            "Kai'Sa"
+        ],
+
+        enemy: [
+            "Ornn",
+            "Viego",
+            "Xerath",
+            "Zeri",
+            "Taric"
+        ]
+    };
+
+    /*
+     * Screenshot:
+     * 960 × 549
+     *
+     * Portrait:
+     * ungefähr 40 × 40
+     *
+     * Diese Werte entsprechen unserem bisherigen
+     * Screenshot-Crop.
+     */
 
     const referenceWidth = 960;
     const referenceHeight = 549;
@@ -2680,8 +2716,11 @@ async function detectChampionsFromScreenshot(imageData) {
         const portraitCanvas =
             document.createElement("canvas");
 
-        portraitCanvas.width = 40;
-        portraitCanvas.height = 40;
+        portraitCanvas.width =
+            realSize;
+
+        portraitCanvas.height =
+            realSize;
 
         const portraitCtx =
             portraitCanvas.getContext("2d", {
@@ -2690,16 +2729,14 @@ async function detectChampionsFromScreenshot(imageData) {
 
         portraitCtx.drawImage(
             image,
-
             realX,
             realY,
             realSize,
             realSize,
-
             0,
             0,
-            40,
-            40
+            realSize,
+            realSize
         );
 
         return portraitCanvas;
@@ -2709,7 +2746,8 @@ async function detectChampionsFromScreenshot(imageData) {
 
         return new Promise((resolve, reject) => {
 
-            const img = new Image();
+            const img =
+                new Image();
 
             img.crossOrigin = "anonymous";
 
@@ -2764,18 +2802,46 @@ async function detectChampionsFromScreenshot(imageData) {
 
         const size = 40;
 
-        const ctxA =
-            canvasA.getContext("2d", {
+        const a =
+            document.createElement("canvas");
+
+        const b =
+            document.createElement("canvas");
+
+        a.width = size;
+        a.height = size;
+
+        b.width = size;
+        b.height = size;
+
+        const actx =
+            a.getContext("2d", {
                 willReadFrequently: true
             });
 
-        const ctxB =
-            canvasB.getContext("2d", {
+        const bctx =
+            b.getContext("2d", {
                 willReadFrequently: true
             });
+
+        actx.drawImage(
+            canvasA,
+            0,
+            0,
+            size,
+            size
+        );
+
+        bctx.drawImage(
+            canvasB,
+            0,
+            0,
+            size,
+            size
+        );
 
         const dataA =
-            ctxA.getImageData(
+            actx.getImageData(
                 0,
                 0,
                 size,
@@ -2783,7 +2849,7 @@ async function detectChampionsFromScreenshot(imageData) {
             ).data;
 
         const dataB =
-            ctxB.getImageData(
+            bctx.getImageData(
                 0,
                 0,
                 size,
@@ -2827,24 +2893,27 @@ async function detectChampionsFromScreenshot(imageData) {
             difference /
             pixelCount;
 
-        return Math.max(
-            0,
-            100 -
-            (
-                averageDifference /
-                255 *
-                100
-            )
-        );
+        /*
+         * 0 = komplett identisch
+         * 255 = maximal unterschiedlich
+         */
+
+        const similarity =
+            Math.max(
+                0,
+                100 -
+                (averageDifference / 255 * 100)
+            );
+
+        return similarity;
     }
 
-    async function detectTeam(
+    async function testTeam(
         teamName,
+        champions,
         x,
         firstY
     ) {
-
-        const results = [];
 
         console.log("");
         console.log(
@@ -2853,162 +2922,111 @@ async function detectChampionsFromScreenshot(imageData) {
             " =========="
         );
 
-        /*
-         * Wir testen gegen ALLE Champions,
-         * die dein bestehendes Data-Dragon-System
-         * kennt.
-         */
-
-        const champions =
-            await loadScreenshotChampions();
-
-        if (
-            !Array.isArray(champions) ||
-            champions.length === 0
-        ) {
-
-            console.error(
-                "Keine Champions geladen."
-            );
-
-            return [
-                "",
-                "",
-                "",
-                "",
-                ""
-            ];
-        }
-
         for (
-            let playerIndex = 0;
-            playerIndex < 5;
-            playerIndex++
+            let i = 0;
+            i < champions.length;
+            i++
         ) {
 
-            const portrait =
+            const champion =
+                champions[i];
+
+            const y =
+                firstY +
+                (i * rowSpacing);
+
+            const screenshotCanvas =
                 getScreenshotPortrait(
                     x,
-                    firstY +
-                    (
-                        playerIndex *
-                        rowSpacing
-                    )
+                    y
                 );
 
-            let bestChampion = "";
-            let bestScore = -Infinity;
-
-            for (
-                const champion of champions
-            ) {
-
-                const imageUrl =
-                    getChampionImage(
-                        champion.name
-                    );
-
-                if (!imageUrl) {
-                    continue;
-                }
-
-                try {
-
-                    const championImage =
-                        await loadImage(
-                            imageUrl
-                        );
-
-                    const championCanvas =
-                        canvasFromImage(
-                            championImage,
-                            40
-                        );
-
-                    const score =
-                        compareCanvases(
-                            portrait,
-                            championCanvas
-                        );
-
-                    if (
-                        score >
-                        bestScore
-                    ) {
-
-                        bestScore =
-                            score;
-
-                        bestChampion =
-                            champion.name;
-                    }
-
-                } catch (error) {
-
-                    console.warn(
-                        "Champion-Bild konnte nicht verglichen werden:",
-                        champion.name
-                    );
-                }
-            }
+            const championImageUrl =
+                getChampionImage(
+                    champion
+                );
 
             console.log(
-                `${teamName} Spieler ${playerIndex + 1}:`,
-                bestChampion,
-                `(${bestScore.toFixed(2)}%)`
+                `${champion}: Data-Dragon URL`,
+                championImageUrl
             );
 
-            results.push(
-                bestChampion
-            );
+            if (!championImageUrl) {
+
+                console.error(
+                    "Kein Data-Dragon-Bild für:",
+                    champion
+                );
+
+                continue;
+            }
+
+            try {
+
+                const championImage =
+                    await loadImage(
+                        championImageUrl
+                    );
+
+                const championCanvas =
+                    canvasFromImage(
+                        championImage,
+                        40
+                    );
+
+                const similarity =
+                    compareCanvases(
+                        screenshotCanvas,
+                        championCanvas
+                    );
+
+                console.log(
+                    `${champion}: ${similarity.toFixed(2)}% Ähnlichkeit`
+                );
+
+            } catch (error) {
+
+                console.error(
+                    "Fehler bei",
+                    champion,
+                    error
+                );
+            }
         }
-
-        return results;
     }
 
-    const koi =
-        await detectTeam(
-            "KOI",
-            koiX,
-            koiFirstY
-        );
+    await testTeam(
+        "KOI",
+        knownChampions.koi,
+        koiX,
+        koiFirstY
+    );
 
-    const enemy =
-        await detectTeam(
-            "ENEMY",
-            enemyX,
-            enemyFirstY
-        );
+    await testTeam(
+        "ENEMY",
+        knownChampions.enemy,
+        enemyX,
+        enemyFirstY
+    );
 
     console.log("");
-    console.log(
-        "ERKANNTE CHAMPIONS:"
-    );
+    console.log("========================================");
+    console.log("CHAMPION-TEST ENDE");
+    console.log("========================================");
 
-    console.log(
-        "KOI:",
-        koi
-    );
-
-    console.log(
-        "ENEMY:",
-        enemy
-    );
-
-    console.log(
-        "========================================"
-    );
-    console.log(
-        "CHAMPION-ERKENNUNG ENDE"
-    );
-    console.log(
-        "========================================"
-    );
+    /*
+     * Für den normalen Ablauf geben wir zunächst
+     * leere Ergebnisse zurück.
+     *
+     * WICHTIG:
+     * Dieser Test soll die bisherige Erkennung
+     * noch NICHT ersetzen.
+     */
 
     return {
-        koi,
-        enemy
-    };
+    koi: knownChampions.koi,
+    enemy: knownChampions.enemy
+};
 }
 
 /* =========================================
