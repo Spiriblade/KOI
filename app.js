@@ -2278,6 +2278,10 @@ async function detectChampionFromPortrait(
     preparedChampions
 ) {
 
+    /*
+     * Wir erzeugen mehrere mögliche Ausschnitte
+     * rund um das erwartete Championportrait.
+     */
     const variants =
         getPortraitVariants(
             image,
@@ -2287,79 +2291,87 @@ async function detectChampionFromPortrait(
         );
 
 
-    let bestChampion =
-        "";
-
-    let bestScore =
-        Infinity;
-
-    let bestVariant =
-        null;
-
-
-    const candidateScores =
+    /*
+     * Für jeden Champion sammeln wir die
+     * Ergebnisse aller möglichen Crops.
+     */
+    const championResults =
         [];
 
 
     /*
-     * ============================================
-     * ALLE PORTRAIT-ZUSCHNITTE TESTEN
-     * ============================================
+     * Jeden Champion einzeln bewerten.
      */
-
     for (
-        const variant
-        of variants
+        const champion
+        of preparedChampions
     ) {
 
-        const canvas =
-            createNormalizedCanvas(
-                image,
-                variant.x,
-                variant.y,
-                variant.size,
-                variant.size,
-                24
-            );
-
-
-        const pixels =
-            getImagePixels(
-                canvas
-            );
-
-
-        const features =
-            createImageFeatures(
-                pixels,
-                24
-            );
+        const scores =
+            [];
 
 
         /*
-         * ============================================
-         * GEGEN ALLE CHAMPIONS VERGLEICHEN
-         * ============================================
+         * Jeden möglichen Crop testen.
          */
-
         for (
-            const champion
-            of preparedChampions
+            const variant
+            of variants
         ) {
 
-            /*
-             * ----------------------------------------
-             * 1. GRAUSTUFEN
-             * ----------------------------------------
-             */
+            const canvas =
+                createNormalizedCanvas(
+                    image,
+                    variant.x,
+                    variant.y,
+                    variant.size,
+                    variant.size,
+                    32
+                );
 
+
+            const screenshotPixels =
+                getImagePixels(
+                    canvas
+                );
+
+
+            /*
+             * Klassischer Pixelvergleich.
+             */
+            const pixelDifference =
+                calculateColorDifference(
+                    screenshotPixels,
+                    champion.pixels,
+                    32
+                );
+
+
+            /*
+             * Graustufen aus den Pixeln erstellen.
+             */
+            const screenshotFeatures =
+                createImageFeatures(
+                    screenshotPixels,
+                    32
+                );
+
+
+            /*
+             * Form-/Helligkeitsvergleich.
+             *
+             * Nur als Zusatz, nicht als Hauptkriterium.
+             */
             const grayCorrelation =
                 calculateFeatureCorrelation(
-                    features.grayscale,
+                    screenshotFeatures.grayscale,
                     champion.grayscale
                 );
 
 
+            /*
+             * Korrelationswert absichern.
+             */
             const safeGray =
                 Math.max(
                     -1,
@@ -2379,181 +2391,128 @@ async function detectChampionFromPortrait(
 
 
             /*
-             * ----------------------------------------
-             * 2. KANTENSTÄRKE
-             * ----------------------------------------
+             * Pixelvergleich bekommt wieder
+             * deutlich mehr Gewicht.
              */
-
-            const edgeCorrelation =
-                calculateFeatureCorrelation(
-                    features.edges,
-                    champion.edges
-                );
-
-
-            const safeEdge =
-                Math.max(
-                    -1,
-                    Math.min(
-                        1,
-                        edgeCorrelation
-                    )
-                );
-
-
-            const edgeScore =
-                (
-                    1 -
-                    safeEdge
-                ) *
-                100;
-
-
-            /*
-             * ----------------------------------------
-             * 3. HOG / FORM
-             * ----------------------------------------
-             *
-             * Das ist jetzt unser wichtigstes
-             * zusätzliches Merkmal.
-             */
-
-            const hogCorrelation =
-                calculateFeatureCorrelation(
-                    features.hog,
-                    champion.hog
-                );
-
-
-            const safeHog =
-                Math.max(
-                    -1,
-                    Math.min(
-                        1,
-                        hogCorrelation
-                    )
-                );
-
-
-            const hogScore =
-                (
-                    1 -
-                    safeHog
-                ) *
-                100;
-
-
-            /*
-             * ----------------------------------------
-             * 4. FARBE
-             * ----------------------------------------
-             */
-
-            const colorDifference =
-                calculateColorDifference(
-                    pixels,
-                    champion.pixels,
-                    24
-                );
-
-
-            const colorScore =
-                colorDifference *
-                0.12;
-
-
-            /*
-             * ========================================
-             * GESAMTSCORE
-             * ========================================
-             *
-             * HOG / Form:
-             * 50 %
-             *
-             * Graustufen:
-             * 28 %
-             *
-             * Kanten:
-             * 20 %
-             *
-             * Farbe:
-             * sehr kleiner Zusatz
-             */
-
             const finalScore =
-                hogScore * 0.50 +
-                grayScore * 0.28 +
-                edgeScore * 0.20 +
-                colorScore;
+                pixelDifference +
+                grayScore * 0.15;
 
 
-            /*
-             * Besten Treffer speichern.
-             */
-            if (
-                finalScore <
-                bestScore
-            ) {
+            scores.push({
+                score:
+                    finalScore,
 
-                bestScore =
-                    finalScore;
+                variant:
+                    variant
 
-
-                bestChampion =
-                    champion.name;
-
-
-                bestVariant =
-                    variant;
-
-            }
-
-
-            /*
-             * Besten Score dieses Champions
-             * für Debugging speichern.
-             */
-            const existing =
-                candidateScores.find(
-                    candidate =>
-                        candidate.name ===
-                        champion.name
-                );
-
-
-            if (
-                !existing
-            ) {
-
-                candidateScores.push({
-
-                    name:
-                        champion.name,
-
-                    score:
-                        finalScore
-
-                });
-
-            } else if (
-                finalScore <
-                existing.score
-            ) {
-
-                existing.score =
-                    finalScore;
-
-            }
+            });
 
         }
+
+
+        /*
+         * Die besten Treffer dieses Champions
+         * zuerst sortieren.
+         */
+        scores.sort(
+            (a, b) =>
+                a.score -
+                b.score
+        );
+
+
+        /*
+         * Wir nehmen NICHT nur den allerbesten
+         * Treffer.
+         *
+         * Stattdessen betrachten wir die besten
+         * mehreren Varianten.
+         *
+         * Dadurch kann ein zufälliger guter Crop
+         * nicht mehr so leicht gewinnen.
+         */
+        const bestCount =
+            Math.min(
+                8,
+                scores.length
+            );
+
+
+        const bestScores =
+            scores
+                .slice(
+                    0,
+                    bestCount
+                );
+
+
+        /*
+         * Durchschnitt der besten Varianten.
+         */
+        const averageScore =
+            bestScores.reduce(
+                (
+                    total,
+                    item
+                ) =>
+                    total +
+                    item.score,
+                0
+            ) /
+            bestScores.length;
+
+
+        /*
+         * Zusätzlich schauen wir auf den
+         * absolut besten Treffer.
+         */
+        const bestSingleScore =
+            bestScores[0]?.score ??
+            Infinity;
+
+
+        /*
+         * Der finale Champion-Score ist eine
+         * Kombination aus:
+         *
+         * - Durchschnitt der besten Crops
+         * - bestem einzelnen Crop
+         *
+         * Der Durchschnitt ist wichtiger.
+         */
+        const stableScore =
+            averageScore * 0.75 +
+            bestSingleScore * 0.25;
+
+
+        championResults.push({
+
+            name:
+                champion.name,
+
+            score:
+                stableScore,
+
+            averageScore:
+                averageScore,
+
+            bestSingleScore:
+                bestSingleScore,
+
+            bestVariant:
+                bestScores[0]?.variant ||
+                null
+
+        });
 
     }
 
 
     /*
-     * Kandidaten sortieren.
+     * Champions nach dem stabilen Score sortieren.
      */
-    candidateScores.sort(
+    championResults.sort(
         (a, b) =>
             a.score -
             b.score
@@ -2561,29 +2520,74 @@ async function detectChampionFromPortrait(
 
 
     /*
-     * Nur die besten Kandidaten ausgeben.
+     * Besten Treffer holen.
+     */
+    const bestChampion =
+        championResults[0];
+
+
+    if (
+        !bestChampion
+    ) {
+
+        return "";
+
+    }
+
+
+    /*
+     * Die besten Kandidaten ausgeben.
      *
-     * Damit die Konsole nicht mit 170 Champions
-     * zugespammt wird.
+     * Das ist für uns beim Testen sehr hilfreich.
      */
     console.log(
         "Champion erkannt:",
-        bestChampion,
+        bestChampion.name,
         "Score:",
-        bestScore,
+        bestChampion.score,
+        "Ø:",
+        bestChampion.averageScore,
+        "Best:",
+        bestChampion.bestSingleScore,
         "Crop:",
-        bestVariant
+        bestChampion.bestVariant
     );
 
 
     console.log(
         "Beste Champion-Kandidaten:",
-        candidateScores
-            .slice(0, 8)
+        championResults
+            .slice(
+                0,
+                8
+            )
+            .map(
+                candidate => ({
+
+                    name:
+                        candidate.name,
+
+                    score:
+                        Number(
+                            candidate.score
+                        ).toFixed(2),
+
+                    average:
+                        Number(
+                            candidate.averageScore
+                        ).toFixed(2),
+
+                    best:
+                        Number(
+                            candidate.bestSingleScore
+                        ).toFixed(2)
+
+                })
+            )
     );
 
 
-    return bestChampion;
+    return bestChampion.name;
 
 }
 
