@@ -1681,57 +1681,139 @@ function calculateColorDifference(
 
 
     /*
-     * Äußeren Rand ignorieren.
+     * Nicht nur einzelne Pixel vergleichen,
+     * sondern kleine Bereiche.
+     *
+     * Dadurch werden minimale Verschiebungen
+     * weniger problematisch.
      */
+    const blockSize = 2;
+
+
     for (
         let y = 2;
         y < size - 2;
-        y++
+        y += blockSize
     ) {
 
         for (
             let x = 2;
             x < size - 2;
-            x++
+            x += blockSize
         ) {
 
-            const index =
-                (
-                    y * size +
-                    x
-                ) * 4;
+            let averageRA = 0;
+            let averageGA = 0;
+            let averageBA = 0;
+
+            let averageRB = 0;
+            let averageGB = 0;
+            let averageBB = 0;
+
+            let pixelsInBlock = 0;
 
 
-            const rA =
-                pixelsA[index];
+            for (
+                let by = 0;
+                by < blockSize;
+                by++
+            ) {
 
-            const gA =
-                pixelsA[index + 1];
+                for (
+                    let bx = 0;
+                    bx < blockSize;
+                    bx++
+                ) {
 
-            const bA =
-                pixelsA[index + 2];
+                    const px =
+                        x + bx;
+
+                    const py =
+                        y + by;
 
 
-            const rB =
-                pixelsB[index];
+                    if (
+                        px >= size - 2 ||
+                        py >= size - 2
+                    ) {
+                        continue;
+                    }
 
-            const gB =
-                pixelsB[index + 1];
 
-            const bB =
-                pixelsB[index + 2];
+                    const index =
+                        (
+                            py * size +
+                            px
+                        ) * 4;
+
+
+                    averageRA +=
+                        pixelsA[index];
+
+                    averageGA +=
+                        pixelsA[index + 1];
+
+                    averageBA +=
+                        pixelsA[index + 2];
+
+
+                    averageRB +=
+                        pixelsB[index];
+
+                    averageGB +=
+                        pixelsB[index + 1];
+
+                    averageBB +=
+                        pixelsB[index + 2];
+
+
+                    pixelsInBlock++;
+
+                }
+
+            }
+
+
+            if (
+                pixelsInBlock === 0
+            ) {
+                continue;
+            }
+
+
+            averageRA /=
+                pixelsInBlock;
+
+            averageGA /=
+                pixelsInBlock;
+
+            averageBA /=
+                pixelsInBlock;
+
+
+            averageRB /=
+                pixelsInBlock;
+
+            averageGB /=
+                pixelsInBlock;
+
+            averageBB /=
+                pixelsInBlock;
 
 
             difference +=
                 (
                     Math.abs(
-                        rA - rB
+                        averageRA -
+                        averageRB
                     ) +
                     Math.abs(
-                        gA - gB
+                        averageGA -
+                        averageGB
                     ) +
                     Math.abs(
-                        bA - bB
+                        averageBA -
+                        averageBB
                     )
                 ) / 3;
 
@@ -2051,17 +2133,27 @@ async function detectChampionFromPortrait(
     let bestChampion =
         "";
 
-
     let bestScore =
         Infinity;
-
 
     let bestVariant =
         null;
 
 
     /*
-     * Jeden möglichen Screenshot-Zuschnitt testen.
+     * Wir merken uns zusätzlich die
+     * besten Kandidaten.
+     *
+     * Das hilft uns beim Testen zu sehen,
+     * ob z.B. Zeri nur knapp gegen Vladimir
+     * verliert oder komplett falsch liegt.
+     */
+    const candidateScores =
+        [];
+
+
+    /*
+     * Jeden möglichen Portrait-Ausschnitt testen.
      */
     for (
         const variant
@@ -2102,7 +2194,7 @@ async function detectChampionFromPortrait(
 
             /*
              * ============================================
-             * 1. GRAUSTUFEN-FORM
+             * GRAUSTUFEN / FORM
              * ============================================
              */
             const grayCorrelation =
@@ -2114,7 +2206,7 @@ async function detectChampionFromPortrait(
 
             /*
              * ============================================
-             * 2. KANTEN / FORM
+             * KANTEN / FORM
              * ============================================
              */
             const edgeCorrelation =
@@ -2126,7 +2218,7 @@ async function detectChampionFromPortrait(
 
             /*
              * ============================================
-             * 3. FARBE
+             * FARBE
              * ============================================
              */
             const colorDifference =
@@ -2142,48 +2234,71 @@ async function detectChampionFromPortrait(
              * SCORE
              * ============================================
              *
-             * Niedriger = besser.
+             * Jetzt bekommt die Bildstruktur
+             * deutlich mehr Gewicht.
              *
-             * Die Form bekommt mehr Gewicht als die
-             * reine Farbe.
+             * Farbe ist nur noch ein Zusatz.
+             */
+            const safeGray =
+                Math.max(
+                    -1,
+                    Math.min(
+                        1,
+                        grayCorrelation
+                    )
+                );
+
+
+            const safeEdge =
+                Math.max(
+                    -1,
+                    Math.min(
+                        1,
+                        edgeCorrelation
+                    )
+                );
+
+
+            /*
+             * Je höher die Korrelation,
+             * desto kleiner der Score.
              */
             const grayScore =
                 (
                     1 -
-                    Math.max(
-                        -1,
-                        Math.min(
-                            1,
-                            grayCorrelation
-                        )
-                    )
+                    safeGray
                 ) * 100;
 
 
             const edgeScore =
                 (
                     1 -
-                    Math.max(
-                        -1,
-                        Math.min(
-                            1,
-                            edgeCorrelation
-                        )
-                    )
+                    safeEdge
                 ) * 100;
 
 
+            /*
+             * Farbe deutlich schwächer gewichten.
+             */
             const colorScore =
                 colorDifference *
-                0.35;
+                0.18;
 
 
+            /*
+             * Gesamtwertung.
+             *
+             * Form ist jetzt wichtiger als Farbe.
+             */
             const finalScore =
-                grayScore * 0.40 +
-                edgeScore * 0.25 +
+                grayScore * 0.48 +
+                edgeScore * 0.34 +
                 colorScore;
 
 
+            /*
+             * Besten Treffer speichern.
+             */
             if (
                 finalScore <
                 bestScore
@@ -2192,19 +2307,66 @@ async function detectChampionFromPortrait(
                 bestScore =
                     finalScore;
 
-
                 bestChampion =
                     champion.name;
-
 
                 bestVariant =
                     variant;
 
             }
 
+
+            /*
+             * Für Debugging sammeln.
+             *
+             * Wir nehmen später nur den besten
+             * Score dieses Champions.
+             */
+            const existing =
+                candidateScores.find(
+                    candidate =>
+                        candidate.name ===
+                        champion.name
+                );
+
+
+            if (
+                !existing
+            ) {
+
+                candidateScores.push({
+
+                    name:
+                        champion.name,
+
+                    score:
+                        finalScore
+
+                });
+
+            } else if (
+                finalScore <
+                existing.score
+            ) {
+
+                existing.score =
+                    finalScore;
+
+            }
+
         }
 
     }
+
+
+    /*
+     * Die besten 5 Kandidaten ausgeben.
+     */
+    candidateScores.sort(
+        (a, b) =>
+            a.score -
+            b.score
+    );
 
 
     console.log(
@@ -2214,6 +2376,13 @@ async function detectChampionFromPortrait(
         bestScore,
         "Crop:",
         bestVariant
+    );
+
+
+    console.log(
+        "Beste Champion-Kandidaten:",
+        candidateScores
+            .slice(0, 5)
     );
 
 
