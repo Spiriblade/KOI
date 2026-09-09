@@ -2017,6 +2017,21 @@ async function prepareChampionComparisonImages() {
     );
 
 
+    /*
+     * WICHTIG:
+     *
+     * Die gesamte Erkennung arbeitet mit 32 × 32.
+     *
+     * Screenshot-Crop:
+     * 32 × 32
+     *
+     * Championbild:
+     * 32 × 32
+     *
+     * Dadurch vergleichen wir garantiert
+     * gleich große Pixelbereiche.
+     */
+
     for (
         const champion
         of champions
@@ -2039,7 +2054,7 @@ async function prepareChampionComparisonImages() {
                         image.width,
                     image.naturalHeight ||
                         image.height,
-                    24
+                    32
                 );
 
 
@@ -2052,7 +2067,7 @@ async function prepareChampionComparisonImages() {
             const features =
                 createImageFeatures(
                     pixels,
-                    24
+                    32
                 );
 
 
