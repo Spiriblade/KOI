@@ -1224,6 +1224,163 @@ if (gametimeInput) {
 }
 
 
+function sortScreenshotKoiPlayers(players) {
+
+    if (!Array.isArray(players)) {
+        return [];
+    }
+
+
+    /*
+        Aktuelles Team bestimmen.
+    */
+
+    const teamName =
+        currentTeam?.name || "KOI Gaming";
+
+
+    const currentTeamData =
+        teamData[teamName];
+
+
+    /*
+        Falls kein Team gefunden wurde,
+        nichts an der Reihenfolge ändern.
+    */
+
+    if (
+        !currentTeamData ||
+        !Array.isArray(currentTeamData.players)
+    ) {
+
+        console.warn(
+            "Kein Team-Roster für Screenshot-Sortierung gefunden:",
+            teamName
+        );
+
+        return players;
+    }
+
+
+    const roster =
+        currentTeamData.players;
+
+
+    /*
+        Spieler anhand des Namens finden.
+
+        Wir vergleichen zusätzlich eine normalisierte
+        Version, damit kleine Unterschiede bei
+        Groß-/Kleinschreibung nicht stören.
+    */
+
+    function normalizePlayerName(name) {
+
+        return String(name || "")
+            .trim()
+            .toLowerCase();
+
+    }
+
+
+    /*
+        Jedem erkannten Spieler seine Position
+        anhand des Roster-Index zuweisen.
+    */
+
+    const sortedPlayers =
+        players
+            .map((player, originalIndex) => {
+
+                const playerName =
+                    normalizePlayerName(
+                        player?.name
+                    );
+
+
+                const rosterIndex =
+                    roster.findIndex(
+                        rosterPlayer =>
+                            normalizePlayerName(
+                                rosterPlayer
+                            ) === playerName
+                    );
+
+
+                return {
+
+                    player,
+
+                    originalIndex,
+
+                    rosterIndex
+
+                };
+
+            })
+            .sort((a, b) => {
+
+                /*
+                    Erkannter Spieler im Roster:
+                    nach Roster-Reihenfolge sortieren.
+                */
+
+                const aKnown =
+                    a.rosterIndex !== -1;
+
+                const bKnown =
+                    b.rosterIndex !== -1;
+
+
+                if (aKnown && bKnown) {
+
+                    return (
+                        a.rosterIndex -
+                        b.rosterIndex
+                    );
+
+                }
+
+
+                /*
+                    Bekannte Spieler kommen vor
+                    unbekannten Spielern.
+                */
+
+                if (aKnown && !bKnown) {
+                    return -1;
+                }
+
+                if (!aKnown && bKnown) {
+                    return 1;
+                }
+
+
+                /*
+                    Beide unbekannt:
+                    ursprüngliche Reihenfolge behalten.
+                */
+
+                return (
+                    a.originalIndex -
+                    b.originalIndex
+                );
+
+            })
+            .map(item => item.player);
+
+
+    console.log(
+        "KOI-Spieler nach Roster sortiert:",
+        sortedPlayers
+    );
+
+
+    return sortedPlayers;
+
+}
+
+
 /*
  * Spielerwerte in den Editor schreiben.
  *
@@ -1232,11 +1389,33 @@ if (gametimeInput) {
  */
 function fillScreenshotTeam(team, players) {
 
-    const teamPlayers =
+    let teamPlayers =
         Array.isArray(players)
             ? players
             : [];
 
+
+    /*
+        Nur das eigene Team anhand
+        des bekannten Rosters sortieren.
+
+        Das Enemy-Team bleibt komplett
+        unverändert.
+    */
+
+    if (team === "koi") {
+
+        teamPlayers =
+            sortScreenshotKoiPlayers(
+                teamPlayers
+            );
+
+    }
+
+
+    /*
+        Spielerwerte in den Editor schreiben.
+    */
 
     for (let i = 0; i < 5; i++) {
 
@@ -1249,30 +1428,36 @@ function fillScreenshotTeam(team, players) {
                 `.${team}-name[data-index="${i}"]`
             );
 
+
         const championInput =
             document.querySelector(
                 `.${team}-champion[data-index="${i}"]`
             );
+
 
         const killsInput =
             document.querySelector(
                 `.${team}-kills[data-index="${i}"]`
             );
 
+
         const deathsInput =
             document.querySelector(
                 `.${team}-deaths[data-index="${i}"]`
             );
+
 
         const assistsInput =
             document.querySelector(
                 `.${team}-assists[data-index="${i}"]`
             );
 
+
         const csInput =
             document.querySelector(
                 `.${team}-cs[data-index="${i}"]`
             );
+
 
         const damageInput =
             document.querySelector(
@@ -1292,6 +1477,7 @@ function fillScreenshotTeam(team, players) {
 
             championInput.value =
                 player.champion || "";
+
 
             updateChampionPreview(
                 championInput
