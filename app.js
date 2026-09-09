@@ -3252,169 +3252,14 @@ if (gametimeInput) {
 }
 
 
-function sortScreenshotKoiPlayers(players) {
-
-    if (!Array.isArray(players)) {
-        return [];
-    }
-
-
-    /*
-        Aktuelles Team bestimmen.
-    */
-
-    const teamName =
-        currentTeam?.name || "KOI Gaming";
-
-
-    const currentTeamData =
-        teamData[teamName];
-
-
-    /*
-        Falls kein Team gefunden wurde,
-        nichts an der Reihenfolge ändern.
-    */
-
-    if (
-        !currentTeamData ||
-        !Array.isArray(currentTeamData.players)
-    ) {
-
-        console.warn(
-            "Kein Team-Roster für Screenshot-Sortierung gefunden:",
-            teamName
-        );
-
-        return players;
-    }
-
-
-    const roster =
-        currentTeamData.players;
-
-
-    /*
-        Spieler anhand des Namens finden.
-
-        Wir vergleichen zusätzlich eine normalisierte
-        Version, damit kleine Unterschiede bei
-        Groß-/Kleinschreibung nicht stören.
-    */
-
-    function normalizePlayerName(name) {
-
-        return String(name || "")
-            .trim()
-            .toLowerCase();
-
-    }
-
-
-    /*
-        Jedem erkannten Spieler seine Position
-        anhand des Roster-Index zuweisen.
-    */
-
-    const sortedPlayers =
-        players
-            .map((player, originalIndex) => {
-
-                const playerName =
-                    normalizePlayerName(
-                        player?.name
-                    );
-
-
-                const rosterIndex =
-                    roster.findIndex(
-                        rosterPlayer =>
-                            normalizePlayerName(
-                                rosterPlayer
-                            ) === playerName
-                    );
-
-
-                return {
-
-                    player,
-
-                    originalIndex,
-
-                    rosterIndex
-
-                };
-
-            })
-            .sort((a, b) => {
-
-                /*
-                    Erkannter Spieler im Roster:
-                    nach Roster-Reihenfolge sortieren.
-                */
-
-                const aKnown =
-                    a.rosterIndex !== -1;
-
-                const bKnown =
-                    b.rosterIndex !== -1;
-
-
-                if (aKnown && bKnown) {
-
-                    return (
-                        a.rosterIndex -
-                        b.rosterIndex
-                    );
-
-                }
-
-
-                /*
-                    Bekannte Spieler kommen vor
-                    unbekannten Spielern.
-                */
-
-                if (aKnown && !bKnown) {
-                    return -1;
-                }
-
-                if (!aKnown && bKnown) {
-                    return 1;
-                }
-
-
-                /*
-                    Beide unbekannt:
-                    ursprüngliche Reihenfolge behalten.
-                */
-
-                return (
-                    a.originalIndex -
-                    b.originalIndex
-                );
-
-            })
-            .map(item => item.player);
-
-
-    console.log(
-        "KOI-Spieler nach Roster sortiert:",
-        sortedPlayers
-    );
-
-
-    return sortedPlayers;
-
-}
-
 /*
  * =========================================
- * SCREENSHOT-KOI-SPIELER NACH ROLLE SORTIEREN
+ * SCREENSHOT-SPIELER NACH ERKANNTER ROLLE SORTIEREN
  * =========================================
  *
- * Die KI erkennt die tatsächliche Rolle
- * anhand des Role-Quest-Symbols.
+ * Die Edge Function erkennt die tatsächliche
+ * Rolle aus dem Role-Quest / Rollenindikator
+ * im Screenshot.
  *
  * Reihenfolge:
  * Top
@@ -3423,12 +3268,15 @@ function sortScreenshotKoiPlayers(players) {
  * ADC
  * Support
  *
- * Falls eine Rolle nicht erkannt wurde,
- * bleibt der Spieler am Ende in seiner
- * ursprünglichen Reihenfolge.
+ * Die Position der Spieler im Screenshot
+ * wird NICHT als Rolle interpretiert.
  */
 
-function sortScreenshotKoiPlayers(players) {
+function sortScreenshotPlayers(players) {
+
+    if (!Array.isArray(players)) {
+        return [];
+    }
 
     const roleOrder = {
         "Top": 0,
@@ -3438,16 +3286,10 @@ function sortScreenshotKoiPlayers(players) {
         "Support": 4
     };
 
-
-    if (!Array.isArray(players)) {
-        return [];
-    }
-
-
     return players
-        .map((player, index) => ({
+        .map((player, originalIndex) => ({
             player,
-            originalIndex: index
+            originalIndex
         }))
         .sort((a, b) => {
 
@@ -3459,10 +3301,9 @@ function sortScreenshotKoiPlayers(players) {
 
 
             /*
-             * Beide Rollen bekannt:
-             * normale Rollenreihenfolge.
+             * Beide Rollen erkannt:
+             * Nach Top → Jungle → Mid → ADC → Support
              */
-
             if (
                 roleA !== undefined &&
                 roleB !== undefined
@@ -3472,10 +3313,9 @@ function sortScreenshotKoiPlayers(players) {
 
 
             /*
-             * Nur A bekannt:
-             * A nach vorne.
+             * Nur A hat eine erkannte Rolle:
+             * A kommt nach vorne.
              */
-
             if (
                 roleA !== undefined &&
                 roleB === undefined
@@ -3485,10 +3325,9 @@ function sortScreenshotKoiPlayers(players) {
 
 
             /*
-             * Nur B bekannt:
-             * B nach vorne.
+             * Nur B hat eine erkannte Rolle:
+             * B kommt nach vorne.
              */
-
             if (
                 roleA === undefined &&
                 roleB !== undefined
@@ -3498,11 +3337,10 @@ function sortScreenshotKoiPlayers(players) {
 
 
             /*
-             * Beide unbekannt:
+             * Beide Rollen unbekannt:
              * ursprüngliche Screenshot-Reihenfolge
              * beibehalten.
              */
-
             return (
                 a.originalIndex -
                 b.originalIndex
@@ -3616,15 +3454,49 @@ function fillScreenshotTeam(
 }
 
 
+/*
+ * =========================================
+ * SPIELER NACH ERKANNTER ROLLE SORTIEREN
+ * =========================================
+ */
+
+const sortedKoiPlayers =
+    sortScreenshotPlayers(
+        game.koi
+    );
+
+const sortedEnemyPlayers =
+    sortScreenshotPlayers(
+        game.enemy
+    );
+
+
+console.log(
+    "KOI nach Rolle sortiert:",
+    sortedKoiPlayers
+);
+
+console.log(
+    "Gegner nach Rolle sortiert:",
+    sortedEnemyPlayers
+);
+
+
+/*
+ * =========================================
+ * SORTIERTE SPIELER IN GAME-EDITOR SCHREIBEN
+ * =========================================
+ */
+
 fillScreenshotTeam(
     "koi",
-    game.koi,
+    sortedKoiPlayers,
     detectedChampions.koi
 );
 
 fillScreenshotTeam(
     "enemy",
-    game.enemy,
+    sortedEnemyPlayers,
     detectedChampions.enemy
 );
 
