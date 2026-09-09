@@ -1015,26 +1015,49 @@ let screenshotChampionCache = null;
  */
 
 async function loadScreenshotChampions() {
+
     if (screenshotChampionCache) {
+
         return screenshotChampionCache;
+
     }
 
-    const response = await fetch(
-        "https://ddragon.leagueoflegends.com/cdn/16.17.1/data/en_US/champion.json"
-    );
+
+    const response =
+        await fetch(
+            "https://ddragon.leagueoflegends.com/cdn/16.17.1/data/en_US/champion.json"
+        );
+
 
     if (!response.ok) {
-        throw new Error("Championliste konnte nicht geladen werden.");
+
+        throw new Error(
+            "Championliste konnte nicht geladen werden."
+        );
+
     }
 
-    const data = await response.json();
 
-    screenshotChampionCache = Object.values(data.data || {}).map(champion => ({
-        name: champion.name,
-        image: `https://ddragon.leagueoflegends.com/cdn/16.17.1/img/champion/${champion.image.full}`
-    }));
+    const data =
+        await response.json();
+
+
+    screenshotChampionCache =
+        Object.values(
+            data.data || {}
+        ).map(champion => ({
+
+            name:
+                champion.name,
+
+            image:
+                `https://ddragon.leagueoflegends.com/cdn/16.17.1/img/champion/${champion.image.full}`
+
+        }));
+
 
     return screenshotChampionCache;
+
 }
 
 
@@ -1045,23 +1068,44 @@ async function loadScreenshotChampions() {
  */
 
 function loadImageForComparison(src) {
-    return new Promise((resolve, reject) => {
-        const image = new Image();
 
-        image.crossOrigin = "anonymous";
+    return new Promise(
+        (resolve, reject) => {
 
-        image.onload = () => resolve(image);
+            const image =
+                new Image();
 
-        image.onerror = () => {
-            reject(
-                new Error(
-                    `Championbild konnte nicht geladen werden: ${src}`
-                )
-            );
-        };
 
-        image.src = src;
-    });
+            image.crossOrigin =
+                "anonymous";
+
+
+            image.onload =
+                () => {
+
+                    resolve(image);
+
+                };
+
+
+            image.onerror =
+                () => {
+
+                    reject(
+                        new Error(
+                            `Championbild konnte nicht geladen werden: ${src}`
+                        )
+                    );
+
+                };
+
+
+            image.src =
+                src;
+
+        }
+    );
+
 }
 
 
@@ -1071,39 +1115,235 @@ function loadImageForComparison(src) {
  * ============================================================
  */
 
-function getImagePixels(image, size = 32) {
-    const canvas = document.createElement("canvas");
+function getImagePixels(
+    image,
+    size = 32
+) {
 
-    canvas.width = size;
-    canvas.height = size;
+    const canvas =
+        document.createElement(
+            "canvas"
+        );
 
-    const ctx = canvas.getContext("2d", {
-        willReadFrequently: true
-    });
 
-    ctx.drawImage(
-        image,
+    canvas.width =
+        size;
+
+    canvas.height =
+        size;
+
+
+    const ctx =
+        canvas.getContext(
+            "2d",
+            {
+                willReadFrequently: true
+            }
+        );
+
+
+    if (!ctx) {
+
+        throw new Error(
+            "Canvas konnte nicht erstellt werden."
+        );
+
+    }
+
+
+    ctx.clearRect(
         0,
         0,
         size,
         size
     );
 
-    return ctx.getImageData(
+
+    ctx.drawImage(
+        image,
+        0,
+        0,
+        image.naturalWidth ||
+            image.width,
+        image.naturalHeight ||
+            image.height,
         0,
         0,
         size,
         size
-    ).data;
+    );
+
+
+    return ctx
+        .getImageData(
+            0,
+            0,
+            size,
+            size
+        )
+        .data;
+
+}
+
+
+/*
+ * ============================================================
+ * Farbhistogramm erstellen
+ * ============================================================
+ *
+ * Das Histogramm ist nicht für die eigentliche Erkennung
+ * zuständig.
+ *
+ * Es hilft lediglich dabei, völlig falsche Farbbilder
+ * schlechter zu bewerten.
+ */
+
+function getColorHistogram(
+    pixels,
+    size = 32
+) {
+
+    const histogram =
+        new Array(27).fill(0);
+
+
+    let count =
+        0;
+
+
+    for (
+        let y = 3;
+        y < size - 3;
+        y++
+    ) {
+
+        for (
+            let x = 3;
+            x < size - 3;
+            x++
+        ) {
+
+            const index =
+                (
+                    y * size +
+                    x
+                ) * 4;
+
+
+            const r =
+                pixels[index];
+
+            const g =
+                pixels[index + 1];
+
+            const b =
+                pixels[index + 2];
+
+
+            const rBin =
+                Math.min(
+                    2,
+                    Math.floor(
+                        r / 86
+                    )
+                );
+
+
+            const gBin =
+                Math.min(
+                    2,
+                    Math.floor(
+                        g / 86
+                    )
+                );
+
+
+            const bBin =
+                Math.min(
+                    2,
+                    Math.floor(
+                        b / 86
+                    )
+                );
+
+
+            const bin =
+                rBin * 9 +
+                gBin * 3 +
+                bBin;
+
+
+            histogram[bin]++;
+
+            count++;
+
+        }
+
+    }
+
+
+    if (
+        count === 0
+    ) {
+
+        return histogram;
+
+    }
+
+
+    return histogram.map(
+        value =>
+            value / count
+    );
+
+}
+
+
+/*
+ * ============================================================
+ * Histogramm-Unterschied berechnen
+ * ============================================================
+ */
+
+function compareHistograms(
+    histogramA,
+    histogramB
+) {
+
+    let difference =
+        0;
+
+
+    for (
+        let i = 0;
+        i < histogramA.length;
+        i++
+    ) {
+
+        difference +=
+            Math.abs(
+                histogramA[i] -
+                histogramB[i]
+            );
+
+    }
+
+
+    return difference;
+
 }
 
 
 /*
  * ============================================================
  * Ähnlichkeit zweier Bilder berechnen
- *
- * Je kleiner der Wert, desto ähnlicher.
  * ============================================================
+ *
+ * Je kleiner der Wert,
+ * desto ähnlicher sind die Bilder.
+ *
+ * Wir vergleichen bewusst nicht den kompletten Rand,
+ * weil der Screenshot dort UI-/Rahmenelemente enthalten kann.
  */
 
 function compareChampionImages(
@@ -1111,36 +1351,37 @@ function compareChampionImages(
     championPixels,
     size = 32
 ) {
-    let totalDifference = 0;
-    let usedPixels = 0;
 
-    const center = size / 2;
-    const radius = size * 0.43;
+    let totalDifference =
+        0;
 
-    for (let y = 0; y < size; y++) {
-        for (let x = 0; x < size; x++) {
+    let usedPixels =
+        0;
 
-            const dx = x - center;
-            const dy = y - center;
 
-            /*
-             * Nur den inneren Portraitbereich vergleichen.
-             *
-             * Dadurch ignorieren wir den goldenen Rand
-             * des Championportraits.
-             */
+    /*
+     * Inneren Bereich verwenden.
+     *
+     * Der äußere Rand des Portraits wird ignoriert.
+     */
+    for (
+        let y = 3;
+        y < size - 3;
+        y++
+    ) {
 
-            if (
-                Math.sqrt(
-                    dx * dx +
-                    dy * dy
-                ) > radius
-            ) {
-                continue;
-            }
+        for (
+            let x = 3;
+            x < size - 3;
+            x++
+        ) {
 
             const index =
-                (y * size + x) * 4;
+                (
+                    y * size +
+                    x
+                ) * 4;
+
 
             const r1 =
                 screenshotPixels[index];
@@ -1151,6 +1392,7 @@ function compareChampionImages(
             const b1 =
                 screenshotPixels[index + 2];
 
+
             const r2 =
                 championPixels[index];
 
@@ -1160,22 +1402,71 @@ function compareChampionImages(
             const b2 =
                 championPixels[index + 2];
 
-            const difference =
-                Math.abs(r1 - r2) +
-                Math.abs(g1 - g2) +
-                Math.abs(b1 - b2);
 
-            totalDifference += difference;
+            /*
+             * Farbunterschied.
+             */
+            const rgbDifference =
+                (
+                    Math.abs(r1 - r2) +
+                    Math.abs(g1 - g2) +
+                    Math.abs(b1 - b2)
+                ) / 3;
+
+
+            /*
+             * Helligkeitsunterschied.
+             */
+            const brightness1 =
+                r1 * 0.299 +
+                g1 * 0.587 +
+                b1 * 0.114;
+
+
+            const brightness2 =
+                r2 * 0.299 +
+                g2 * 0.587 +
+                b2 * 0.114;
+
+
+            const brightnessDifference =
+                Math.abs(
+                    brightness1 -
+                    brightness2
+                );
+
+
+            /*
+             * Kombination.
+             */
+            totalDifference +=
+                (
+                    rgbDifference * 0.8 +
+                    brightnessDifference * 0.2
+                );
+
 
             usedPixels++;
+
         }
+
     }
 
-    if (usedPixels === 0) {
+
+    if (
+        usedPixels === 0
+    ) {
+
         return Infinity;
+
     }
 
-    return totalDifference / usedPixels;
+
+    return (
+        totalDifference /
+        usedPixels
+    );
+
 }
 
 
@@ -1186,36 +1477,253 @@ function compareChampionImages(
  */
 
 async function prepareChampionComparisonImages() {
+
     const champions =
         await loadScreenshotChampions();
 
-    const prepared = [];
 
-    for (const champion of champions) {
+    const prepared =
+        [];
+
+
+    for (
+        const champion
+        of champions
+    ) {
+
         try {
+
             const image =
                 await loadImageForComparison(
                     champion.image
                 );
 
-            prepared.push({
-                name: champion.name,
-                pixels: getImagePixels(
+
+            const pixels =
+                getImagePixels(
                     image,
                     32
-                )
+                );
+
+
+            const histogram =
+                getColorHistogram(
+                    pixels,
+                    32
+                );
+
+
+            prepared.push({
+
+                name:
+                    champion.name,
+
+                pixels:
+                    pixels,
+
+                histogram:
+                    histogram
+
             });
 
+
         } catch (error) {
+
             console.warn(
                 "Championbild übersprungen:",
                 champion.name,
                 error
             );
+
         }
+
     }
 
+
+    console.log(
+        "Championbilder vorbereitet:",
+        prepared.length
+    );
+
+
     return prepared;
+
+}
+
+
+/*
+ * ============================================================
+ * MÖGLICHE PORTRAIT-ZUSCHNITTE
+ * ============================================================
+ *
+ * Das ist der wichtige Unterschied zur alten Version.
+ *
+ * Wir gehen nicht mehr davon aus, dass der Screenshot-
+ * Ausschnitt exakt pixelgenau mit dem Data-Dragon-Bild
+ * übereinstimmt.
+ *
+ * Stattdessen testen wir:
+ *
+ * - etwas größer
+ * - etwas kleiner
+ * - leicht nach links/rechts
+ * - leicht nach oben/unten
+ */
+
+function getPortraitVariants(
+    image,
+    x,
+    y,
+    size
+) {
+
+    const variants =
+        [];
+
+
+    const imageWidth =
+        image.naturalWidth ||
+        image.width;
+
+    const imageHeight =
+        image.naturalHeight ||
+        image.height;
+
+
+    /*
+     * x/y sind die obere linke Ecke
+     * des erwarteten Portraits.
+     *
+     * Das ist wichtig:
+     *
+     * In deinem Screenshot liegt das Portrait
+     * ungefähr bei x=102 / y=52.
+     *
+     * Wir behandeln 102/52 deshalb NICHT
+     * als Mittelpunkt.
+     */
+
+
+    const sizeFactors = [
+        1.00,
+        0.95,
+        0.90,
+        0.85
+    ];
+
+
+    const offsets = [
+
+        [-2, -2],
+        [-1, -2],
+        [0, -2],
+        [1, -2],
+        [2, -2],
+
+        [-2, -1],
+        [-1, -1],
+        [0, -1],
+        [1, -1],
+        [2, -1],
+
+        [-2, 0],
+        [-1, 0],
+        [0, 0],
+        [1, 0],
+        [2, 0],
+
+        [-2, 1],
+        [-1, 1],
+        [0, 1],
+        [1, 1],
+        [2, 1],
+
+        [-2, 2],
+        [-1, 2],
+        [0, 2],
+        [1, 2],
+        [2, 2]
+
+    ];
+
+
+    for (
+        const factor
+        of sizeFactors
+    ) {
+
+        const variantSize =
+            size * factor;
+
+
+        /*
+         * Wenn das Bild kleiner wird,
+         * soll es möglichst um die Mitte
+         * des ursprünglichen Portraits liegen.
+         */
+        const centerX =
+            x +
+            size / 2;
+
+
+        const centerY =
+            y +
+            size / 2;
+
+
+        for (
+            const [offsetX, offsetY]
+            of offsets
+        ) {
+
+            const variantX =
+                centerX -
+                variantSize / 2 +
+                offsetX;
+
+
+            const variantY =
+                centerY -
+                variantSize / 2 +
+                offsetY;
+
+
+            if (
+                variantX < 0 ||
+                variantY < 0 ||
+                variantX +
+                    variantSize >
+                    imageWidth ||
+                variantY +
+                    variantSize >
+                    imageHeight
+            ) {
+
+                continue;
+
+            }
+
+
+            variants.push({
+
+                x:
+                    variantX,
+
+                y:
+                    variantY,
+
+                size:
+                    variantSize
+
+            });
+
+        }
+
+    }
+
+
+    return variants;
+
 }
 
 
@@ -1226,50 +1734,192 @@ async function prepareChampionComparisonImages() {
  */
 
 async function detectChampionFromPortrait(
-    portraitCanvas,
+    image,
+    portraitX,
+    portraitY,
+    portraitSize,
     preparedChampions
 ) {
-    const ctx =
-        portraitCanvas.getContext(
-            "2d",
-            {
-                willReadFrequently: true
-            }
+
+    const variants =
+        getPortraitVariants(
+            image,
+            portraitX,
+            portraitY,
+            portraitSize
         );
 
-    const screenshotPixels =
-        ctx.getImageData(
-            0,
-            0,
-            portraitCanvas.width,
-            portraitCanvas.height
-        ).data;
 
-    let bestChampion = "";
-    let bestScore = Infinity;
+    if (
+        variants.length === 0
+    ) {
 
-    for (const champion of preparedChampions) {
-        const score =
-            compareChampionImages(
-                screenshotPixels,
-                champion.pixels,
-                portraitCanvas.width
+        return "";
+
+    }
+
+
+    let bestChampion =
+        "";
+
+
+    let bestScore =
+        Infinity;
+
+
+    let bestVariant =
+        null;
+
+
+    /*
+     * Jeden möglichen Screenshot-Ausschnitt
+     * testen.
+     */
+    for (
+        const variant
+        of variants
+    ) {
+
+        const canvas =
+            document.createElement(
+                "canvas"
             );
 
-        if (score < bestScore) {
-            bestScore = score;
-            bestChampion = champion.name;
+
+        canvas.width =
+            32;
+
+        canvas.height =
+            32;
+
+
+        const ctx =
+            canvas.getContext(
+                "2d",
+                {
+                    willReadFrequently: true
+                }
+            );
+
+
+        if (!ctx) {
+
+            continue;
+
         }
+
+
+        ctx.clearRect(
+            0,
+            0,
+            32,
+            32
+        );
+
+
+        ctx.drawImage(
+            image,
+
+            variant.x,
+            variant.y,
+            variant.size,
+            variant.size,
+
+            0,
+            0,
+            32,
+            32
+        );
+
+
+        const screenshotPixels =
+            ctx.getImageData(
+                0,
+                0,
+                32,
+                32
+            ).data;
+
+
+        const screenshotHistogram =
+            getColorHistogram(
+                screenshotPixels,
+                32
+            );
+
+
+        /*
+         * Diesen Ausschnitt gegen alle
+         * Champions vergleichen.
+         */
+        for (
+            const champion
+            of preparedChampions
+        ) {
+
+            const pixelScore =
+                compareChampionImages(
+                    screenshotPixels,
+                    champion.pixels,
+                    32
+                );
+
+
+            const histogramScore =
+                compareHistograms(
+                    screenshotHistogram,
+                    champion.histogram
+                );
+
+
+            /*
+             * Der Pixelvergleich ist deutlich
+             * wichtiger als das Histogramm.
+             *
+             * Das Histogramm verhindert nur,
+             * dass komplett falsche Farbverteilungen
+             * zu leicht gewinnen.
+             */
+            const finalScore =
+                pixelScore +
+                histogramScore * 20;
+
+
+            if (
+                finalScore <
+                bestScore
+            ) {
+
+                bestScore =
+                    finalScore;
+
+
+                bestChampion =
+                    champion.name;
+
+
+                bestVariant =
+                    variant;
+
+            }
+
+        }
+
     }
+
 
     console.log(
         "Champion erkannt:",
         bestChampion,
         "Score:",
-        bestScore
+        bestScore,
+        "Crop:",
+        bestVariant
     );
 
+
     return bestChampion;
+
 }
 
 
@@ -1282,128 +1932,226 @@ async function detectChampionFromPortrait(
 async function detectChampionsFromScreenshot(
     imageData
 ) {
+
     const image =
         await loadImageForComparison(
             imageData
         );
 
-    /*
-     * Dein aktueller LoL-Endscreen ist 960 × 549.
-     *
-     * Die Werte werden auf die tatsächliche
-     * Screenshotgröße skaliert.
-     */
 
+    /*
+     * Dein aktueller LoL-Endscreen:
+     *
+     * 960 × 549
+     */
+    const referenceWidth =
+        960;
+
+    const referenceHeight =
+        549;
+
+
+    const imageWidth =
+        image.naturalWidth ||
+        image.width;
+
+    const imageHeight =
+        image.naturalHeight ||
+        image.height;
+
+
+    /*
+     * Skalierung auf die tatsächliche
+     * Screenshotgröße.
+     */
     const scaleX =
-        image.width / 960;
+        imageWidth /
+        referenceWidth;
+
 
     const scaleY =
-        image.height / 549;
+        imageHeight /
+        referenceHeight;
+
 
     /*
-     * Position des Championportraits.
+     * ============================================
+     * PORTRAIT-POSITION
+     * ============================================
      *
-     * Aus deinem Screenshot:
+     * Wichtig:
      *
-     * X ≈ 102
-     * Y erste Zeile ≈ 52
+     * Diese Werte sind die obere linke Ecke
+     * des Portraitbereichs.
      *
-     * Die fünf Zeilen haben ca. 42 Pixel Abstand.
+     * Nicht der Mittelpunkt.
      */
+    const portraitX =
+        102;
 
-    const portraitX = 102;
-    const portraitSize = 40;
+    const portraitSize =
+        40;
 
-    const team1FirstY = 52;
-    const team2FirstY = 318;
 
-    const rowSpacing = 42;
+    const team1FirstY =
+        52;
 
-    const positions = [];
+    const team2FirstY =
+        318;
 
-    for (let i = 0; i < 5; i++) {
-        positions.push({
-            team: "koi",
-            index: i,
-            x: portraitX,
-            y:
-                team1FirstY +
-                i * rowSpacing
-        });
-    }
 
-    for (let i = 0; i < 5; i++) {
-        positions.push({
-            team: "enemy",
-            index: i,
-            x: portraitX,
-            y:
-                team2FirstY +
-                i * rowSpacing
-        });
-    }
+    const rowSpacing =
+        42;
 
+
+    /*
+     * Auf tatsächliche Screenshotgröße skalieren.
+     */
+    const scaledPortraitX =
+        portraitX *
+        scaleX;
+
+
+    const scaledPortraitSize =
+        portraitSize *
+        Math.min(
+            scaleX,
+            scaleY
+        );
+
+
+    const scaledTeam1FirstY =
+        team1FirstY *
+        scaleY;
+
+
+    const scaledTeam2FirstY =
+        team2FirstY *
+        scaleY;
+
+
+    const scaledRowSpacing =
+        rowSpacing *
+        scaleY;
+
+
+    console.log(
+        "Champion-Erkennung:",
+        {
+            imageWidth,
+            imageHeight,
+            scaledPortraitX,
+            scaledPortraitSize,
+            scaledTeam1FirstY,
+            scaledTeam2FirstY,
+            scaledRowSpacing
+        }
+    );
+
+
+    /*
+     * Championbilder vorbereiten.
+     */
     console.log(
         "Bereite Championbilder vor..."
     );
 
+
     const preparedChampions =
         await prepareChampionComparisonImages();
 
+
+    console.log(
+        "Championbilder bereit:",
+        preparedChampions.length
+    );
+
+
     const result = {
-        koi: new Array(5).fill(""),
-        enemy: new Array(5).fill("")
+
+        koi:
+            new Array(5).fill(""),
+
+        enemy:
+            new Array(5).fill("")
+
     };
 
-    for (const position of positions) {
 
-        const canvas =
-            document.createElement(
-                "canvas"
-            );
+    /*
+     * ============================================
+     * KOI / TEAM 1
+     * ============================================
+     */
 
-        canvas.width = 32;
-        canvas.height = 32;
+    for (
+        let i = 0;
+        i < 5;
+        i++
+    ) {
 
-        const ctx =
-            canvas.getContext(
-                "2d",
-                {
-                    willReadFrequently: true
-                }
-            );
+        const y =
+            scaledTeam1FirstY +
+            i * scaledRowSpacing;
 
-        ctx.drawImage(
-            image,
-
-            position.x * scaleX,
-            position.y * scaleY,
-            portraitSize * scaleX,
-            portraitSize * scaleY,
-
-            0,
-            0,
-            32,
-            32
-        );
 
         const champion =
             await detectChampionFromPortrait(
-                canvas,
+                image,
+                scaledPortraitX,
+                y,
+                scaledPortraitSize,
                 preparedChampions
             );
 
-        result[
-            position.team
-        ][position.index] = champion;
+
+        result.koi[i] =
+            champion || "";
+
     }
+
+
+    /*
+     * ============================================
+     * ENEMY / TEAM 2
+     * ============================================
+     */
+
+    for (
+        let i = 0;
+        i < 5;
+        i++
+    ) {
+
+        const y =
+            scaledTeam2FirstY +
+            i * scaledRowSpacing;
+
+
+        const champion =
+            await detectChampionFromPortrait(
+                image,
+                scaledPortraitX,
+                y,
+                scaledPortraitSize,
+                preparedChampions
+            );
+
+
+        result.enemy[i] =
+            champion || "";
+
+    }
+
 
     console.log(
         "SELBST ERKANNTE CHAMPIONS:",
         result
     );
 
+
     return result;
+
 }
 
 
