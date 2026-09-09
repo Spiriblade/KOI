@@ -396,11 +396,11 @@ const teamData = {
         name: "KOI Gaming",
 
         players: [
-            "Dietrich Aden#48268",
-            "KOI eraZer#kat",
-            "SlimShady#Bazed",
-            "Shinki Hiiro#EUW",
-            "BrokenPromises#1887"
+            "Dietrich Aden",
+            "KOI eraZer",
+            "SlimShady",
+            "Shinki Hiiro",
+            "BrokenPromises"
         ]
     },
 
@@ -408,11 +408,11 @@ const teamData = {
         name: "KOI Kohaku",
 
         players: [
-            "tarrossilver#EUW",
+            "tarrossilver",
             "KOI Kohaku Jungle",
-            "DönerohneTomate#69420",
-            "Stay aggressive#KAISA",
-            "CrueLOr#EUW"
+            "DönerohneTomate",
+            "Stay aggressive",
+            "CrueLOr"
         ]
     }
 
