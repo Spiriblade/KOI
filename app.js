@@ -381,6 +381,7 @@ let matches = [];
 let currentMatchId = null;
 let currentGameIndex = 0;
 let currentTeam = null;
+let unsavedGameDraft = null;
 
 const roles = [
     "Top",
@@ -3604,6 +3605,7 @@ function startNewMatch() {
     */
     currentMatchId = null;
     currentGameIndex = 0;
+    unsavedGameDraft = null;
 
 
     /*
@@ -3692,14 +3694,44 @@ function getGameCount(mode) {
 document.getElementById("match-mode")
     .addEventListener("change", () => {
 
+        /*
+            Bei einem neuen Match befinden sich die
+            Game-Daten bisher nur im HTML.
+
+            Deshalb müssen wir sie VOR dem erneuten
+            Rendern zwischenspeichern.
+        */
+        if (currentMatchId === null) {
+
+            const draft =
+                captureCurrentGameDraft();
+
+            if (draft) {
+
+                unsavedGameDraft =
+                    draft;
+
+            }
+
+        }
+
+
         const count =
             getGameCount(
                 document.getElementById("match-mode").value
             );
 
 
+        /*
+            Falls das aktuelle Game durch den Wechsel
+            von Bo5 auf Bo3 nicht mehr existiert,
+            auf das letzte verfügbare Game wechseln.
+        */
         if (currentGameIndex >= count) {
-            currentGameIndex = count - 1;
+
+            currentGameIndex =
+                count - 1;
+
         }
 
 
@@ -3878,33 +3910,38 @@ function renderGameEditor() {
 
     let game = null;
 
+/*
+    Bestehendes Match:
+    Gespeichertes Game laden.
+*/
+if (currentMatchId !== null) {
 
-    /*
-        Nur bei einem bestehenden Match
-        ein bereits gespeichertes Game laden.
+    const match =
+        matches.find(
+            match =>
+                match.id === currentMatchId
+        );
 
-        Bei einem neuen Match bleibt game = null,
-        damit immer ein komplett neuer Editor
-        mit den Standard-Spielern erzeugt wird.
-    */
+    if (match && match.games) {
 
-    if (currentMatchId !== null) {
-
-        const match =
-            matches.find(
-                match =>
-                    match.id === currentMatchId
-            );
-
-
-        if (match && match.games) {
-
-            game =
-                match.games[currentGameIndex];
-
-        }
+        game =
+            match.games[currentGameIndex];
 
     }
+
+}
+
+/*
+    Neues Match:
+    Noch nicht gespeicherte Eingaben aus dem
+    Browser-Entwurf verwenden.
+*/
+else if (unsavedGameDraft) {
+
+    game =
+        unsavedGameDraft;
+
+}
 
 
     /*
@@ -4249,6 +4286,57 @@ function createPlayerFormsHtml(team, players) {
         `;
 
     }).join("");
+}
+
+function captureCurrentGameDraft() {
+
+    const resultElement =
+        document.getElementById(
+            "current-game-result"
+        );
+
+    const gametimeElement =
+        document.getElementById(
+            "current-game-time"
+        );
+
+    const koiName =
+        document.querySelector(
+            ".koi-name[data-index='0']"
+        );
+
+    const enemyName =
+        document.querySelector(
+            ".enemy-name[data-index='0']"
+        );
+
+    /*
+        Kein Game-Editor geöffnet.
+    */
+    if (
+        !resultElement ||
+        !gametimeElement ||
+        !koiName ||
+        !enemyName
+    ) {
+        return null;
+    }
+
+    return {
+
+        result:
+            resultElement.value,
+
+        gametime:
+            gametimeElement.value.trim(),
+
+        koi:
+            getPlayersFromEditor("koi"),
+
+        enemy:
+            getPlayersFromEditor("enemy")
+
+    };
 }
 
 
