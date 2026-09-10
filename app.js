@@ -3270,13 +3270,6 @@ function sortScreenshotPlayers(
         "Support": 4
     };
 
-    /*
-     * Spieler und Champion werden zuerst miteinander
-     * verbunden.
-     *
-     * Dadurch bleibt der Champion IMMER beim richtigen
-     * Spieler, auch wenn wir anschließend nach Rolle sortieren.
-     */
     const combinedPlayers = players
         .slice(0, 5)
         .map((player, originalIndex) => {
@@ -3291,15 +3284,6 @@ function sortScreenshotPlayers(
             };
         });
 
-    /*
-     * Jetzt nach der von der KI erkannten Rolle sortieren:
-     *
-     * Top
-     * Jungle
-     * Mid
-     * ADC
-     * Support
-     */
     combinedPlayers.sort((a, b) => {
         const roleA =
             roleOrder[a.player?.role];
@@ -3307,7 +3291,6 @@ function sortScreenshotPlayers(
         const roleB =
             roleOrder[b.player?.role];
 
-        // Beide haben eine bekannte Rolle
         if (
             roleA !== undefined &&
             roleB !== undefined
@@ -3315,7 +3298,6 @@ function sortScreenshotPlayers(
             return roleA - roleB;
         }
 
-        // A hat Rolle, B nicht
         if (
             roleA !== undefined &&
             roleB === undefined
@@ -3323,7 +3305,6 @@ function sortScreenshotPlayers(
             return -1;
         }
 
-        // B hat Rolle, A nicht
         if (
             roleA === undefined &&
             roleB !== undefined
@@ -3331,8 +3312,6 @@ function sortScreenshotPlayers(
             return 1;
         }
 
-        // Beide unbekannt:
-        // ursprüngliche Reihenfolge behalten
         return (
             a.originalIndex -
             b.originalIndex
@@ -3424,51 +3403,6 @@ fillScreenshotTeam(
 );
 
 
-/*
- * =========================================
- * SPIELER NACH ERKANNTER ROLLE SORTIEREN
- * =========================================
- */
-
-const sortedKoiPlayers =
-    sortScreenshotPlayers(
-        game.koi
-    );
-
-const sortedEnemyPlayers =
-    sortScreenshotPlayers(
-        game.enemy
-    );
-
-
-console.log(
-    "KOI nach Rolle sortiert:",
-    sortedKoiPlayers
-);
-
-console.log(
-    "Gegner nach Rolle sortiert:",
-    sortedEnemyPlayers
-);
-
-
-/*
- * =========================================
- * SORTIERTE SPIELER IN GAME-EDITOR SCHREIBEN
- * =========================================
- */
-
-fillScreenshotTeam(
-    "koi",
-    sortedKoiPlayers,
-    detectedChampions.koi
-);
-
-fillScreenshotTeam(
-    "enemy",
-    sortedEnemyPlayers,
-    detectedChampions.enemy
-);
 
 
 /*
