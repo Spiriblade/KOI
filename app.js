@@ -459,6 +459,28 @@ function getChampionImage(championName) {
 
 }
 
+function findChampionBySearch(searchTerm) {
+
+    if (!Array.isArray(champions)) {
+        return [];
+    }
+
+    const search =
+        String(searchTerm || "")
+            .trim()
+            .toLowerCase();
+
+    if (!search) {
+        return champions;
+    }
+
+    return champions.filter(
+        champion =>
+            champion?.name
+                ?.toLowerCase()
+                .includes(search)
+    );
+}
 
 function createChampionDatalist() {
 
@@ -3249,6 +3271,132 @@ if (gametimeInput) {
     gametimeInput.value =
         game.gametime || "";
 
+}
+
+function fillScreenshotTeam(
+    team,
+    players,
+    detectedChampions = []
+) {
+
+    if (!Array.isArray(players)) {
+        return;
+    }
+
+    players
+        .slice(0, 5)
+        .forEach(
+            (player, index) => {
+
+                const prefix =
+                    team === "koi"
+                        ? "koi"
+                        : "enemy";
+
+
+                const nameInput =
+                    document.querySelector(
+                        `.${prefix}-name[data-index="${index}"]`
+                    );
+
+
+                const championInput =
+                    document.querySelector(
+                        `.${prefix}-champion[data-index="${index}"]`
+                    );
+
+
+                const killsInput =
+                    document.querySelector(
+                        `.${prefix}-kills[data-index="${index}"]`
+                    );
+
+
+                const deathsInput =
+                    document.querySelector(
+                        `.${prefix}-deaths[data-index="${index}"]`
+                    );
+
+
+                const assistsInput =
+                    document.querySelector(
+                        `.${prefix}-assists[data-index="${index}"]`
+                    );
+
+
+                const damageInput =
+                    document.querySelector(
+                        `.${prefix}-damage[data-index="${index}"]`
+                    );
+
+
+                const csInput =
+                    document.querySelector(
+                        `.${prefix}-cs[data-index="${index}"]`
+                    );
+
+
+                if (nameInput) {
+
+                    nameInput.value =
+                        player?.name || "";
+
+                }
+
+
+                if (championInput) {
+
+                    championInput.value =
+                        detectedChampions[index] || "";
+
+                    updateChampionPreview(
+                        championInput
+                    );
+
+                }
+
+
+                if (killsInput) {
+
+                    killsInput.value =
+                        player?.kills ?? 0;
+
+                }
+
+
+                if (deathsInput) {
+
+                    deathsInput.value =
+                        player?.deaths ?? 0;
+
+                }
+
+
+                if (assistsInput) {
+
+                    assistsInput.value =
+                        player?.assists ?? 0;
+
+                }
+
+
+                if (damageInput) {
+
+                    damageInput.value =
+                        player?.damage ?? 0;
+
+                }
+
+
+                if (csInput) {
+
+                    csInput.value =
+                        player?.cs ?? 0;
+
+                }
+
+            }
+        );
 }
 
 function sortScreenshotPlayers(
