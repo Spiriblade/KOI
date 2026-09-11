@@ -10045,24 +10045,26 @@ function updateScheduleWeek() {
 
 
     /*
-     * Wochentage und Datum oben
-     * im Kalender aktualisieren.
+     * Die 7 Tages-Header holen.
      */
 
-    document
-        .querySelectorAll(
+    const headers =
+        document.querySelectorAll(
             ".schedule-day-header"
-        )
-        .forEach(header => {
+        );
 
-            const index =
-                Number(
-                    header.dataset.dayIndex
-                );
+
+    headers.forEach(
+        (header, index) => {
+
+            if (index > 6) {
+                return;
+            }
 
 
             const date =
                 new Date(monday);
+
 
             date.setDate(
                 monday.getDate() + index
@@ -10073,6 +10075,7 @@ function updateScheduleWeek() {
                 header.querySelector(
                     ".schedule-day-name"
                 );
+
 
             const dateElement =
                 header.querySelector(
@@ -10091,50 +10094,57 @@ function updateScheduleWeek() {
             if (dateElement) {
 
                 dateElement.textContent =
-                    formatScheduleDate(date);
+                    formatScheduleDate(
+                        date
+                    );
 
             }
 
-        });
+        }
+    );
 
 
     /*
-     * Das tatsächliche Datum an jeder
-     * Tages-Spalte hinterlegen.
-     *
-     * Das brauchen wir später für
-     * die Termine.
+     * Die 7 Tages-Spalten holen.
      */
 
-    document
-        .querySelectorAll(
+    const columns =
+        document.querySelectorAll(
             ".schedule-day-column"
-        )
-        .forEach(column => {
+        );
 
-            const index =
-                Number(
-                    column.dataset.dayIndex
-                );
+
+    columns.forEach(
+        (column, index) => {
+
+            if (index > 6) {
+                return;
+            }
 
 
             const date =
                 new Date(monday);
+
 
             date.setDate(
                 monday.getDate() + index
             );
 
 
+            /*
+             * Das Datum für später
+             * an der Spalte speichern.
+             */
+
             column.dataset.date =
                 date
                     .toISOString()
                     .split("T")[0];
 
-        });
+        }
+    );
 
 }
-
 
 /*
  * Eine Woche zurück
