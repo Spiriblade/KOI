@@ -9983,6 +9983,284 @@ function makeMapArrowDraggable(
 
 }
 
+/* =========================================================
+   TERMINPLANER – WOCHENANSICHT
+========================================================= */
+
+let scheduleCurrentWeek = new Date();
+
+
+function getStartOfWeek(date) {
+
+    const result = new Date(date);
+
+    result.setHours(0, 0, 0, 0);
+
+    const day = result.getDay();
+
+    // Montag als Wochenanfang
+    const difference =
+        day === 0
+            ? -6
+            : 1 - day;
+
+    result.setDate(
+        result.getDate() + difference
+    );
+
+    return result;
+}
+
+
+function formatScheduleDate(date) {
+
+    return date.toLocaleDateString(
+        "de-DE",
+        {
+            day: "2-digit",
+            month: "2-digit"
+        }
+    );
+
+}
+
+
+function updateScheduleWeek() {
+
+    const monday =
+        getStartOfWeek(
+            scheduleCurrentWeek
+        );
+
+
+    const dayNames = [
+        "Montag",
+        "Dienstag",
+        "Mittwoch",
+        "Donnerstag",
+        "Freitag",
+        "Samstag",
+        "Sonntag"
+    ];
+
+
+    /*
+     * Wochentage und Datum oben
+     * im Kalender aktualisieren.
+     */
+
+    document
+        .querySelectorAll(
+            ".schedule-day-header"
+        )
+        .forEach(header => {
+
+            const index =
+                Number(
+                    header.dataset.dayIndex
+                );
+
+
+            const date =
+                new Date(monday);
+
+            date.setDate(
+                monday.getDate() + index
+            );
+
+
+            const nameElement =
+                header.querySelector(
+                    ".schedule-day-name"
+                );
+
+            const dateElement =
+                header.querySelector(
+                    ".schedule-day-date"
+                );
+
+
+            if (nameElement) {
+
+                nameElement.textContent =
+                    dayNames[index];
+
+            }
+
+
+            if (dateElement) {
+
+                dateElement.textContent =
+                    formatScheduleDate(date);
+
+            }
+
+        });
+
+
+    /*
+     * Das tatsächliche Datum an jeder
+     * Tages-Spalte hinterlegen.
+     *
+     * Das brauchen wir später für
+     * die Termine.
+     */
+
+    document
+        .querySelectorAll(
+            ".schedule-day-column"
+        )
+        .forEach(column => {
+
+            const index =
+                Number(
+                    column.dataset.dayIndex
+                );
+
+
+            const date =
+                new Date(monday);
+
+            date.setDate(
+                monday.getDate() + index
+            );
+
+
+            column.dataset.date =
+                date
+                    .toISOString()
+                    .split("T")[0];
+
+        });
+
+}
+
+
+/*
+ * Eine Woche zurück
+ */
+
+function schedulePreviousWeek() {
+
+    scheduleCurrentWeek =
+        getStartOfWeek(
+            scheduleCurrentWeek
+        );
+
+
+    scheduleCurrentWeek.setDate(
+        scheduleCurrentWeek.getDate() - 7
+    );
+
+
+    updateScheduleWeek();
+
+}
+
+
+/*
+ * Eine Woche vor
+ */
+
+function scheduleNextWeek() {
+
+    scheduleCurrentWeek =
+        getStartOfWeek(
+            scheduleCurrentWeek
+        );
+
+
+    scheduleCurrentWeek.setDate(
+        scheduleCurrentWeek.getDate() + 7
+    );
+
+
+    updateScheduleWeek();
+
+}
+
+
+/*
+ * Zur aktuellen Woche springen
+ */
+
+function scheduleToday() {
+
+    scheduleCurrentWeek =
+        new Date();
+
+
+    updateScheduleWeek();
+
+}
+
+
+/*
+ * Kalender-Buttons verbinden
+ */
+
+document.addEventListener(
+    "DOMContentLoaded",
+    () => {
+
+        const previousButton =
+            document.getElementById(
+                "schedule-prev-week"
+            );
+
+
+        const todayButton =
+            document.getElementById(
+                "schedule-today"
+            );
+
+
+        const nextButton =
+            document.getElementById(
+                "schedule-next-week"
+            );
+
+
+        if (previousButton) {
+
+            previousButton.addEventListener(
+                "click",
+                schedulePreviousWeek
+            );
+
+        }
+
+
+        if (todayButton) {
+
+            todayButton.addEventListener(
+                "click",
+                scheduleToday
+            );
+
+        }
+
+
+        if (nextButton) {
+
+            nextButton.addEventListener(
+                "click",
+                scheduleNextWeek
+            );
+
+        }
+
+
+        /*
+         * Beim Start direkt die aktuelle
+         * Kalenderwoche anzeigen.
+         */
+
+        updateScheduleWeek();
+
+    }
+);
+
 /* =========================================
    GOOGLE DOCS
 ========================================= */
