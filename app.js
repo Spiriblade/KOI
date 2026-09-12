@@ -3017,9 +3017,18 @@ document.getElementById("overview-new-match-btn")
 const screenshotUploadButton =
     document.getElementById("overview-upload-btn");
 
+const editorScreenshotButton =
+    document.getElementById("editor-screenshot-btn");
+
 const screenshotFileInput =
     document.getElementById("screenshot-file-input");
 
+
+/*
+ * =========================================
+ * SCREENSHOT BUTTON ÜBERSICHT
+ * =========================================
+ */
 
 if (screenshotUploadButton && screenshotFileInput) {
 
@@ -3029,6 +3038,33 @@ if (screenshotUploadButton && screenshotFileInput) {
 
     });
 
+}
+
+
+/*
+ * =========================================
+ * SCREENSHOT BUTTON MATCH-EDITOR
+ * =========================================
+ */
+
+if (editorScreenshotButton && screenshotFileInput) {
+
+    editorScreenshotButton.addEventListener("click", () => {
+
+        screenshotFileInput.click();
+
+    });
+
+}
+
+
+/*
+ * =========================================
+ * SCREENSHOT ANALYSE
+ * =========================================
+ */
+
+if (screenshotFileInput) {
 
     screenshotFileInput.addEventListener(
         "change",
@@ -3060,11 +3096,31 @@ if (screenshotUploadButton && screenshotFileInput) {
             );
 
 
+            /*
+             * Merken, welches Game aktuell
+             * ausgewählt ist.
+             */
+            const targetGameIndex =
+                currentGameIndex;
+
+
+            /*
+             * Prüfen, ob wir gerade ein
+             * bestehendes Match bearbeiten.
+             */
+            const editingExistingMatch =
+                currentMatchId !== null &&
+                currentMatchId !== undefined;
+
+
             try {
 
                 /*
-                 * Screenshot als Base64 einlesen.
+                 * =========================================
+                 * SCREENSHOT EINLESEN
+                 * =========================================
                  */
+
                 const imageData =
                     await new Promise(
                         (resolve, reject) => {
@@ -3102,9 +3158,11 @@ if (screenshotUploadButton && screenshotFileInput) {
 
 
                 /*
-                 * Screenshot an unsere
-                 * Supabase Edge Function schicken.
+                 * =========================================
+                 * KI-ANALYSE
+                 * =========================================
                  */
+
                 const {
                     data,
                     error
@@ -3138,82 +3196,299 @@ if (screenshotUploadButton && screenshotFileInput) {
 
 
                 console.log(
-    "Screenshot erfolgreich analysiert:",
-    data.game
-);
+                    "Screenshot erfolgreich analysiert:",
+                    data.game
+                );
 
 
-console.log(
-    "ERKANNTES GAME:",
-    JSON.stringify(
-        data.game,
-        null,
-        4
-    )
-);
+                console.log(
+                    "ERKANNTES GAME:",
+                    JSON.stringify(
+                        data.game,
+                        null,
+                        4
+                    )
+                );
 
 
-/*
- * =========================================
- * ERKANNTES GAME IN DEN GAME-EDITOR LADEN
- * =========================================
- */
+                const game =
+                    data.game;
 
-const game = data.game;
 
-console.log(
-    "KI ERKANNT:",
-    JSON.stringify(game, null, 2)
-);
+                /*
+                 * =========================================
+                 * CHAMPIONS ERKENNEN
+                 * =========================================
+                 */
 
-const detectedChampions =
-    await detectChampionsFromScreenshot(
-        imageData
+                const detectedChampions =
+                    await detectChampionsFromScreenshot(
+                        imageData
+                    );
+
+
+                console.log(
+                    "CHAMPIONS ERKANNT:",
+                    detectedChampions
+                );
+
+
+                /*
+                 * =========================================
+                 * BESTEHENDES MATCH BEARBEITEN
+                 * =========================================
+                 */
+
+                if (editingExistingMatch) {
+
+                    /*
+                     * Das ausgewählte Game beibehalten.
+                     *
+                     * Beispiel:
+                     * Game 2 geöffnet → Screenshot
+                     * → Daten werden in Game 2 geladen.
+                     */
+                    currentGameIndex =
+                        targetGameIndex;
+
+
+                    updateGameTabs();
+
+                    renderGameEditor();
+
+
+                    /*
+                     * Ergebnis setzen
+                     */
+                    const resultInput =
+                        document.getElementById(
+                            "current-game-result"
+                        );
+
+
+                    if (resultInput) {
+
+                        resultInput.value =
+                            game.result === "loss"
+                                ? "loss"
+                                : "win";
+
+                    }
+
+
+                    /*
+                     * GameTime setzen
+                     */
+                    const gametimeInput =
+                        document.getElementById(
+                            "current-game-time"
+                        );
+
+
+                    if (gametimeInput) {
+
+                        gametimeInput.value =
+                            game.gametime || "";
+
+                    }
+
+
+                    /*
+                     * KOI-Spieler nach ihrer
+                     * erkannten Rolle sortieren.
+                     */
+                    const sortedKoi =
+                        sortScreenshotPlayers(
+                            game.koi,
+                            detectedChampions.koi
+                        );
+
+
+                    /*
+                     * Gegner ebenfalls nach
+                     * Rolle sortieren.
+                     */
+                    const sortedEnemy =
+                        sortScreenshotPlayers(
+                            game.enemy,
+                            detectedChampions.enemy
+                        );
+
+
+                    console.log(
+                        "KOI nach Rolle sortiert:",
+                        sortedKoi
+                    );
+
+
+                    console.log(
+                        "Gegner nach Rolle sortiert:",
+                        sortedEnemy
+                    );
+
+
+                    /*
+                     * KOI in das aktuell ausgewählte
+                     * Game schreiben.
+                     */
+                    fillScreenshotTeam(
+                        "koi",
+                        sortedKoi.players,
+                        sortedKoi.champions
+                    );
+
+
+                    /*
+                     * Gegner in das aktuell ausgewählte
+                     * Game schreiben.
+                     */
+                    fillScreenshotTeam(
+                        "enemy",
+                        sortedEnemy.players,
+                        sortedEnemy.champions
+                    );
+
+
+                    /*
+                     * Editor geöffnet lassen.
+                     */
+                    showPage(
+                        "match-editor"
+                    );
+
+
+                    alert(
+                        `Screenshot wurde analysiert und in Game ${targetGameIndex + 1} übernommen.\n\n` +
+                        "Bitte die Werte kontrollieren und das Match anschließend speichern."
+                    );
+
+                }
+
+
+                /*
+                 * =========================================
+                 * NEUES MATCH AUS ÜBERSICHT
+                 * =========================================
+                 */
+
+                else {
+
+                    startNewMatch();
+
+                    currentGameIndex = 0;
+
+                    updateGameTabs();
+
+                    renderGameEditor();
+
+
+                    /*
+                     * Ergebnis setzen
+                     */
+                    const resultInput =
+                        document.getElementById(
+                            "current-game-result"
+                        );
+
+
+                    if (resultInput) {
+
+                        resultInput.value =
+                            game.result === "loss"
+                                ? "loss"
+                                : "win";
+
+                    }
+
+
+                    /*
+                     * GameTime setzen
+                     */
+                    const gametimeInput =
+                        document.getElementById(
+                            "current-game-time"
+                        );
+
+
+                    if (gametimeInput) {
+
+                        gametimeInput.value =
+                            game.gametime || "";
+
+                    }
+
+
+                    /*
+                     * KOI-Spieler
+                     */
+                    const sortedKoi =
+                        sortScreenshotPlayers(
+                            game.koi,
+                            detectedChampions.koi
+                        );
+
+
+                    /*
+                     * Gegner
+                     */
+                    const sortedEnemy =
+                        sortScreenshotPlayers(
+                            game.enemy,
+                            detectedChampions.enemy
+                        );
+
+
+                    fillScreenshotTeam(
+                        "koi",
+                        sortedKoi.players,
+                        sortedKoi.champions
+                    );
+
+
+                    fillScreenshotTeam(
+                        "enemy",
+                        sortedEnemy.players,
+                        sortedEnemy.champions
+                    );
+
+
+                    showPage(
+                        "match-editor"
+                    );
+
+
+                    alert(
+                        "Screenshot wurde analysiert und in Game 1 übernommen.\n\n" +
+                        "Bitte die Werte kontrollieren und das Match anschließend speichern."
+                    );
+
+                }
+
+
+            } catch (error) {
+
+                console.error(
+                    "Fehler bei der Screenshot-Analyse:",
+                    error
+                );
+
+
+                alert(
+                    "Der Screenshot konnte nicht analysiert werden.\n\n" +
+                    (
+                        error?.message ||
+                        "Unbekannter Fehler."
+                    )
+                );
+
+            } finally {
+
+                screenshotFileInput.value = "";
+
+            }
+
+        }
     );
-
-console.log(
-    "CHAMPIONS ERKANNT:",
-    detectedChampions
-);
-
-startNewMatch();
-
-currentGameIndex = 0;
-
-updateGameTabs();
-renderGameEditor();
-
-
-/*
- * Ergebnis setzen.
- */
-const resultInput =
-    document.getElementById(
-        "current-game-result"
-    );
-
-if (resultInput) {
-
-    resultInput.value =
-        game.result === "loss"
-            ? "loss"
-            : "win";
-
-}
-
-
-/*
- * GameTime setzen.
- */
-const gametimeInput =
-    document.getElementById(
-        "current-game-time"
-    );
-
-if (gametimeInput) {
-
-    gametimeInput.value =
-        game.gametime || "";
 
 }
 
