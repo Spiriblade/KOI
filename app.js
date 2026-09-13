@@ -3774,6 +3774,9 @@ function getGameCount(mode) {
 
     switch (mode) {
 
+        case "bo1":
+            return 1;
+
         case "bo3":
         case "fearless3":
             return 3;
