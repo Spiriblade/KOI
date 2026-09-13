@@ -124,14 +124,10 @@ async function loginWithTeamCode(teamCode) {
     const loginError =
         document.getElementById("login-error");
 
-
     if (loginError) {
-
         loginError.hidden = true;
         loginError.textContent = "";
-
     }
-
 
     try {
 
@@ -149,84 +145,95 @@ async function loginWithTeamCode(teamCode) {
                 }
             );
 
-
         if (error) {
             throw error;
         }
 
+        console.log("Team-Login Antwort:", data);
 
         if (
             !data ||
             !data.success ||
             !data.session
         ) {
-
             throw new Error(
                 data?.error ||
                 "Anmeldung fehlgeschlagen."
             );
-
         }
-
-
-        /*
-            Team merken
-        */
 
         currentTeam =
             data.team;
 
+        console.log(
+            "Access Token vorhanden:",
+            !!data.session.access_token
+        );
 
-        /*
-            Supabase-Session im Browser speichern
-        */
+        console.log(
+            "Refresh Token vorhanden:",
+            !!data.session.refresh_token
+        );
 
         const {
+            data: sessionData,
             error: sessionError
         } =
             await supabaseClient.auth.setSession({
-
                 access_token:
                     data.session.access_token,
-
                 refresh_token:
                     data.session.refresh_token
-
             });
 
+        console.log(
+            "setSession Ergebnis:",
+            sessionData
+        );
+
+        console.log(
+            "setSession Fehler:",
+            sessionError
+        );
 
         if (sessionError) {
             throw sessionError;
         }
 
+        const {
+            data: currentSessionData,
+            error: currentSessionError
+        } =
+            await supabaseClient.auth.getSession();
 
-        /*
-            Login ausblenden
-        */
+        console.log(
+            "Session direkt nach setSession:",
+            currentSessionData
+        );
+
+        console.log(
+            "getSession Fehler:",
+            currentSessionError
+        );
+
+        console.log(
+            "localStorage nach Login:",
+            Object.keys(localStorage)
+        );
 
         const loginScreen =
             document.getElementById(
                 "login-screen"
             );
 
-
         if (loginScreen) {
-
             loginScreen.style.display =
                 "none";
-
         }
 
-
-        /*
-            Daten laden
-        */
-
         await loadMatches();
-
         renderOverview();
         renderMatches();
-
 
     } catch (error) {
 
@@ -235,19 +242,14 @@ async function loginWithTeamCode(teamCode) {
             error
         );
 
-
         if (loginError) {
-
             loginError.textContent =
                 error?.message ||
-                "Ungültiger Zugangscode.";
+                "Anmeldung fehlgeschlagen.";
 
             loginError.hidden = false;
-
         }
-
     }
-
 }
 
 /* =========================================
