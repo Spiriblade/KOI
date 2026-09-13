@@ -8899,7 +8899,18 @@ function renderTeamCompChampion(
 
             <div class="teamcomp-champion-picker">
 
-                <div class="teamcomp-champion-image">
+                <div
+                    class="teamcomp-champion-image"
+                    data-comp-id="${compId}"
+                    data-role="${role}"
+                    data-slot-type="${slotType}"
+                    data-slot-index="${slotIndex}"
+                    title="${
+                        champion
+                            ? "Rechtsklick zum Entfernen"
+                            : "Champion auswählen"
+                    }"
+                >
 
                     ${
                         image
@@ -8908,6 +8919,10 @@ function renderTeamCompChampion(
                                     src="${image}"
                                     alt="${escapeHtml(champion)}"
                                 >
+
+                                <span class="teamcomp-remove-hint">
+                                    ×
+                                </span>
                             `
                             : `
                                 <span>
@@ -8935,7 +8950,10 @@ function renderTeamCompChampion(
                     data-slot-index="${slotIndex}"
                 >
 
-                <div class="teamcomp-champion-dropdown"></div>
+
+                <div
+                    class="teamcomp-champion-dropdown"
+                ></div>
 
             </div>
 
@@ -8966,12 +8984,6 @@ function attachTeamCompEvents() {
                 "click",
                 event => {
 
-                    /*
-                     * Nicht aufklappen, wenn gerade
-                     * ein Button, Input oder Dropdown
-                     * angeklickt wurde.
-                     */
-
                     if (
                         event.target.closest(
                             "input, button, .teamcomp-champion-dropdown"
@@ -8980,10 +8992,6 @@ function attachTeamCompEvents() {
                         return;
                     }
 
-
-                    /*
-                     * Alle anderen Teamcomps schließen.
-                     */
 
                     document
                         .querySelectorAll(
@@ -9001,10 +9009,6 @@ function attachTeamCompEvents() {
 
                         });
 
-
-                    /*
-                     * Diese Teamcomp öffnen.
-                     */
 
                     card.classList.toggle(
                         "active"
@@ -9044,10 +9048,6 @@ function attachTeamCompEvents() {
                 "focus",
                 () => {
 
-                    /*
-                     * Sicherheitshalber Karte öffnen.
-                     */
-
                     const card =
                         input.closest(
                             ".teamcomp-card"
@@ -9062,7 +9062,9 @@ function attachTeamCompEvents() {
                             )
                             .forEach(otherCard => {
 
-                                if (otherCard !== card) {
+                                if (
+                                    otherCard !== card
+                                ) {
 
                                     otherCard.classList.remove(
                                         "active"
@@ -9079,6 +9081,11 @@ function attachTeamCompEvents() {
 
                     }
 
+
+                    /*
+                     * Beim Reinklicken ohne Text
+                     * alle Champions anzeigen.
+                     */
 
                     renderTeamCompChampionDropdown(
                         input
@@ -9152,51 +9159,61 @@ function attachTeamCompEvents() {
 
     /*
      * =========================================
-     * TEAMCOMP NAMEN
+     * CHAMPION-BILDER
+     * RECHTSKLICK = ENTFERNEN
      * =========================================
      */
 
     document
         .querySelectorAll(
-            ".teamcomp-name-input"
+            ".teamcomp-champion-image"
         )
-        .forEach(input => {
+        .forEach(image => {
 
-            input.addEventListener(
-                "change",
-                async () => {
+            image.addEventListener(
+                "contextmenu",
+                async event => {
 
-                    await saveTeamCompName(
+                    event.preventDefault();
+
+
+                    const compId =
+                        image.dataset.compId;
+
+                    const role =
+                        image.dataset.role;
+
+                    const slotType =
+                        image.dataset.slotType;
+
+                    const slotIndex =
+                        Number(
+                            image.dataset.slotIndex
+                        );
+
+
+                    const input =
+                        image.parentElement
+                            .querySelector(
+                                ".teamcomp-champion-input"
+                            );
+
+
+                    if (!input) {
+                        return;
+                    }
+
+
+                    input.value = "";
+
+
+                    await saveTeamCompSlot(
                         input
                     );
 
-                }
-            );
 
-        });
-
-
-    /*
-     * =========================================
-     * LÖSCHEN
-     * =========================================
-     */
-
-    document
-        .querySelectorAll(
-            ".teamcomp-delete-btn"
-        )
-        .forEach(button => {
-
-            button.addEventListener(
-                "click",
-                async () => {
-
-                    const compId =
-                        button.dataset.compId;
-
-                    await deleteTeamComp(
-                        compId
+                    updateTeamCompSlotPreview(
+                        input
                     );
 
                 }
@@ -9248,12 +9265,8 @@ function attachTeamCompEvents() {
                     }
 
 
-                    const championName =
-                        option.dataset.champion;
-
-
                     input.value =
-                        championName;
+                        option.dataset.champion;
 
 
                     dropdown.innerHTML = "";
@@ -9270,6 +9283,61 @@ function attachTeamCompEvents() {
                                 bubbles: true
                             }
                         )
+                    );
+
+                }
+            );
+
+        });
+
+
+    /*
+     * =========================================
+     * TEAMCOMP NAMEN
+     * =========================================
+     */
+
+    document
+        .querySelectorAll(
+            ".teamcomp-name-input"
+        )
+        .forEach(input => {
+
+            input.addEventListener(
+                "change",
+                async () => {
+
+                    await saveTeamCompName(
+                        input
+                    );
+
+                }
+            );
+
+        });
+
+
+    /*
+     * =========================================
+     * LÖSCHEN
+     * =========================================
+     */
+
+    document
+        .querySelectorAll(
+            ".teamcomp-delete-btn"
+        )
+        .forEach(button => {
+
+            button.addEventListener(
+                "click",
+                async () => {
+
+                    const compId =
+                        button.dataset.compId;
+
+                    await deleteTeamComp(
+                        compId
                     );
 
                 }
@@ -9334,18 +9402,18 @@ function renderTeamCompChampionDropdown(
         input.value.trim().toLowerCase();
 
 
-    /*
-     * Wenn nichts eingegeben wurde,
-     * zeigen wir die ersten Champions.
-     */
-
     let results;
 
+
+    /*
+     * Kein Suchtext:
+     * beliebte/erste Champions anzeigen.
+     */
 
     if (!search) {
 
         results =
-            champions.slice(0, 8);
+            champions.slice(0, 12);
 
     } else {
 
@@ -9362,7 +9430,7 @@ function renderTeamCompChampionDropdown(
                     );
 
                 })
-                .slice(0, 8);
+                .slice(0, 12);
 
     }
 

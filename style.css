@@ -3228,6 +3228,7 @@ nav {
     grid-template-columns: 42px minmax(0, 1fr);
     gap: 7px;
     align-items: center;
+    width: 100%;
 }
 
 
@@ -3599,4 +3600,47 @@ span {
 .teamcomp-slot-sub
 .teamcomp-champion-input {
     display: block;
+}
+
+/* =========================================
+   TEAMCOMP – ENTFERNEN HINWEIS
+========================================= */
+
+.teamcomp-champion-image {
+    position: relative;
+    cursor: pointer;
+}
+
+
+.teamcomp-remove-hint {
+    position: absolute;
+
+    top: 2px;
+    right: 2px;
+
+    width: 17px;
+    height: 17px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 50%;
+
+    background: rgba(0, 0, 0, .8);
+    color: #fff;
+
+    font-size: 14px;
+    line-height: 1;
+
+    opacity: 0;
+
+    transition:
+        opacity .15s ease;
+}
+
+
+.teamcomp-champion-image:hover
+.teamcomp-remove-hint {
+    opacity: 1;
 }
