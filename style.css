@@ -3321,3 +3321,110 @@ nav {
     }
 
 }
+
+/* =========================================
+   TEAMCOMP CHAMPION PICKER
+========================================= */
+
+.teamcomp-champion-picker {
+    position: relative;
+    width: 100%;
+}
+
+
+.teamcomp-champion-input {
+    position: relative;
+    z-index: 2;
+    pointer-events: auto;
+}
+
+
+/* =========================================
+   TEAMCOMP DROPDOWN
+========================================= */
+
+.teamcomp-champion-dropdown {
+    display: none;
+
+    position: absolute;
+    top: calc(100% + 5px);
+    left: 0;
+    right: 0;
+
+    z-index: 1000;
+
+    background: #181b21;
+    border: 1px solid #343944;
+    border-radius: 7px;
+
+    box-shadow:
+        0 10px 25px rgba(0, 0, 0, .45);
+
+    overflow: hidden;
+
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+
+.teamcomp-champion-dropdown.active {
+    display: block;
+}
+
+
+.teamcomp-champion-option {
+    width: 100%;
+
+    display: flex;
+    align-items: center;
+
+    gap: 9px;
+
+    padding: 7px 9px;
+
+    border: none;
+    background: transparent;
+
+    color: #e8e9ec;
+
+    text-align: left;
+
+    cursor: pointer;
+
+    font-size: 12px;
+}
+
+
+.teamcomp-champion-option:hover {
+    background: #252932;
+}
+
+
+.teamcomp-champion-option img {
+    width: 32px;
+    height: 32px;
+
+    border-radius: 5px;
+
+    object-fit: cover;
+
+    flex-shrink: 0;
+}
+
+
+.teamcomp-champion-option span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+
+.teamcomp-champion-dropdown-empty {
+    padding: 12px;
+
+    color: #777e8b;
+
+    font-size: 12px;
+
+    text-align: center;
+}

@@ -8883,7 +8883,6 @@ function renderTeamCompChampion(
     const champion =
         slot?.champion || "";
 
-
     const image =
         champion
             ? getChampionImage(champion)
@@ -8898,41 +8897,47 @@ function renderTeamCompChampion(
                     : "teamcomp-slot-sub"}"
         >
 
-            <div class="teamcomp-champion-image">
+            <div class="teamcomp-champion-picker">
 
-                ${
-                    image
-                        ? `
-                            <img
-                                src="${image}"
-                                alt="${escapeHtml(champion)}"
-                            >
-                        `
-                        : `
-                            <span>
-                                +
-                            </span>
-                        `
-                }
+                <div class="teamcomp-champion-image">
+
+                    ${
+                        image
+                            ? `
+                                <img
+                                    src="${image}"
+                                    alt="${escapeHtml(champion)}"
+                                >
+                            `
+                            : `
+                                <span>
+                                    +
+                                </span>
+                            `
+                    }
+
+                </div>
+
+
+                <input
+                    type="text"
+                    class="teamcomp-champion-input"
+                    placeholder="${
+                        slotType === "main"
+                            ? "Champion suchen..."
+                            : "Sub suchen..."
+                    }"
+                    value="${escapeHtml(champion)}"
+                    autocomplete="off"
+                    data-comp-id="${compId}"
+                    data-role="${role}"
+                    data-slot-type="${slotType}"
+                    data-slot-index="${slotIndex}"
+                >
+
+                <div class="teamcomp-champion-dropdown"></div>
 
             </div>
-
-
-            <input
-                type="text"
-                class="teamcomp-champion-input"
-                list="champion-list"
-                placeholder="${
-                    slotType === "main"
-                        ? "Champion"
-                        : "Sub"
-                }"
-                value="${escapeHtml(champion)}"
-                data-comp-id="${compId}"
-                data-role="${role}"
-                data-slot-type="${slotType}"
-                data-slot-index="${slotIndex}"
-            >
 
         </div>
     `;
@@ -8945,6 +8950,10 @@ function renderTeamCompChampion(
 
 function attachTeamCompEvents() {
 
+    /*
+     * CHAMPION INPUTS
+     */
+
     document
         .querySelectorAll(
             ".teamcomp-champion-input"
@@ -8952,14 +8961,10 @@ function attachTeamCompEvents() {
         .forEach(input => {
 
             input.addEventListener(
-                "change",
-                async () => {
+                "input",
+                () => {
 
-                    await saveTeamCompSlot(
-                        input
-                    );
-
-                    updateTeamCompSlotPreview(
+                    renderTeamCompChampionDropdown(
                         input
                     );
 
@@ -8968,7 +8973,19 @@ function attachTeamCompEvents() {
 
 
             input.addEventListener(
-                "blur",
+                "focus",
+                () => {
+
+                    renderTeamCompChampionDropdown(
+                        input
+                    );
+
+                }
+            );
+
+
+            input.addEventListener(
+                "change",
                 async () => {
 
                     const champion =
@@ -8995,10 +9012,6 @@ function attachTeamCompEvents() {
 
                     if (!found) {
 
-                        alert(
-                            "Dieser Champion wurde nicht gefunden."
-                        );
-
                         input.value = "";
 
                         await saveTeamCompSlot(
@@ -9009,13 +9022,31 @@ function attachTeamCompEvents() {
                             input
                         );
 
+                        return;
                     }
+
+
+                    input.value =
+                        found.name;
+
+
+                    await saveTeamCompSlot(
+                        input
+                    );
+
+                    updateTeamCompSlotPreview(
+                        input
+                    );
 
                 }
             );
 
         });
 
+
+    /*
+     * TEAMCOMP NAMEN
+     */
 
     document
         .querySelectorAll(
@@ -9036,6 +9067,10 @@ function attachTeamCompEvents() {
 
         });
 
+
+    /*
+     * LÖSCHEN
+     */
 
     document
         .querySelectorAll(
@@ -9059,8 +9094,211 @@ function attachTeamCompEvents() {
 
         });
 
+
+    /*
+     * DROPDOWN OPTIONEN
+     */
+
+    document
+        .querySelectorAll(
+            ".teamcomp-champion-dropdown"
+        )
+        .forEach(dropdown => {
+
+            dropdown.addEventListener(
+                "mousedown",
+                event => {
+
+                    const option =
+                        event.target.closest(
+                            ".teamcomp-champion-option"
+                        );
+
+
+                    if (!option) {
+                        return;
+                    }
+
+
+                    event.preventDefault();
+
+
+                    const input =
+                        dropdown
+                            .parentElement
+                            .querySelector(
+                                ".teamcomp-champion-input"
+                            );
+
+
+                    if (!input) {
+                        return;
+                    }
+
+
+                    const championName =
+                        option.dataset.champion;
+
+
+                    input.value =
+                        championName;
+
+
+                    dropdown.innerHTML = "";
+
+                    dropdown.classList.remove(
+                        "active"
+                    );
+
+
+                    input.dispatchEvent(
+                        new Event(
+                            "change",
+                            {
+                                bubbles: true
+                            }
+                        )
+                    );
+
+                }
+            );
+
+        });
+
+
+    /*
+     * DROPDOWNS SCHLIESSEN
+     */
+
+    document.addEventListener(
+        "click",
+        event => {
+
+            if (
+                event.target.closest(
+                    ".teamcomp-champion-picker"
+                )
+            ) {
+                return;
+            }
+
+
+            document
+                .querySelectorAll(
+                    ".teamcomp-champion-dropdown"
+                )
+                .forEach(dropdown => {
+
+                    dropdown.classList.remove(
+                        "active"
+                    );
+
+                });
+
+        }
+    );
+
 }
 
+
+function renderTeamCompChampionDropdown(
+    input
+) {
+
+    const dropdown =
+        input.parentElement.querySelector(
+            ".teamcomp-champion-dropdown"
+        );
+
+
+    if (!dropdown) {
+        return;
+    }
+
+
+    const search =
+        input.value.trim().toLowerCase();
+
+
+    /*
+     * Wenn nichts eingegeben wurde,
+     * zeigen wir die ersten Champions.
+     */
+
+    let results;
+
+
+    if (!search) {
+
+        results =
+            champions.slice(0, 8);
+
+    } else {
+
+        results =
+            champions
+                .filter(champion => {
+
+                    const name =
+                        champion.name
+                            .toLowerCase();
+
+                    return name.includes(
+                        search
+                    );
+
+                })
+                .slice(0, 8);
+
+    }
+
+
+    if (results.length === 0) {
+
+        dropdown.innerHTML = `
+            <div class="teamcomp-champion-dropdown-empty">
+                Kein Champion gefunden
+            </div>
+        `;
+
+        dropdown.classList.add(
+            "active"
+        );
+
+        return;
+    }
+
+
+    dropdown.innerHTML =
+        results
+            .map(
+                champion => `
+                    <button
+                        type="button"
+                        class="teamcomp-champion-option"
+                        data-champion="${escapeHtml(champion.name)}"
+                    >
+
+                        <img
+                            src="${champion.image}"
+                            alt="${escapeHtml(champion.name)}"
+                        >
+
+                        <span>
+                            ${escapeHtml(champion.name)}
+                        </span>
+
+                    </button>
+                `
+            )
+            .join("");
+
+
+    dropdown.classList.add(
+        "active"
+    );
+
+}
 
 /* =========================================
    SLOT SPEICHERN
