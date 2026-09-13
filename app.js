@@ -8492,6 +8492,999 @@ document.addEventListener("click", event => {
 });
 
 /* =========================================
+   TEAMCOMPS
+========================================= */
+
+const TEAMCOMP_ROLES = [
+    "Top",
+    "Jungle",
+    "Mid",
+    "ADC",
+    "Support"
+];
+
+let teamComps = [];
+
+
+/* =========================================
+   TEAMCOMPS LADEN
+========================================= */
+
+async function loadTeamComps() {
+
+    const container =
+        document.getElementById(
+            "teamcomps-container"
+        );
+
+    if (!container) {
+        return;
+    }
+
+    if (!currentTeam?.id) {
+
+        container.innerHTML = `
+            <div class="empty-state">
+                Kein Team ausgewählt.
+            </div>
+        `;
+
+        return;
+    }
+
+
+    container.innerHTML = `
+        <div class="teamcomps-loading">
+            Teamcomps werden geladen...
+        </div>
+    `;
+
+
+    const {
+        data: compRows,
+        error: compError
+    } =
+        await supabaseClient
+            .from("team_comps")
+            .select("*")
+            .eq(
+                "team_id",
+                currentTeam.id
+            )
+            .order(
+                "created_at",
+                {
+                    ascending: true
+                }
+            );
+
+
+    if (compError) {
+
+        console.error(
+            "Fehler beim Laden der Teamcomps:",
+            compError
+        );
+
+        container.innerHTML = `
+            <div class="empty-state">
+                Teamcomps konnten nicht geladen werden.
+            </div>
+        `;
+
+        return;
+    }
+
+
+    const comps =
+        compRows || [];
+
+
+    if (comps.length === 0) {
+
+        teamComps = [];
+
+        renderTeamComps();
+
+        return;
+    }
+
+
+    const compIds =
+        comps.map(
+            comp => comp.id
+        );
+
+
+    const {
+        data: slotRows,
+        error: slotError
+    } =
+        await supabaseClient
+            .from("team_comp_slots")
+            .select("*")
+            .in(
+                "comp_id",
+                compIds
+            );
+
+
+    if (slotError) {
+
+        console.error(
+            "Fehler beim Laden der Teamcomp Slots:",
+            slotError
+        );
+
+        container.innerHTML = `
+            <div class="empty-state">
+                Teamcomp-Daten konnten nicht geladen werden.
+            </div>
+        `;
+
+        return;
+    }
+
+
+    const slots =
+        slotRows || [];
+
+
+    teamComps =
+        comps.map(comp => {
+
+            const compSlots =
+                slots.filter(
+                    slot =>
+                        slot.comp_id === comp.id
+                );
+
+
+            return {
+                id: comp.id,
+                name: comp.name,
+                slots: compSlots
+            };
+
+        });
+
+
+    renderTeamComps();
+}
+
+
+/* =========================================
+   TEAMCOMPS DARSTELLEN
+========================================= */
+
+function renderTeamComps() {
+
+    const container =
+        document.getElementById(
+            "teamcomps-container"
+        );
+
+    if (!container) {
+        return;
+    }
+
+
+    if (teamComps.length === 0) {
+
+        container.innerHTML = `
+            <div class="teamcomps-empty">
+
+                <div class="teamcomps-empty-icon">
+                    ⚔️
+                </div>
+
+                <h3>
+                    Noch keine Teamcomps
+                </h3>
+
+                <p>
+                    Erstelle deine erste Teamcomp
+                    und hinterlege Main Picks
+                    sowie drei Alternativen.
+                </p>
+
+                <button
+                    type="button"
+                    class="primary-btn"
+                    id="teamcomp-empty-new-btn"
+                >
+                    + Erste Teamcomp erstellen
+                </button>
+
+            </div>
+        `;
+
+
+        const button =
+            document.getElementById(
+                "teamcomp-empty-new-btn"
+            );
+
+
+        if (button) {
+
+            button.addEventListener(
+                "click",
+                createTeamComp
+            );
+
+        }
+
+        return;
+    }
+
+
+    container.innerHTML =
+        teamComps
+            .map(
+                comp =>
+                    renderTeamCompCard(comp)
+            )
+            .join("");
+
+
+    attachTeamCompEvents();
+}
+
+
+/* =========================================
+   EINZELNE TEAMCOMP KARTE
+========================================= */
+
+function renderTeamCompCard(comp) {
+
+    return `
+        <div
+            class="teamcomp-card"
+            data-comp-id="${comp.id}"
+        >
+
+            <div class="teamcomp-header">
+
+                <input
+                    type="text"
+                    class="teamcomp-name-input"
+                    value="${escapeHtml(comp.name || "Neue Teamcomp")}"
+                    data-comp-id="${comp.id}"
+                    aria-label="Name der Teamcomp"
+                >
+
+                <button
+                    type="button"
+                    class="danger-btn teamcomp-delete-btn"
+                    data-comp-id="${comp.id}"
+                >
+                    🗑️
+                </button>
+
+            </div>
+
+
+            <div class="teamcomp-grid">
+
+                ${
+                    TEAMCOMP_ROLES
+                        .map(
+                            role =>
+                                renderTeamCompRole(
+                                    comp,
+                                    role
+                                )
+                        )
+                        .join("")
+                }
+
+            </div>
+
+        </div>
+    `;
+}
+
+
+/* =========================================
+   ROLLE DARSTELLEN
+========================================= */
+
+function renderTeamCompRole(
+    comp,
+    role
+) {
+
+    const mainSlot =
+        comp.slots.find(
+            slot =>
+                slot.role === role &&
+                slot.slot_type === "main"
+        );
+
+
+    const subs =
+        [0, 1, 2].map(
+            index =>
+                comp.slots.find(
+                    slot =>
+                        slot.role === role &&
+                        slot.slot_type === "sub" &&
+                        Number(slot.slot_index) === index
+                )
+        );
+
+
+    return `
+        <div
+            class="teamcomp-role"
+            data-role="${role}"
+        >
+
+            <div class="teamcomp-role-title">
+                ${role}
+            </div>
+
+
+            <div class="teamcomp-main">
+
+                ${renderTeamCompChampion(
+                    mainSlot,
+                    comp.id,
+                    role,
+                    "main",
+                    0
+                )}
+
+            </div>
+
+
+            <div class="teamcomp-subs-title">
+                Alternativen
+            </div>
+
+
+            <div class="teamcomp-subs">
+
+                ${
+                    subs
+                        .map(
+                            (slot, index) =>
+                                renderTeamCompChampion(
+                                    slot,
+                                    comp.id,
+                                    role,
+                                    "sub",
+                                    index
+                                )
+                        )
+                        .join("")
+                }
+
+            </div>
+
+        </div>
+    `;
+}
+
+
+/* =========================================
+   CHAMPION SLOT
+========================================= */
+
+function renderTeamCompChampion(
+    slot,
+    compId,
+    role,
+    slotType,
+    slotIndex
+) {
+
+    const champion =
+        slot?.champion || "";
+
+
+    const image =
+        champion
+            ? getChampionImage(champion)
+            : null;
+
+
+    return `
+        <div
+            class="teamcomp-slot
+                ${slotType === "main"
+                    ? "teamcomp-slot-main"
+                    : "teamcomp-slot-sub"}"
+        >
+
+            <div class="teamcomp-champion-image">
+
+                ${
+                    image
+                        ? `
+                            <img
+                                src="${image}"
+                                alt="${escapeHtml(champion)}"
+                            >
+                        `
+                        : `
+                            <span>
+                                +
+                            </span>
+                        `
+                }
+
+            </div>
+
+
+            <input
+                type="text"
+                class="teamcomp-champion-input"
+                list="champion-list"
+                placeholder="${
+                    slotType === "main"
+                        ? "Champion"
+                        : "Sub"
+                }"
+                value="${escapeHtml(champion)}"
+                data-comp-id="${compId}"
+                data-role="${role}"
+                data-slot-type="${slotType}"
+                data-slot-index="${slotIndex}"
+            >
+
+        </div>
+    `;
+}
+
+
+/* =========================================
+   TEAMCOMP EVENTS
+========================================= */
+
+function attachTeamCompEvents() {
+
+    document
+        .querySelectorAll(
+            ".teamcomp-champion-input"
+        )
+        .forEach(input => {
+
+            input.addEventListener(
+                "change",
+                async () => {
+
+                    await saveTeamCompSlot(
+                        input
+                    );
+
+                    updateTeamCompSlotPreview(
+                        input
+                    );
+
+                }
+            );
+
+
+            input.addEventListener(
+                "blur",
+                async () => {
+
+                    const champion =
+                        input.value.trim();
+
+
+                    if (!champion) {
+
+                        await saveTeamCompSlot(
+                            input
+                        );
+
+                        updateTeamCompSlotPreview(
+                            input
+                        );
+
+                        return;
+                    }
+
+
+                    const found =
+                        getChampion(champion);
+
+
+                    if (!found) {
+
+                        alert(
+                            "Dieser Champion wurde nicht gefunden."
+                        );
+
+                        input.value = "";
+
+                        await saveTeamCompSlot(
+                            input
+                        );
+
+                        updateTeamCompSlotPreview(
+                            input
+                        );
+
+                    }
+
+                }
+            );
+
+        });
+
+
+    document
+        .querySelectorAll(
+            ".teamcomp-name-input"
+        )
+        .forEach(input => {
+
+            input.addEventListener(
+                "change",
+                async () => {
+
+                    await saveTeamCompName(
+                        input
+                    );
+
+                }
+            );
+
+        });
+
+
+    document
+        .querySelectorAll(
+            ".teamcomp-delete-btn"
+        )
+        .forEach(button => {
+
+            button.addEventListener(
+                "click",
+                async () => {
+
+                    const compId =
+                        button.dataset.compId;
+
+                    await deleteTeamComp(
+                        compId
+                    );
+
+                }
+            );
+
+        });
+
+}
+
+
+/* =========================================
+   SLOT SPEICHERN
+========================================= */
+
+async function saveTeamCompSlot(
+    input
+) {
+
+    const compId =
+        input.dataset.compId;
+
+    const role =
+        input.dataset.role;
+
+    const slotType =
+        input.dataset.slotType;
+
+    const slotIndex =
+        Number(
+            input.dataset.slotIndex
+        );
+
+
+    if (!compId || !role) {
+        return;
+    }
+
+
+    const champion =
+        input.value.trim();
+
+
+    const {
+        error
+    } =
+        await supabaseClient
+            .from("team_comp_slots")
+            .upsert(
+                {
+                    comp_id: compId,
+                    role: role,
+                    slot_type: slotType,
+                    slot_index: slotIndex,
+                    champion:
+                        champion || null,
+                    updated_at:
+                        new Date().toISOString()
+                },
+                {
+                    onConflict:
+                        "comp_id,role,slot_type,slot_index"
+                }
+            );
+
+
+    if (error) {
+
+        console.error(
+            "Fehler beim Speichern des Champions:",
+            error
+        );
+
+        alert(
+            "Der Champion konnte nicht gespeichert werden."
+        );
+
+        return;
+    }
+
+
+    const comp =
+        teamComps.find(
+            item =>
+                item.id === compId
+        );
+
+
+    if (!comp) {
+        return;
+    }
+
+
+    let existingSlot =
+        comp.slots.find(
+            slot =>
+                slot.role === role &&
+                slot.slot_type === slotType &&
+                Number(slot.slot_index) === slotIndex
+        );
+
+
+    if (!existingSlot) {
+
+        existingSlot = {
+            comp_id: compId,
+            role: role,
+            slot_type: slotType,
+            slot_index: slotIndex
+        };
+
+        comp.slots.push(
+            existingSlot
+        );
+
+    }
+
+
+    existingSlot.champion =
+        champion || null;
+}
+
+
+/* =========================================
+   SLOT BILD AKTUALISIEREN
+========================================= */
+
+function updateTeamCompSlotPreview(
+    input
+) {
+
+    const champion =
+        getChampion(
+            input.value.trim()
+        );
+
+
+    const slot =
+        input.closest(
+            ".teamcomp-slot"
+        );
+
+
+    if (!slot) {
+        return;
+    }
+
+
+    const imageContainer =
+        slot.querySelector(
+            ".teamcomp-champion-image"
+        );
+
+
+    if (!imageContainer) {
+        return;
+    }
+
+
+    if (!champion) {
+
+        imageContainer.innerHTML = `
+            <span>
+                +
+            </span>
+        `;
+
+        return;
+    }
+
+
+    imageContainer.innerHTML = `
+        <img
+            src="${champion.image}"
+            alt="${escapeHtml(champion.name)}"
+        >
+    `;
+
+}
+
+
+/* =========================================
+   TEAMCOMP NAME SPEICHERN
+========================================= */
+
+async function saveTeamCompName(
+    input
+) {
+
+    const compId =
+        input.dataset.compId;
+
+    const name =
+        input.value.trim() ||
+        "Neue Teamcomp";
+
+
+    const {
+        error
+    } =
+        await supabaseClient
+            .from("team_comps")
+            .update({
+                name: name,
+                updated_at:
+                    new Date().toISOString()
+            })
+            .eq(
+                "id",
+                compId
+            );
+
+
+    if (error) {
+
+        console.error(
+            "Fehler beim Speichern des Teamcomp-Namens:",
+            error
+        );
+
+        alert(
+            "Der Name konnte nicht gespeichert werden."
+        );
+
+        return;
+    }
+
+
+    const comp =
+        teamComps.find(
+            item =>
+                item.id === compId
+        );
+
+
+    if (comp) {
+        comp.name = name;
+    }
+
+}
+
+
+/* =========================================
+   NEUE TEAMCOMP
+========================================= */
+
+async function createTeamComp() {
+
+    if (!currentTeam?.id) {
+
+        alert(
+            "Kein Team ausgewählt."
+        );
+
+        return;
+    }
+
+
+    const name =
+        prompt(
+            "Name der neuen Teamcomp:",
+            `Teamcomp ${teamComps.length + 1}`
+        );
+
+
+    if (name === null) {
+        return;
+    }
+
+
+    const cleanName =
+        name.trim() ||
+        `Teamcomp ${teamComps.length + 1}`;
+
+
+    const {
+        data,
+        error
+    } =
+        await supabaseClient
+            .from("team_comps")
+            .insert({
+                team_id:
+                    currentTeam.id,
+                name:
+                    cleanName
+            })
+            .select()
+            .single();
+
+
+    if (error) {
+
+        console.error(
+            "Fehler beim Erstellen der Teamcomp:",
+            error
+        );
+
+        alert(
+            "Die Teamcomp konnte nicht erstellt werden."
+        );
+
+        return;
+    }
+
+
+    teamComps.push({
+        id: data.id,
+        name: data.name,
+        slots: []
+    });
+
+
+    renderTeamComps();
+}
+
+
+/* =========================================
+   TEAMCOMP LÖSCHEN
+========================================= */
+
+async function deleteTeamComp(
+    compId
+) {
+
+    const comp =
+        teamComps.find(
+            item =>
+                item.id === compId
+        );
+
+
+    if (!comp) {
+        return;
+    }
+
+
+    const confirmed =
+        confirm(
+            `Teamcomp "${comp.name}" wirklich löschen?`
+        );
+
+
+    if (!confirmed) {
+        return;
+    }
+
+
+    const {
+        error
+    } =
+        await supabaseClient
+            .from("team_comps")
+            .delete()
+            .eq(
+                "id",
+                compId
+            );
+
+
+    if (error) {
+
+        console.error(
+            "Fehler beim Löschen der Teamcomp:",
+            error
+        );
+
+        alert(
+            "Die Teamcomp konnte nicht gelöscht werden."
+        );
+
+        return;
+    }
+
+
+    teamComps =
+        teamComps.filter(
+            item =>
+                item.id !== compId
+        );
+
+
+    renderTeamComps();
+}
+
+
+/* =========================================
+   TEAMCOMP NAVIGATION / INITIALISIERUNG
+========================================= */
+
+document.addEventListener(
+    "DOMContentLoaded",
+    () => {
+
+        const teamCompButton =
+            document.getElementById(
+                "teamcomp-new-btn"
+            );
+
+
+        if (teamCompButton) {
+
+            teamCompButton.addEventListener(
+                "click",
+                createTeamComp
+            );
+
+        }
+
+
+        const teamCompsNav =
+            document.querySelector(
+                '.nav-btn[data-page="teamcomps"]'
+            );
+
+
+        if (teamCompsNav) {
+
+            teamCompsNav.addEventListener(
+                "click",
+                async () => {
+
+                    await loadTeamComps();
+
+                }
+            );
+
+        }
+
+    }
+);
+
+
+/* =========================================
    MAP EDITOR
 ========================================= */
 
