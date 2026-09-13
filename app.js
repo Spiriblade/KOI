@@ -8970,37 +8970,72 @@ function attachTeamCompEvents() {
 
     /*
      * =========================================
-     * TEAMCOMP KARTE ÖFFNEN
+     * TEAMCOMP NUR ÜBER DIE KOPFZEILE ÖFFNEN
      * =========================================
      */
 
     document
-        .querySelectorAll(".teamcomp-card")
-        .forEach(card => {
+        .querySelectorAll(".teamcomp-header")
+        .forEach(header => {
 
-            card.addEventListener("click", event => {
+            header.addEventListener(
+                "click",
+                event => {
 
-                if (
-                    event.target.closest(
-                        "input, button, .teamcomp-champion-dropdown"
-                    )
-                ) {
-                    return;
+                    /*
+                     * Wenn der Löschen-Button geklickt wird,
+                     * soll die Teamcomp NICHT auf-/zuklappen.
+                     */
+
+                    if (
+                        event.target.closest("button")
+                    ) {
+                        return;
+                    }
+
+
+                    const card =
+                        header.closest(
+                            ".teamcomp-card"
+                        );
+
+
+                    if (!card) {
+                        return;
+                    }
+
+
+                    /*
+                     * Alle anderen Teamcomps schließen.
+                     */
+
+                    document
+                        .querySelectorAll(
+                            ".teamcomp-card.active"
+                        )
+                        .forEach(otherCard => {
+
+                            if (otherCard !== card) {
+
+                                otherCard.classList.remove(
+                                    "active"
+                                );
+
+                            }
+
+                        });
+
+
+                    /*
+                     * Diese Teamcomp öffnen/schließen.
+                     */
+
+                    card.classList.toggle(
+                        "active"
+                    );
+
                 }
-
-                document
-                    .querySelectorAll(".teamcomp-card.active")
-                    .forEach(otherCard => {
-
-                        if (otherCard !== card) {
-                            otherCard.classList.remove("active");
-                        }
-
-                    });
-
-                card.classList.toggle("active");
-
-            });
+            );
 
         });
 
@@ -9012,14 +9047,14 @@ function attachTeamCompEvents() {
      */
 
     document
-        .querySelectorAll(".teamcomp-champion-input")
+        .querySelectorAll(
+            ".teamcomp-champion-input"
+        )
         .forEach(input => {
 
             /*
-             * Beim Tippen NUR das Dropdown aktualisieren.
-             *
-             * Noch NICHT speichern und noch NICHT
-             * prüfen, ob der Text ein Champion ist.
+             * Beim Tippen nur das Dropdown
+             * aktualisieren.
              */
 
             input.addEventListener(
@@ -9078,12 +9113,9 @@ function attachTeamCompEvents() {
 
 
                     /*
-                     * Wenn bereits ein Champion
-                     * eingetragen ist, markieren wir
-                     * den Namen komplett.
-                     *
-                     * Dadurch kann man direkt einen
-                     * neuen Champion schreiben.
+                     * Vorhandenen Champion komplett
+                     * markieren, damit man direkt
+                     * einen neuen schreiben kann.
                      */
 
                     requestAnimationFrame(() => {
@@ -9107,7 +9139,7 @@ function attachTeamCompEvents() {
              * =====================================
              *
              * Wird ausgelöst, wenn ein Champion
-             * aus unserem Dropdown ausgewählt wurde.
+             * aus dem Dropdown ausgewählt wurde.
              */
 
             input.addEventListener(
@@ -9119,7 +9151,7 @@ function attachTeamCompEvents() {
 
 
                     /*
-                     * Feld komplett leer:
+                     * Feld leer:
                      * Champion entfernen.
                      */
 
@@ -9148,9 +9180,8 @@ function attachTeamCompEvents() {
 
 
                     /*
-                     * Nur wenn tatsächlich ein
-                     * Champion ausgewählt/eingegeben
-                     * wurde, speichern wir ihn.
+                     * Nur einen tatsächlich
+                     * vorhandenen Champion speichern.
                      */
 
                     if (found) {
@@ -9169,15 +9200,6 @@ function attachTeamCompEvents() {
 
                     }
 
-                    /*
-                     * Wenn der Text kein Champion ist,
-                     * machen wir NICHTS.
-                     *
-                     * Dadurch wird ein bestehender
-                     * Champion nicht plötzlich gelöscht,
-                     * nur weil man gerade "Ori" tippt.
-                     */
-
                 }
             );
 
@@ -9192,7 +9214,9 @@ function attachTeamCompEvents() {
      */
 
     document
-        .querySelectorAll(".teamcomp-champion-image")
+        .querySelectorAll(
+            ".teamcomp-champion-image"
+        )
         .forEach(image => {
 
             image.addEventListener(
@@ -9276,7 +9300,7 @@ function attachTeamCompEvents() {
 
 
                     /*
-                     * Champion aus Dropdown übernehmen.
+                     * Champion übernehmen.
                      */
 
                     input.value =
@@ -9291,10 +9315,7 @@ function attachTeamCompEvents() {
 
 
                     /*
-                     * Jetzt erst change auslösen.
-                     *
-                     * Dadurch wird der neue Champion
-                     * gespeichert.
+                     * Erst jetzt speichern.
                      */
 
                     input.dispatchEvent(

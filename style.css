@@ -3774,3 +3774,17 @@ span {
 .teamcomp-champion-dropdown {
     display: none !important;
 }
+
+/* =========================================
+   TEAMCOMP HEADER – AUF/ZUKLAPPEN
+========================================= */
+
+.teamcomp-header {
+    cursor: pointer;
+}
+
+
+.teamcomp-card.active
+.teamcomp-header {
+    cursor: pointer;
+}
