@@ -3428,3 +3428,125 @@ nav {
 
     text-align: center;
 }
+
+/* =========================================
+   TEAMCOMPS – KOMPAKTE ANSICHT
+========================================= */
+
+.teamcomp-card {
+    cursor: pointer;
+}
+
+
+/* =========================================
+   KOMPAKTER ZUSTAND
+========================================= */
+
+.teamcomp-card:not(.active) {
+    cursor: pointer;
+}
+
+
+.teamcomp-card:not(.active) .teamcomp-role {
+    padding: 14px 10px 16px;
+}
+
+
+.teamcomp-card:not(.active) .teamcomp-role-title {
+    margin-bottom: 8px;
+}
+
+
+/* Main Champion kleiner */
+
+.teamcomp-card:not(.active)
+.teamcomp-slot-main
+.teamcomp-champion-image {
+    width: 64px;
+    height: 64px;
+    margin-bottom: 5px;
+}
+
+
+/* Eingabefelder verstecken */
+
+.teamcomp-card:not(.active)
+.teamcomp-champion-input {
+    display: none;
+}
+
+
+/* Alternativen kompakter */
+
+.teamcomp-card:not(.active)
+.teamcomp-subs-title {
+    margin-top: 4px;
+    margin-bottom: 5px;
+}
+
+
+/* Subs horizontal statt untereinander */
+
+.teamcomp-card:not(.active)
+.teamcomp-subs {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    gap: 5px;
+}
+
+
+/* Sub-Slot nur als Bild */
+
+.teamcomp-card:not(.active)
+.teamcomp-slot-sub {
+    display: block;
+}
+
+
+.teamcomp-card:not(.active)
+.teamcomp-slot-sub
+.teamcomp-champion-image {
+    width: 38px;
+    height: 38px;
+}
+
+
+/* Leere Subs ebenfalls kompakt */
+
+.teamcomp-card:not(.active)
+.teamcomp-slot-sub
+.teamcomp-champion-image
+span {
+    font-size: 16px;
+}
+
+
+/* =========================================
+   AKTIVE TEAMCOMP
+========================================= */
+
+.teamcomp-card.active {
+    cursor: default;
+}
+
+
+.teamcomp-card.active
+.teamcomp-champion-input {
+    display: block;
+}
+
+
+/* =========================================
+   AKTIVE KARTE HERVORHEBEN
+========================================= */
+
+.teamcomp-card.active {
+    border-color: #8e6d2d;
+}
+
+
+.teamcomp-card.active
+.teamcomp-header {
+    background: rgba(196, 155, 58, 0.04);
+}

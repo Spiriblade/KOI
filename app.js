@@ -8951,7 +8951,75 @@ function renderTeamCompChampion(
 function attachTeamCompEvents() {
 
     /*
+     * =========================================
+     * TEAMCOMP KARTE ÖFFNEN
+     * =========================================
+     */
+
+    document
+        .querySelectorAll(
+            ".teamcomp-card"
+        )
+        .forEach(card => {
+
+            card.addEventListener(
+                "click",
+                event => {
+
+                    /*
+                     * Nicht aufklappen, wenn gerade
+                     * ein Button, Input oder Dropdown
+                     * angeklickt wurde.
+                     */
+
+                    if (
+                        event.target.closest(
+                            "input, button, .teamcomp-champion-dropdown"
+                        )
+                    ) {
+                        return;
+                    }
+
+
+                    /*
+                     * Alle anderen Teamcomps schließen.
+                     */
+
+                    document
+                        .querySelectorAll(
+                            ".teamcomp-card.active"
+                        )
+                        .forEach(otherCard => {
+
+                            if (otherCard !== card) {
+
+                                otherCard.classList.remove(
+                                    "active"
+                                );
+
+                            }
+
+                        });
+
+
+                    /*
+                     * Diese Teamcomp öffnen.
+                     */
+
+                    card.classList.toggle(
+                        "active"
+                    );
+
+                }
+            );
+
+        });
+
+
+    /*
+     * =========================================
      * CHAMPION INPUTS
+     * =========================================
      */
 
     document
@@ -8975,6 +9043,42 @@ function attachTeamCompEvents() {
             input.addEventListener(
                 "focus",
                 () => {
+
+                    /*
+                     * Sicherheitshalber Karte öffnen.
+                     */
+
+                    const card =
+                        input.closest(
+                            ".teamcomp-card"
+                        );
+
+
+                    if (card) {
+
+                        document
+                            .querySelectorAll(
+                                ".teamcomp-card.active"
+                            )
+                            .forEach(otherCard => {
+
+                                if (otherCard !== card) {
+
+                                    otherCard.classList.remove(
+                                        "active"
+                                    );
+
+                                }
+
+                            });
+
+
+                        card.classList.add(
+                            "active"
+                        );
+
+                    }
+
 
                     renderTeamCompChampionDropdown(
                         input
@@ -9007,7 +9111,9 @@ function attachTeamCompEvents() {
 
 
                     const found =
-                        getChampion(champion);
+                        getChampion(
+                            champion
+                        );
 
 
                     if (!found) {
@@ -9045,7 +9151,9 @@ function attachTeamCompEvents() {
 
 
     /*
+     * =========================================
      * TEAMCOMP NAMEN
+     * =========================================
      */
 
     document
@@ -9069,7 +9177,9 @@ function attachTeamCompEvents() {
 
 
     /*
+     * =========================================
      * LÖSCHEN
+     * =========================================
      */
 
     document
@@ -9096,7 +9206,9 @@ function attachTeamCompEvents() {
 
 
     /*
+     * =========================================
      * DROPDOWN OPTIONEN
+     * =========================================
      */
 
     document
@@ -9167,7 +9279,9 @@ function attachTeamCompEvents() {
 
 
     /*
+     * =========================================
      * DROPDOWNS SCHLIESSEN
+     * =========================================
      */
 
     document.addEventListener(
