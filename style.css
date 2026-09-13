@@ -3550,3 +3550,53 @@ span {
 .teamcomp-header {
     background: rgba(196, 155, 58, 0.04);
 }
+
+/* =========================================
+   TEAMCOMP SUBS – BILD + INPUT NEBENEINANDER
+========================================= */
+
+.teamcomp-slot-sub
+.teamcomp-champion-picker {
+    display: grid;
+
+    grid-template-columns:
+        42px minmax(0, 1fr);
+
+    gap: 7px;
+
+    align-items: center;
+
+    width: 100%;
+}
+
+
+/* Sub-Bild */
+
+.teamcomp-slot-sub
+.teamcomp-champion-image {
+    width: 42px;
+    height: 42px;
+
+    margin: 0;
+}
+
+
+/* Sub-Eingabe */
+
+.teamcomp-slot-sub
+.teamcomp-champion-input {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+
+/* =========================================
+   AKTIVE TEAMCOMP
+========================================= */
+
+.teamcomp-card.active
+.teamcomp-slot-sub
+.teamcomp-champion-input {
+    display: block;
+}
