@@ -3644,3 +3644,133 @@ span {
 .teamcomp-remove-hint {
     opacity: 1;
 }
+
+/* =========================================
+   TEAMCOMPS – SUB INPUT FINAL FIX
+========================================= */
+
+/*
+ * Der Sub-Slot selbst darf KEIN Grid sein.
+ * Das Grid sitzt nur im Champion-Picker.
+ */
+
+.teamcomp-slot-sub {
+    display: block !important;
+
+    width: 100% !important;
+    min-width: 0 !important;
+
+    box-sizing: border-box;
+}
+
+
+/*
+ * Picker nimmt die komplette Breite
+ * der jeweiligen Rollen-Spalte ein.
+ */
+
+.teamcomp-slot-sub
+.teamcomp-champion-picker {
+    display: grid !important;
+
+    grid-template-columns:
+        42px minmax(0, 1fr) !important;
+
+    gap: 8px !important;
+
+    width: 100% !important;
+    min-width: 0 !important;
+
+    box-sizing: border-box;
+
+    align-items: center;
+}
+
+
+/*
+ * Bild
+ */
+
+.teamcomp-slot-sub
+.teamcomp-champion-image {
+    width: 42px !important;
+    height: 42px !important;
+
+    margin: 0 !important;
+
+    min-width: 42px !important;
+}
+
+
+/*
+ * Eingabefeld
+ */
+
+.teamcomp-slot-sub
+.teamcomp-champion-input {
+    display: block !important;
+
+    width: 100% !important;
+    min-width: 0 !important;
+
+    box-sizing: border-box !important;
+
+    height: 42px;
+}
+
+
+/*
+ * Dropdown ebenfalls über die komplette
+ * Breite des Pickers.
+ */
+
+.teamcomp-slot-sub
+.teamcomp-champion-dropdown {
+    grid-column: 1 / -1;
+
+    width: 100%;
+}
+
+
+/* =========================================
+   AKTIVE ANSICHT
+========================================= */
+
+.teamcomp-card.active
+.teamcomp-slot-sub
+.teamcomp-champion-picker {
+    display: grid !important;
+}
+
+
+/* =========================================
+   KOMPAKTE ANSICHT
+========================================= */
+
+.teamcomp-card:not(.active)
+.teamcomp-slot-sub {
+    display: block !important;
+    width: auto !important;
+}
+
+
+.teamcomp-card:not(.active)
+.teamcomp-slot-sub
+.teamcomp-champion-picker {
+    display: block !important;
+    width: auto !important;
+}
+
+
+.teamcomp-card:not(.active)
+.teamcomp-slot-sub
+.teamcomp-champion-input {
+    display: none !important;
+}
+
+
+.teamcomp-card:not(.active)
+.teamcomp-slot-sub
+.teamcomp-champion-dropdown {
+    display: none !important;
+}

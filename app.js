@@ -8975,47 +8975,32 @@ function attachTeamCompEvents() {
      */
 
     document
-        .querySelectorAll(
-            ".teamcomp-card"
-        )
+        .querySelectorAll(".teamcomp-card")
         .forEach(card => {
 
-            card.addEventListener(
-                "click",
-                event => {
+            card.addEventListener("click", event => {
 
-                    if (
-                        event.target.closest(
-                            "input, button, .teamcomp-champion-dropdown"
-                        )
-                    ) {
-                        return;
-                    }
-
-
-                    document
-                        .querySelectorAll(
-                            ".teamcomp-card.active"
-                        )
-                        .forEach(otherCard => {
-
-                            if (otherCard !== card) {
-
-                                otherCard.classList.remove(
-                                    "active"
-                                );
-
-                            }
-
-                        });
-
-
-                    card.classList.toggle(
-                        "active"
-                    );
-
+                if (
+                    event.target.closest(
+                        "input, button, .teamcomp-champion-dropdown"
+                    )
+                ) {
+                    return;
                 }
-            );
+
+                document
+                    .querySelectorAll(".teamcomp-card.active")
+                    .forEach(otherCard => {
+
+                        if (otherCard !== card) {
+                            otherCard.classList.remove("active");
+                        }
+
+                    });
+
+                card.classList.toggle("active");
+
+            });
 
         });
 
@@ -9027,10 +9012,15 @@ function attachTeamCompEvents() {
      */
 
     document
-        .querySelectorAll(
-            ".teamcomp-champion-input"
-        )
+        .querySelectorAll(".teamcomp-champion-input")
         .forEach(input => {
+
+            /*
+             * Beim Tippen NUR das Dropdown aktualisieren.
+             *
+             * Noch NICHT speichern und noch NICHT
+             * prüfen, ob der Text ein Champion ist.
+             */
 
             input.addEventListener(
                 "input",
@@ -9043,6 +9033,11 @@ function attachTeamCompEvents() {
                 }
             );
 
+
+            /*
+             * Beim Öffnen der Eingabe
+             * Teamcomp aktivieren.
+             */
 
             input.addEventListener(
                 "focus",
@@ -9083,9 +9078,20 @@ function attachTeamCompEvents() {
 
 
                     /*
-                     * Beim Reinklicken ohne Text
-                     * alle Champions anzeigen.
+                     * Wenn bereits ein Champion
+                     * eingetragen ist, markieren wir
+                     * den Namen komplett.
+                     *
+                     * Dadurch kann man direkt einen
+                     * neuen Champion schreiben.
                      */
+
+                    requestAnimationFrame(() => {
+
+                        input.select();
+
+                    });
+
 
                     renderTeamCompChampionDropdown(
                         input
@@ -9095,15 +9101,29 @@ function attachTeamCompEvents() {
             );
 
 
+            /*
+             * =====================================
+             * CHANGE
+             * =====================================
+             *
+             * Wird ausgelöst, wenn ein Champion
+             * aus unserem Dropdown ausgewählt wurde.
+             */
+
             input.addEventListener(
                 "change",
                 async () => {
 
-                    const champion =
+                    const championName =
                         input.value.trim();
 
 
-                    if (!champion) {
+                    /*
+                     * Feld komplett leer:
+                     * Champion entfernen.
+                     */
+
+                    if (!championName) {
 
                         await saveTeamCompSlot(
                             input
@@ -9116,16 +9136,28 @@ function attachTeamCompEvents() {
                         return;
                     }
 
+
+                    /*
+                     * Champion prüfen.
+                     */
 
                     const found =
                         getChampion(
-                            champion
+                            championName
                         );
 
 
-                    if (!found) {
+                    /*
+                     * Nur wenn tatsächlich ein
+                     * Champion ausgewählt/eingegeben
+                     * wurde, speichern wir ihn.
+                     */
 
-                        input.value = "";
+                    if (found) {
+
+                        input.value =
+                            found.name;
+
 
                         await saveTeamCompSlot(
                             input
@@ -9135,21 +9167,16 @@ function attachTeamCompEvents() {
                             input
                         );
 
-                        return;
                     }
 
-
-                    input.value =
-                        found.name;
-
-
-                    await saveTeamCompSlot(
-                        input
-                    );
-
-                    updateTeamCompSlotPreview(
-                        input
-                    );
+                    /*
+                     * Wenn der Text kein Champion ist,
+                     * machen wir NICHTS.
+                     *
+                     * Dadurch wird ein bestehender
+                     * Champion nicht plötzlich gelöscht,
+                     * nur weil man gerade "Ori" tippt.
+                     */
 
                 }
             );
@@ -9165,9 +9192,7 @@ function attachTeamCompEvents() {
      */
 
     document
-        .querySelectorAll(
-            ".teamcomp-champion-image"
-        )
+        .querySelectorAll(".teamcomp-champion-image")
         .forEach(image => {
 
             image.addEventListener(
@@ -9175,21 +9200,6 @@ function attachTeamCompEvents() {
                 async event => {
 
                     event.preventDefault();
-
-
-                    const compId =
-                        image.dataset.compId;
-
-                    const role =
-                        image.dataset.role;
-
-                    const slotType =
-                        image.dataset.slotType;
-
-                    const slotIndex =
-                        Number(
-                            image.dataset.slotIndex
-                        );
 
 
                     const input =
@@ -9265,6 +9275,10 @@ function attachTeamCompEvents() {
                     }
 
 
+                    /*
+                     * Champion aus Dropdown übernehmen.
+                     */
+
                     input.value =
                         option.dataset.champion;
 
@@ -9275,6 +9289,13 @@ function attachTeamCompEvents() {
                         "active"
                     );
 
+
+                    /*
+                     * Jetzt erst change auslösen.
+                     *
+                     * Dadurch wird der neue Champion
+                     * gespeichert.
+                     */
 
                     input.dispatchEvent(
                         new Event(
@@ -9335,6 +9356,7 @@ function attachTeamCompEvents() {
 
                     const compId =
                         button.dataset.compId;
+
 
                     await deleteTeamComp(
                         compId
