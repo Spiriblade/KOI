@@ -43,6 +43,32 @@ const supabaseClient =
                     ...args
                 );
             };
+            
+            /* =========================================
+                TEMPORÄRER SESSION DEBUG
+                ========================================= */
+
+                supabaseClient.auth.onAuthStateChange(
+                    (event, session) => {
+
+                        console.log(
+                            "🔐 AUTH EVENT:",
+                            event
+                        );
+
+                        console.log(
+                            "🔐 SESSION VORHANDEN:",
+                            !!session
+                        );
+
+                        console.log(
+                            "🔐 USER:",
+                            session?.user?.id || null
+                        );
+                    }
+                );
+
+
 
 async function getCurrentUser() {
     const {
