@@ -22,6 +22,28 @@ const supabaseClient =
         }
     );
 
+    /* =========================================
+        TEMPORÄRER SIGN-OUT DEBUG
+        ========================================= */
+
+        const originalSignOut =
+            supabaseClient.auth.signOut.bind(
+                supabaseClient.auth
+            );
+
+        supabaseClient.auth.signOut =
+            async function (...args) {
+
+                console.trace(
+                    "🚨 SIGNOUT WIRD AUFGERUFEN",
+                    args
+                );
+
+                return await originalSignOut(
+                    ...args
+                );
+            };
+
 async function getCurrentUser() {
     const {
         data,
