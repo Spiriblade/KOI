@@ -11,7 +11,15 @@ const SUPABASE_KEY =
 const supabaseClient =
     window.supabase.createClient(
         SUPABASE_URL,
-        SUPABASE_KEY
+        SUPABASE_KEY,
+        {
+            auth: {
+                persistSession: true,
+                autoRefreshToken: true,
+                detectSessionInUrl: false,
+                storage: window.localStorage
+            }
+        }
     );
 
 async function getCurrentUser() {
@@ -514,10 +522,6 @@ createChampionDatalist();
 
 async function initializeApp() {
 
-    const user =
-        await getCurrentUser();
-
-
     const loginScreen =
         document.getElementById(
             "login-screen"
@@ -525,55 +529,11 @@ async function initializeApp() {
 
 
     /*
-        Keine Supabase-Session vorhanden
-        → Login anzeigen.
-    */
-
-    if (!user) {
-
-        currentTeam = null;
-
-        if (loginScreen) {
-
-            loginScreen.style.display =
-                "flex";
-
-        }
-
-        return;
-    }
-
-
-    /*
-        Bestehende Session vorhanden
-        → aktuelles Team laden.
-    */
-
-    const team =
-        await loadCurrentTeam();
-
-
-    /*
-        Session vorhanden, aber kein Team
-        → Sicherheitshalber wieder Login anzeigen.
-    */
-
-    if (!team) {
-
-        if (loginScreen) {
-
-            loginScreen.style.display =
-                "flex";
-
-        }
-
-        return;
-    }
-
-
-    /*
-        Login ausblenden.
-    */
+     * Login zunächst ausblenden.
+     *
+     * Wir prüfen erst, ob eine bestehende
+     * Supabase-Session vorhanden ist.
+     */
 
     if (loginScreen) {
 
@@ -583,16 +543,155 @@ async function initializeApp() {
     }
 
 
-    /*
-        Daten laden.
-    */
+    try {
 
-    await loadMatches();
+        /*
+         * Vorhandene Session abrufen.
+         */
+
+        const {
+            data,
+            error
+        } =
+            await supabaseClient.auth.getSession();
 
 
-    renderOverview();
+        if (error) {
 
-    renderMatches();
+            console.error(
+                "Fehler beim Wiederherstellen der Session:",
+                error
+            );
+
+            throw error;
+
+        }
+
+
+        const session =
+            data?.session;
+
+
+        /*
+         * Keine gespeicherte Session vorhanden.
+         */
+
+        if (!session) {
+
+            currentTeam = null;
+
+
+            if (loginScreen) {
+
+                loginScreen.style.display =
+                    "flex";
+
+            }
+
+
+            return;
+
+        }
+
+
+        /*
+         * Session vorhanden.
+         * Aktuelles Team laden.
+         */
+
+        const team =
+            await loadCurrentTeam();
+
+
+        /*
+         * Session vorhanden, aber kein Team
+         * gefunden.
+         */
+
+        if (!team) {
+
+            await supabaseClient.auth.signOut();
+
+
+            currentTeam = null;
+
+
+            if (loginScreen) {
+
+                loginScreen.style.display =
+                    "flex";
+
+            }
+
+
+            return;
+
+        }
+
+
+        /*
+         * Alles erfolgreich:
+         * Login bleibt ausgeblendet.
+         */
+
+        if (loginScreen) {
+
+            loginScreen.style.display =
+                "none";
+
+        }
+
+
+        /*
+         * Daten laden.
+         */
+
+        await loadMatches();
+
+
+        renderOverview();
+
+        renderMatches();
+
+
+        /*
+         * Falls Teamcomps bereits vorhanden
+         * sind bzw. der entsprechende Bereich
+         * aktiv ist, ebenfalls laden.
+         */
+
+        if (
+            document
+                .getElementById(
+                    "teamcomps-page"
+                )
+                ?.classList.contains("active")
+        ) {
+
+            await loadTeamComps();
+
+        }
+
+
+    } catch (error) {
+
+        console.error(
+            "Fehler bei der App-Initialisierung:",
+            error
+        );
+
+
+        currentTeam = null;
+
+
+        if (loginScreen) {
+
+            loginScreen.style.display =
+                "flex";
+
+        }
+
+    }
 
 }
 
