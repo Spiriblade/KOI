@@ -9305,6 +9305,11 @@ async function createTeamComp() {
             "Kein Team ausgewählt."
         );
 
+        console.error(
+            "TEAMCOMP: currentTeam fehlt:",
+            currentTeam
+        );
+
         return;
     }
 
@@ -9326,6 +9331,16 @@ async function createTeamComp() {
         `Teamcomp ${teamComps.length + 1}`;
 
 
+    console.log(
+        "TEAMCOMP: Erstelle Teamcomp",
+        {
+            teamId: currentTeam.id,
+            teamName: currentTeam.name,
+            name: cleanName
+        }
+    );
+
+
     const {
         data,
         error
@@ -9345,16 +9360,23 @@ async function createTeamComp() {
     if (error) {
 
         console.error(
-            "Fehler beim Erstellen der Teamcomp:",
+            "TEAMCOMP SUPABASE FEHLER:",
             error
         );
 
         alert(
-            "Die Teamcomp konnte nicht erstellt werden."
+            "Die Teamcomp konnte nicht erstellt werden.\n\n" +
+            error.message
         );
 
         return;
     }
+
+
+    console.log(
+        "TEAMCOMP erfolgreich erstellt:",
+        data
+    );
 
 
     teamComps.push({
@@ -9365,6 +9387,7 @@ async function createTeamComp() {
 
 
     renderTeamComps();
+
 }
 
 
