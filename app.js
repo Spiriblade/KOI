@@ -92,7 +92,17 @@ async function loadCurrentTeam() {
 
     const user = await getCurrentUser();
 
+    console.log(
+        "🔐 AKTUELLER SUPABASE USER:",
+        user?.id || null
+    );
+
+
     if (!user) {
+
+        console.log(
+            "❌ Kein Supabase-Benutzer vorhanden."
+        );
 
         currentTeam = null;
 
@@ -100,24 +110,34 @@ async function loadCurrentTeam() {
     }
 
 
-    /*
-        Admins und technische Team-Accounts können
-        über user_teams einem oder mehreren Teams zugeordnet sein.
-    */
-
     const {
         data,
         error
     } = await supabaseClient
         .from("user_teams")
         .select(`
+            user_id,
             team_id,
             teams (
                 id,
                 name
             )
         `)
-        .eq("user_id", user.id);
+        .eq(
+            "user_id",
+            user.id
+        );
+
+
+    console.log(
+        "📋 USER_TEAMS ABFRAGE:",
+        data
+    );
+
+    console.log(
+        "📋 USER_TEAMS FEHLER:",
+        error
+    );
 
 
     if (error) {
@@ -136,7 +156,8 @@ async function loadCurrentTeam() {
     if (!data || data.length === 0) {
 
         console.warn(
-            "Der aktuelle Benutzer ist keinem Team zugeordnet."
+            "⚠️ Für diesen Benutzer wurde kein user_teams-Eintrag gefunden:",
+            user.id
         );
 
         currentTeam = null;
@@ -145,17 +166,12 @@ async function loadCurrentTeam() {
     }
 
 
-    /*
-        Für den normalen Team-Login nehmen wir
-        das erste zugeordnete Team.
-    */
-
     currentTeam =
         data[0].teams;
 
 
     console.log(
-        "Aktuelles Team geladen:",
+        "✅ AKTUELLES TEAM GELADEN:",
         currentTeam
     );
 
