@@ -3450,20 +3450,13 @@ if (screenshotFileInput) {
                         sortScreenshotPlayers(
                             game.koi,
                             detectedChampions.koi,
-                            "KOI Gaming"
+                            currentTeam?.name
                         );
 
-
-                    /*
-                     * Gegner ebenfalls nach
-                     * Rolle sortieren.
-                     */
-                    const sortedEnemy =
-                        sortScreenshotPlayers(
-                            game.enemy,
-                            detectedChampions.enemy,
-                            "KOI Kohaku"
-                        );
+                    const sortedEnemy = {
+                        players: game.enemy,
+                        champions: detectedChampions.enemy
+                    };
 
 
                     console.log(
@@ -3569,24 +3562,17 @@ if (screenshotFileInput) {
                     }
 
 
-                    /*
-                     * KOI-Spieler
-                     */
                     const sortedKoi =
                         sortScreenshotPlayers(
                             game.koi,
-                            detectedChampions.koi
+                            detectedChampions.koi,
+                            currentTeam?.name
                         );
 
-
-                    /*
-                     * Gegner
-                     */
-                    const sortedEnemy =
-                        sortScreenshotPlayers(
-                            game.enemy,
-                            detectedChampions.enemy
-                        );
+                    const sortedEnemy = {
+                        players: game.enemy,
+                        champions: detectedChampions.enemy
+                    };
 
 
                     fillScreenshotTeam(
@@ -3774,7 +3760,6 @@ function sortScreenshotPlayers(
     detectedChampions = [],
     teamName = ""
 ) {
-
     if (!Array.isArray(players)) {
         return {
             players: [],
@@ -3783,203 +3768,150 @@ function sortScreenshotPlayers(
     }
 
     /*
-     * =========================================
-     * FESTE ROLLEN DER ROSTER
-     * =========================================
-     *
-     * Die Rolle kommt NICHT aus der KI.
-     * Die Reihenfolge des Editors ist fest:
-     *
-     * Top
-     * Jungle
-     * Mid
-     * ADC
-     * Support
+     * Rollen-Reihenfolge im Editor
      */
-
-    const teamRoles = {
-
-        "KOI Gaming": {
-            "dietrich aden": "Top",
-            "koi erazer": "Jungle",
-            "slimshady": "Mid",
-            "shinki hiiro": "ADC",
-            "brokenpromises": "Support"
-        },
-
-        "KOI Kohaku": {
-            "tarrossilver": "Top",
-            "koi treadas": "Jungle",
-            "dönerohnetomate": "Mid",
-            "koi greedy": "ADC",
-            "cruelor": "Support"
-        }
-
+    const roleOrder = {
+        Top: 0,
+        Jungle: 1,
+        Mid: 2,
+        ADC: 3,
+        Support: 4
     };
 
-
     /*
-     * =========================================
-     * NAMEN NORMALISIEREN
-     * =========================================
+     * Namen normalisieren, damit z. B.
+     *
+     * "Shinki Hiiro"
+     * "shinki hiiro"
+     *
+     * als derselbe Spieler erkannt werden.
      */
-
-    function normalizePlayerName(name) {
-
+    function normalizeName(name) {
         return String(name || "")
             .trim()
-            .replace(/\s+/g, " ")
-            .toLowerCase();
-
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-z0-9]/g, "");
     }
 
-
     /*
-     * =========================================
-     * ROLLEN DES AKTUELLEN TEAMS
-     * =========================================
+     * Das Roster kommt ausschließlich aus teamData.
+     *
+     * Die Reihenfolge in teamData.players entspricht
+     * der Rollen-Reihenfolge:
+     *
+     * 0 = Top
+     * 1 = Jungle
+     * 2 = Mid
+     * 3 = ADC
+     * 4 = Support
      */
+    const team = teamData[teamName];
 
-    const rolesForTeam =
-        teamRoles[teamName] || {};
-
-
-    /*
-     * =========================================
-     * SPIELER + CHAMPION VERBINDEN
-     * =========================================
-     */
-
-    const combinedPlayers =
-        players
-            .slice(0, 5)
-            .map((player, originalIndex) => {
-
-                const normalizedName =
-                    normalizePlayerName(
-                        player?.name
-                    );
-
-
-                const fixedRole =
-                    rolesForTeam[
-                        normalizedName
-                    ];
-
-
-                return {
-
-                    player: {
-                        ...player,
-
-                        /*
-                         * Wenn der Spieler im Roster
-                         * bekannt ist, bekommt er
-                         * IMMER seine feste Rolle.
-                         */
-
-                        role:
-                            fixedRole ||
-                            player?.role ||
-                            ""
-                    },
-
-                    champion:
-                        detectedChampions?.[
-                            originalIndex
-                        ] || "",
-
-                    originalIndex
-
-                };
-
-            });
-
-
-    /*
-     * =========================================
-     * NACH FESTER ROLLE SORTIEREN
-     * =========================================
-     */
-
-    const roleOrder = {
-
-        "Top": 0,
-        "Jungle": 1,
-        "Mid": 2,
-        "ADC": 3,
-        "Support": 4
-
-    };
-
-
-    combinedPlayers.sort((a, b) => {
-
-        const roleA =
-            roleOrder[
-                a.player?.role
-            ];
-
-        const roleB =
-            roleOrder[
-                b.player?.role
-            ];
-
-
-        if (
-            roleA !== undefined &&
-            roleB !== undefined
-        ) {
-            return roleA - roleB;
-        }
-
-
-        if (
-            roleA !== undefined &&
-            roleB === undefined
-        ) {
-            return -1;
-        }
-
-
-        if (
-            roleA === undefined &&
-            roleB !== undefined
-        ) {
-            return 1;
-        }
-
-
-        return (
-            a.originalIndex -
-            b.originalIndex
+    if (!team || !Array.isArray(team.players)) {
+        console.warn(
+            "Kein Roster für das Team gefunden:",
+            teamName
         );
 
-    });
-
+        return {
+            players: players.slice(0, 5),
+            champions: detectedChampions.slice(0, 5)
+        };
+    }
 
     /*
-     * =========================================
-     * ERGEBNIS
-     * =========================================
+     * Roster-Zuordnung aufbauen.
      */
+    const roster = {};
+
+    team.players.forEach((playerName, index) => {
+        roster[normalizeName(playerName)] = {
+            name: playerName,
+            role: roles[index]
+        };
+    });
+
+    /*
+     * Spieler aus dem Screenshot mit dem Roster verbinden.
+     *
+     * Die KI-Rolle wird NICHT verwendet.
+     */
+    const combinedPlayers = players
+        .slice(0, 5)
+        .map((player, originalIndex) => {
+
+            const detectedName =
+                normalizeName(player?.name);
+
+            const rosterPlayer =
+                roster[detectedName];
+
+            const correctedPlayer = {
+                ...player
+            };
+
+            /*
+             * Nur wenn der Spieler im eigenen Roster
+             * gefunden wurde, bekommt er seine feste Rolle.
+             */
+            if (rosterPlayer) {
+                correctedPlayer.role =
+                    rosterPlayer.role;
+            }
+
+            return {
+                player: correctedPlayer,
+                champion:
+                    detectedChampions?.[originalIndex] || "",
+                originalIndex,
+                rosterRole:
+                    rosterPlayer?.role || null
+            };
+        });
+
+    /*
+     * Nur Spieler aus dem eigenen Roster werden
+     * anhand ihrer festen Rolle sortiert.
+     *
+     * Nicht erkannte Spieler bleiben an ihrer
+     * ursprünglichen Position.
+     */
+    combinedPlayers.sort((a, b) => {
+
+        const aOrder =
+            a.rosterRole !== null
+                ? roleOrder[a.rosterRole]
+                : 999;
+
+        const bOrder =
+            b.rosterRole !== null
+                ? roleOrder[b.rosterRole]
+                : 999;
+
+        if (aOrder !== bOrder) {
+            return aOrder - bOrder;
+        }
+
+        /*
+         * Bei gleicher/unbekannter Rolle:
+         * ursprüngliche Screenshot-Reihenfolge behalten.
+         */
+        return a.originalIndex - b.originalIndex;
+    });
 
     return {
-
         players:
             combinedPlayers.map(
-                item =>
-                    item.player
+                item => item.player
             ),
 
         champions:
             combinedPlayers.map(
-                item =>
-                    item.champion
+                item => item.champion
             )
-
     };
-
 }
 
 
