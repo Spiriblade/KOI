@@ -3446,12 +3446,11 @@ if (screenshotFileInput) {
                      * KOI-Spieler nach ihrer
                      * erkannten Rolle sortieren.
                      */
-                    const sortedKoi =
-                        sortScreenshotPlayers(
-                            game.koi,
-                            detectedChampions.koi,
-                            currentTeam?.name
-                        );
+                    const sortedKoi = sortScreenshotPlayers(
+                        game.koi,
+                        detectedChampions.koi,
+                        currentTeam.name
+                    );
 
                     const sortedEnemy = {
                         players: game.enemy,
@@ -3755,11 +3754,7 @@ function fillScreenshotTeam(
         );
 }
 
-function sortScreenshotPlayers(
-    players,
-    detectedChampions = [],
-    teamName = ""
-) {
+function sortScreenshotPlayers(players, detectedChampions = [], teamName = "") {
     if (!Array.isArray(players)) {
         return {
             players: [],
@@ -3767,150 +3762,72 @@ function sortScreenshotPlayers(
         };
     }
 
-    /*
-     * Rollen-Reihenfolge im Editor
-     */
-    const roleOrder = {
-        Top: 0,
-        Jungle: 1,
-        Mid: 2,
-        ADC: 3,
-        Support: 4
-    };
-
-    /*
-     * Namen normalisieren, damit z. B.
-     *
-     * "Shinki Hiiro"
-     * "shinki hiiro"
-     *
-     * als derselbe Spieler erkannt werden.
-     */
-    function normalizeName(name) {
-        return String(name || "")
-            .trim()
-            .toLowerCase()
-            .normalize("NFD")
-            .replace(/[\u0300-\u036f]/g, "")
-            .replace(/[^a-z0-9]/g, "");
-    }
-
-    /*
-     * Das Roster kommt ausschließlich aus teamData.
-     *
-     * Die Reihenfolge in teamData.players entspricht
-     * der Rollen-Reihenfolge:
-     *
-     * 0 = Top
-     * 1 = Jungle
-     * 2 = Mid
-     * 3 = ADC
-     * 4 = Support
-     */
+    // Nur für das eigene Team relevant:
+    // Die Reihenfolge in teamData.players bestimmt die Rolle.
     const team = teamData[teamName];
 
     if (!team || !Array.isArray(team.players)) {
-        console.warn(
-            "Kein Roster für das Team gefunden:",
-            teamName
-        );
-
         return {
-            players: players.slice(0, 5),
-            champions: detectedChampions.slice(0, 5)
+            players: [...players],
+            champions: [...detectedChampions]
         };
     }
 
-    /*
-     * Roster-Zuordnung aufbauen.
-     */
-    const roster = {};
+    const sortedPlayers = new Array(5).fill(null);
+    const sortedChampions = new Array(5).fill("");
 
-    team.players.forEach((playerName, index) => {
-        roster[normalizeName(playerName)] = {
-            name: playerName,
-            role: roles[index]
-        };
+    players.forEach((player, index) => {
+        const playerName = player?.name || "";
+
+        // Spieler in unserem eigenen Roster suchen
+        const rosterIndex = team.players.findIndex(
+            rosterPlayer =>
+                rosterPlayer.trim().toLowerCase() ===
+                playerName.trim().toLowerCase()
+        );
+
+        // Nur Spieler, die tatsächlich im Roster stehen,
+        // werden anhand von teamData einsortiert.
+        if (rosterIndex !== -1 && rosterIndex < 5) {
+            sortedPlayers[rosterIndex] = player;
+            sortedChampions[rosterIndex] = detectedChampions[index] || "";
+        }
     });
 
-    /*
-     * Spieler aus dem Screenshot mit dem Roster verbinden.
-     *
-     * Die KI-Rolle wird NICHT verwendet.
-     */
-    const combinedPlayers = players
-        .slice(0, 5)
-        .map((player, originalIndex) => {
+    // Falls ein Spieler nicht erkannt/gefunden wurde,
+    // füllen wir die noch freien Plätze mit den übrigen Spielern auf.
+    let remainingIndex = 0;
 
-            const detectedName =
-                normalizeName(player?.name);
+    players.forEach((player, index) => {
+        const playerName = player?.name || "";
 
-            const rosterPlayer =
-                roster[detectedName];
+        const rosterIndex = team.players.findIndex(
+            rosterPlayer =>
+                rosterPlayer.trim().toLowerCase() ===
+                playerName.trim().toLowerCase()
+        );
 
-            const correctedPlayer = {
-                ...player
-            };
-
-            /*
-             * Nur wenn der Spieler im eigenen Roster
-             * gefunden wurde, bekommt er seine feste Rolle.
-             */
-            if (rosterPlayer) {
-                correctedPlayer.role =
-                    rosterPlayer.role;
+        if (rosterIndex === -1) {
+            while (
+                remainingIndex < 5 &&
+                sortedPlayers[remainingIndex] !== null
+            ) {
+                remainingIndex++;
             }
 
-            return {
-                player: correctedPlayer,
-                champion:
-                    detectedChampions?.[originalIndex] || "",
-                originalIndex,
-                rosterRole:
-                    rosterPlayer?.role || null
-            };
-        });
-
-    /*
-     * Nur Spieler aus dem eigenen Roster werden
-     * anhand ihrer festen Rolle sortiert.
-     *
-     * Nicht erkannte Spieler bleiben an ihrer
-     * ursprünglichen Position.
-     */
-    combinedPlayers.sort((a, b) => {
-
-        const aOrder =
-            a.rosterRole !== null
-                ? roleOrder[a.rosterRole]
-                : 999;
-
-        const bOrder =
-            b.rosterRole !== null
-                ? roleOrder[b.rosterRole]
-                : 999;
-
-        if (aOrder !== bOrder) {
-            return aOrder - bOrder;
+            if (remainingIndex < 5) {
+                sortedPlayers[remainingIndex] = player;
+                sortedChampions[remainingIndex] =
+                    detectedChampions[index] || "";
+            }
         }
-
-        /*
-         * Bei gleicher/unbekannter Rolle:
-         * ursprüngliche Screenshot-Reihenfolge behalten.
-         */
-        return a.originalIndex - b.originalIndex;
     });
 
     return {
-        players:
-            combinedPlayers.map(
-                item => item.player
-            ),
-
-        champions:
-            combinedPlayers.map(
-                item => item.champion
-            )
+        players: sortedPlayers.filter(player => player !== null),
+        champions: sortedChampions.filter((champion, index) => {
+            return sortedPlayers[index] !== null;
+        })
     };
 }
 
