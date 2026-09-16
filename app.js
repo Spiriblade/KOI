@@ -752,6 +752,7 @@ document.addEventListener("championsLoaded", () => {
      * Falls gerade der Game-Editor geöffnet ist,
      * Champion-Anzeigen aktualisieren.
      */
+
     if (
         document
             .getElementById("match-editor-page")
@@ -3768,7 +3769,8 @@ function fillScreenshotTeam(
 
 function sortScreenshotPlayers(
     players,
-    detectedChampions = []
+    detectedChampions = [],
+    teamName = ""
 ) {
     if (!Array.isArray(players)) {
         return {
@@ -3777,19 +3779,13 @@ function sortScreenshotPlayers(
         };
     }
 
+
     /*
         =========================================================
         ROLLEN-REIHENFOLGE
         =========================================================
-
-        Im Editor wollen wir immer:
-
-        Top
-        Jungle
-        Mid
-        ADC
-        Support
     */
+
     const roleOrder = {
         "Top": 0,
         "Jungle": 1,
@@ -3801,15 +3797,10 @@ function sortScreenshotPlayers(
 
     /*
         =========================================================
-        SPIELER-NAMEN NORMALISIEREN
+        NAMEN NORMALISIEREN
         =========================================================
-
-        Dadurch funktionieren auch kleine Unterschiede wie:
-
-        "Shinki Hiiro"
-        " Shinki Hiiro "
-        "shinki hiiro"
     */
+
     function normalizePlayerName(name) {
         return String(name || "")
             .trim()
@@ -3820,11 +3811,10 @@ function sortScreenshotPlayers(
 
     /*
         =========================================================
-        FESTE SPIELER-ROLLEN
+        FESTE ROLLEN
         =========================================================
-
-        Diese Rollen haben Vorrang vor der KI-Erkennung.
     */
+
     const fixedPlayerRoles = {
 
         // KOI Gaming
@@ -3845,56 +3835,106 @@ function sortScreenshotPlayers(
 
     /*
         =========================================================
-        SPIELER MIT CHAMPION VERBINDEN
+        TEAM-ROSTER ALS ZUSÄTZLICHE ABSICHERUNG
         =========================================================
 
-        Der Champion bleibt immer beim ursprünglichen Spieler.
+        Falls der Name von der KI leicht anders erkannt wird,
+        können wir anhand der Position im bekannten Team-Roster
+        trotzdem die richtige Rolle bestimmen.
     */
-    const combinedPlayers = players
-        .slice(0, 5)
-        .map((player, originalIndex) => {
 
-            const playerName =
-                normalizePlayerName(
-                    player?.name
-                );
+    const teamRoleMap = {
 
-            const fixedRole =
-                fixedPlayerRoles[playerName];
+        "KOI Gaming": [
+            "ADC",
+            "Top",
+            "Jungle",
+            "Mid",
+            "Support"
+        ],
 
-
-            const correctedPlayer = {
-                ...player
-            };
-
-
-            /*
-                Wenn wir den Spieler kennen,
-                nehmen wir IMMER seine feste Rolle.
-            */
-            if (fixedRole) {
-                correctedPlayer.role =
-                    fixedRole;
-            }
-
-
-            return {
-                player: correctedPlayer,
-
-                champion:
-                    detectedChampions?.[originalIndex] || "",
-
-                originalIndex:
-                    originalIndex
-            };
-        });
+        "KOI Kohaku": [
+            "Top",
+            "Jungle",
+            "Mid",
+            "ADC",
+            "Support"
+        ]
+    };
 
 
     /*
         =========================================================
-        NACH ROLLE SORTIEREN
+        SPIELER VORBEREITEN
         =========================================================
     */
+
+    const combinedPlayers =
+        players
+            .slice(0, 5)
+            .map((player, originalIndex) => {
+
+                const playerName =
+                    normalizePlayerName(
+                        player?.name
+                    );
+
+
+                /*
+                    Zuerst feste Rolle anhand
+                    des Spielernamens suchen.
+                */
+
+                let fixedRole =
+                    fixedPlayerRoles[playerName];
+
+
+                /*
+                    Falls kein Name gefunden wurde,
+                    versuchen wir die Teamdaten.
+                */
+
+                if (
+                    !fixedRole &&
+                    teamRoleMap[teamName]
+                ) {
+                    fixedRole =
+                        teamRoleMap[teamName]
+                            [originalIndex];
+                }
+
+
+                const correctedPlayer = {
+                    ...player
+                };
+
+
+                if (fixedRole) {
+                    correctedPlayer.role =
+                        fixedRole;
+                }
+
+
+                return {
+                    player: correctedPlayer,
+
+                    champion:
+                        detectedChampions?.[
+                            originalIndex
+                        ] || "",
+
+                    originalIndex:
+                        originalIndex
+                };
+            });
+
+
+    /*
+        =========================================================
+        SORTIEREN
+        =========================================================
+    */
+
     combinedPlayers.sort((a, b) => {
 
         const roleA =
@@ -3904,9 +3944,6 @@ function sortScreenshotPlayers(
             roleOrder[b.player?.role];
 
 
-        /*
-            Beide Rollen bekannt
-        */
         if (
             roleA !== undefined &&
             roleB !== undefined
@@ -3915,9 +3952,6 @@ function sortScreenshotPlayers(
         }
 
 
-        /*
-            Nur A bekannt
-        */
         if (
             roleA !== undefined &&
             roleB === undefined
@@ -3926,9 +3960,6 @@ function sortScreenshotPlayers(
         }
 
 
-        /*
-            Nur B bekannt
-        */
         if (
             roleA === undefined &&
             roleB !== undefined
@@ -3937,10 +3968,6 @@ function sortScreenshotPlayers(
         }
 
 
-        /*
-            Beide unbekannt:
-            ursprüngliche Reihenfolge behalten.
-        */
         return (
             a.originalIndex -
             b.originalIndex
@@ -3950,9 +3977,29 @@ function sortScreenshotPlayers(
 
     /*
         =========================================================
+        DEBUG
+        =========================================================
+    */
+
+    console.log(
+        `SORTIERUNG ${teamName}:`,
+        combinedPlayers.map(item => ({
+            name:
+                item.player?.name,
+            role:
+                item.player?.role,
+            champion:
+                item.champion
+        }))
+    );
+
+
+    /*
+        =========================================================
         ERGEBNIS
         =========================================================
     */
+
     return {
         players:
             combinedPlayers.map(
@@ -4800,56 +4847,98 @@ function initializePlayerRowDragAndDrop() {
         }
 
 
-        const rows =
-            container.querySelectorAll(".player-form");
+        /*
+            Verhindert, dass dieselben Events
+            bei jedem renderGameEditor()
+            mehrfach registriert werden.
+        */
+
+        if (
+            container.dataset.dragInitialized === "true"
+        ) {
+            return;
+        }
 
 
-        rows.forEach(row => {
+        container.dataset.dragInitialized = "true";
 
-            /*
-             * =========================================
-             * DRAG START
-             * =========================================
-             */
 
-            row.addEventListener("dragstart", event => {
+        /*
+            =====================================================
+            DRAG START
+            =====================================================
+        */
 
-                row.classList.add("dragging");
+        container.addEventListener(
+            "dragstart",
+            event => {
 
-                event.dataTransfer.effectAllowed = "move";
+                const row =
+                    event.target.closest(
+                        ".player-form"
+                    );
+
+
+                if (!row) {
+                    return;
+                }
+
+
+                row.classList.add(
+                    "dragging"
+                );
+
+
+                event.dataTransfer.effectAllowed =
+                    "move";
+
 
                 event.dataTransfer.setData(
                     "text/plain",
-                    ""
+                    "player-row"
+                );
+            }
+        );
+
+
+        /*
+            =====================================================
+            DRAG END
+            =====================================================
+        */
+
+        container.addEventListener(
+            "dragend",
+            event => {
+
+                const row =
+                    event.target.closest(
+                        ".player-form"
+                    );
+
+
+                if (!row) {
+                    return;
+                }
+
+
+                row.classList.remove(
+                    "dragging"
                 );
 
-            });
-
-
-            /*
-             * =========================================
-             * DRAG END
-             * =========================================
-             */
-
-            row.addEventListener("dragend", () => {
-
-                row.classList.remove("dragging");
 
                 updatePlayerRowIndexes(
                     container
                 );
-
-            });
-
-        });
+            }
+        );
 
 
         /*
-         * =========================================
-         * WÄHREND DES ZIEHENS
-         * =========================================
-         */
+            =====================================================
+            DRAG OVER
+            =====================================================
+        */
 
         container.addEventListener(
             "dragover",
@@ -4870,82 +4959,94 @@ function initializePlayerRowDragAndDrop() {
 
 
                 const rows =
-                    [
-                        ...container.querySelectorAll(
+                    Array.from(
+                        container.querySelectorAll(
                             ".player-form:not(.dragging)"
                         )
-                    ];
+                    );
 
-
-                /*
-                 * Die Zeile bestimmen, über der
-                 * sich die Maus befindet.
-                 */
 
                 let closestRow = null;
-                let closestOffset = -Infinity;
+
+                let closestDistance =
+                    Infinity;
 
 
                 rows.forEach(row => {
 
-                    const box =
+                    const rect =
                         row.getBoundingClientRect();
 
 
-                    const offset =
-                        event.clientY -
-                        box.top -
-                        box.height / 2;
+                    const center =
+                        rect.top +
+                        rect.height / 2;
+
+
+                    const distance =
+                        Math.abs(
+                            event.clientY -
+                            center
+                        );
 
 
                     if (
-                        offset < 0 &&
-                        offset > closestOffset
+                        distance <
+                        closestDistance
                     ) {
+                        closestDistance =
+                            distance;
 
-                        closestOffset = offset;
-
-                        closestRow = row;
-
+                        closestRow =
+                            row;
                     }
 
                 });
 
 
-                /*
-                 * Keine passende Zeile gefunden:
-                 * ganz nach unten.
-                 */
-
-                if (closestRow === null) {
+                if (!closestRow) {
 
                     container.appendChild(
                         dragging
                     );
 
                     return;
-
                 }
 
 
-                /*
-                 * Vor die entsprechende Zeile setzen.
-                 */
+                const rect =
+                    closestRow.getBoundingClientRect();
 
-                container.insertBefore(
-                    dragging,
-                    closestRow
-                );
 
+                const insertBefore =
+                    event.clientY <
+                    rect.top +
+                    rect.height / 2;
+
+
+                if (insertBefore) {
+
+                    container.insertBefore(
+                        dragging,
+                        closestRow
+                    );
+
+                } else {
+
+                    container.insertBefore(
+                        dragging,
+                        closestRow.nextSibling
+                    );
+                }
             }
         );
 
 
         /*
-         * =========================================
-         * DROP
-         * =========================================
-         */
+            =====================================================
+            DROP
+            =====================================================
+        */
 
         container.addEventListener(
             "drop",
@@ -4953,15 +5054,30 @@ function initializePlayerRowDragAndDrop() {
 
                 event.preventDefault();
 
+
+                const dragging =
+                    container.querySelector(
+                        ".player-form.dragging"
+                    );
+
+
+                if (!dragging) {
+                    return;
+                }
+
+
+                dragging.classList.remove(
+                    "dragging"
+                );
+
+
                 updatePlayerRowIndexes(
                     container
                 );
-
             }
         );
 
     });
-
 }
 
 function captureCurrentGameDraft() {
