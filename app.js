@@ -3770,7 +3770,6 @@ function sortScreenshotPlayers(
     players,
     detectedChampions = []
 ) {
-
     if (!Array.isArray(players)) {
         return {
             players: [],
@@ -3778,6 +3777,19 @@ function sortScreenshotPlayers(
         };
     }
 
+    /*
+        =========================================================
+        ROLLEN-REIHENFOLGE
+        =========================================================
+
+        Im Editor wollen wir immer:
+
+        Top
+        Jungle
+        Mid
+        ADC
+        Support
+    */
     const roleOrder = {
         "Top": 0,
         "Jungle": 1,
@@ -3788,207 +3800,170 @@ function sortScreenshotPlayers(
 
 
     /*
-     * =========================================================
-     * FESTE SPIELER-ROLLEN
-     * =========================================================
-     *
-     * Bei bekannten Spielern wird die von der KI erkannte
-     * Rolle bewusst ignoriert.
-     *
-     * Dadurch sind Rollentausch / falsche Role-Quest-Erkennung
-     * kein Problem mehr.
-     */
+        =========================================================
+        SPIELER-NAMEN NORMALISIEREN
+        =========================================================
 
+        Dadurch funktionieren auch kleine Unterschiede wie:
+
+        "Shinki Hiiro"
+        " Shinki Hiiro "
+        "shinki hiiro"
+    */
+    function normalizePlayerName(name) {
+        return String(name || "")
+            .trim()
+            .replace(/\s+/g, " ")
+            .toLowerCase();
+    }
+
+
+    /*
+        =========================================================
+        FESTE SPIELER-ROLLEN
+        =========================================================
+
+        Diese Rollen haben Vorrang vor der KI-Erkennung.
+    */
     const fixedPlayerRoles = {
 
         // KOI Gaming
-
-        "Dietrich Aden": "Top",
-
-        "KOI eraZer": "Jungle",
-
-        "SlimShady": "Mid",
-
-        "Shinki Hiiro": "ADC",
-
-        "BrokenPromises": "Support",
-
+        "shinki hiiro": "ADC",
+        "dietrich aden": "Top",
+        "koi erazer": "Jungle",
+        "slimshady": "Mid",
+        "brokenpromises": "Support",
 
         // KOI Kohaku
-
         "tarrossilver": "Top",
-
-        "KOI Treadas": "Jungle",
-
-        "DönerohneTomate": "Mid",
-
-        "KOI Greedy": "ADC",
-
-        "CrueLOr": "Support"
-
+        "koi treadas": "Jungle",
+        "dönerohnetomate": "Mid",
+        "koi greedy": "ADC",
+        "cruelor": "Support"
     };
 
 
     /*
-     * =========================================================
-     * SPIELER + CHAMPION ZUSAMMENHALTEN
-     * =========================================================
-     */
+        =========================================================
+        SPIELER MIT CHAMPION VERBINDEN
+        =========================================================
 
-    const combinedPlayers =
-        players
-            .slice(0, 5)
-            .map(
-                (player, originalIndex) => {
+        Der Champion bleibt immer beim ursprünglichen Spieler.
+    */
+    const combinedPlayers = players
+        .slice(0, 5)
+        .map((player, originalIndex) => {
 
-                    const playerName =
-                        String(
-                            player?.name || ""
-                        ).trim();
+            const playerName =
+                normalizePlayerName(
+                    player?.name
+                );
 
-
-                    const fixedRole =
-                        fixedPlayerRoles[
-                            playerName
-                        ];
+            const fixedRole =
+                fixedPlayerRoles[playerName];
 
 
-                    const correctedPlayer = {
-                        ...player
-                    };
+            const correctedPlayer = {
+                ...player
+            };
 
 
-                    /*
-                     * Bekannter Spieler:
-                     * feste Rolle verwenden.
-                     */
-
-                    if (fixedRole) {
-
-                        correctedPlayer.role =
-                            fixedRole;
-
-                    }
+            /*
+                Wenn wir den Spieler kennen,
+                nehmen wir IMMER seine feste Rolle.
+            */
+            if (fixedRole) {
+                correctedPlayer.role =
+                    fixedRole;
+            }
 
 
-                    return {
+            return {
+                player: correctedPlayer,
 
-                        player:
-                            correctedPlayer,
+                champion:
+                    detectedChampions?.[originalIndex] || "",
 
-                        champion:
-                            detectedChampions?.[
-                                originalIndex
-                            ] || "",
-
-                        originalIndex:
-                            originalIndex
-
-                    };
-
-                }
-            );
+                originalIndex:
+                    originalIndex
+            };
+        });
 
 
     /*
-     * =========================================================
-     * NACH ROLLE SORTIEREN
-     * =========================================================
-     */
+        =========================================================
+        NACH ROLLE SORTIEREN
+        =========================================================
+    */
+    combinedPlayers.sort((a, b) => {
 
-    combinedPlayers.sort(
-        (a, b) => {
+        const roleA =
+            roleOrder[a.player?.role];
 
-            const roleA =
-                roleOrder[
-                    a.player?.role
-                ];
-
-
-            const roleB =
-                roleOrder[
-                    b.player?.role
-                ];
+        const roleB =
+            roleOrder[b.player?.role];
 
 
-            /*
-             * Beide Rollen bekannt
-             */
-
-            if (
-                roleA !== undefined &&
-                roleB !== undefined
-            ) {
-
-                return roleA - roleB;
-
-            }
-
-
-            /*
-             * Nur A bekannt
-             */
-
-            if (
-                roleA !== undefined &&
-                roleB === undefined
-            ) {
-
-                return -1;
-
-            }
-
-
-            /*
-             * Nur B bekannt
-             */
-
-            if (
-                roleA === undefined &&
-                roleB !== undefined
-            ) {
-
-                return 1;
-
-            }
-
-
-            /*
-             * Beide unbekannt:
-             * ursprüngliche Reihenfolge behalten.
-             */
-
-            return (
-                a.originalIndex -
-                b.originalIndex
-            );
-
+        /*
+            Beide Rollen bekannt
+        */
+        if (
+            roleA !== undefined &&
+            roleB !== undefined
+        ) {
+            return roleA - roleB;
         }
-    );
+
+
+        /*
+            Nur A bekannt
+        */
+        if (
+            roleA !== undefined &&
+            roleB === undefined
+        ) {
+            return -1;
+        }
+
+
+        /*
+            Nur B bekannt
+        */
+        if (
+            roleA === undefined &&
+            roleB !== undefined
+        ) {
+            return 1;
+        }
+
+
+        /*
+            Beide unbekannt:
+            ursprüngliche Reihenfolge behalten.
+        */
+        return (
+            a.originalIndex -
+            b.originalIndex
+        );
+    });
 
 
     /*
-     * =========================================================
-     * ERGEBNIS
-     * =========================================================
-     */
-
+        =========================================================
+        ERGEBNIS
+        =========================================================
+    */
     return {
-
         players:
             combinedPlayers.map(
-                item =>
-                    item.player
+                item => item.player
             ),
 
         champions:
             combinedPlayers.map(
-                item =>
-                    item.champion
+                item => item.champion
             )
-
     };
-
 }
 
 
@@ -4742,234 +4717,250 @@ function updatePlayerRowIndexes(container) {
         );
 
 
-    rows.forEach(
-        (row, index) => {
+    rows.forEach((row, index) => {
 
-            /*
-             * Rolle aktualisieren
-             */
+        /*
+         * =========================================
+         * ROLLE
+         * =========================================
+         */
 
-            const roleElement =
-                row.querySelector(
-                    ".player-role"
-                );
-
-
-            if (roleElement) {
-
-                roleElement.textContent =
-                    roles[index];
-
-            }
-
-
-            /*
-             * Alle Inputs auf den neuen
-             * data-index setzen.
-             */
-
-            row.querySelectorAll(
-                "input"
-            ).forEach(
-                input => {
-
-                    input.dataset.index =
-                        index;
-
-                }
+        const roleElement =
+            row.querySelector(
+                ".player-role"
             );
 
 
-            /*
-             * Champion-Preview-ID aktualisieren.
-             */
+        if (roleElement) {
 
-            const team =
-                row.dataset.playerTeam;
-
-
-            const preview =
-                row.querySelector(
-                    ".champion-preview"
-                );
-
-
-            if (preview && team) {
-
-                preview.id =
-                    `${team}-champion-preview-${index}`;
-
-            }
+            roleElement.textContent =
+                roles[index];
 
         }
-    );
+
+
+        /*
+         * =========================================
+         * INPUT-INDIZES
+         * =========================================
+         */
+
+        row.querySelectorAll(
+            "input"
+        ).forEach(input => {
+
+            input.dataset.index =
+                index;
+
+        });
+
+
+        /*
+         * =========================================
+         * CHAMPION-PREVIEW
+         * =========================================
+         */
+
+        const team =
+            row.dataset.playerTeam;
+
+
+        const preview =
+            row.querySelector(
+                ".champion-preview"
+            );
+
+
+        if (
+            preview &&
+            team
+        ) {
+
+            preview.id =
+                `${team}-champion-preview-${index}`;
+
+        }
+
+    });
 
 }
 
 function initializePlayerRowDragAndDrop() {
 
     const containers = [
-        document.getElementById(
-            "editor-koi-players"
-        ),
-
-        document.getElementById(
-            "editor-enemy-players"
-        )
+        document.getElementById("editor-koi-players"),
+        document.getElementById("editor-enemy-players")
     ];
 
 
-    containers.forEach(
-        container => {
+    containers.forEach(container => {
 
-            if (!container) {
-                return;
-            }
+        if (!container) {
+            return;
+        }
 
+
+        const rows =
+            container.querySelectorAll(".player-form");
+
+
+        rows.forEach(row => {
 
             /*
-             * Drag starten
+             * =========================================
+             * DRAG START
+             * =========================================
              */
 
-            container
-                .querySelectorAll(
-                    ".player-form"
-                )
-                .forEach(
-                    row => {
+            row.addEventListener("dragstart", event => {
 
-                        row.addEventListener(
-                            "dragstart",
-                            event => {
+                row.classList.add("dragging");
 
-                                row.classList.add(
-                                    "dragging"
-                                );
+                event.dataTransfer.effectAllowed = "move";
 
-
-                                event.dataTransfer.effectAllowed =
-                                    "move";
-
-
-                                event.dataTransfer.setData(
-                                    "text/plain",
-                                    "player-row"
-                                );
-
-                            }
-                        );
-
-
-                        row.addEventListener(
-                            "dragend",
-                            () => {
-
-                                row.classList.remove(
-                                    "dragging"
-                                );
-
-                                updatePlayerRowIndexes(
-                                    container
-                                );
-
-                            }
-                        );
-
-                    }
+                event.dataTransfer.setData(
+                    "text/plain",
+                    ""
                 );
 
-
-            /*
-             * Während des Ziehens
-             */
-
-            container.addEventListener(
-                "dragover",
-                event => {
-
-                    event.preventDefault();
-
-
-                    const dragging =
-                        container.querySelector(
-                            ".player-form.dragging"
-                        );
-
-
-                    if (!dragging) {
-                        return;
-                    }
-
-
-                    const target =
-                        event.target.closest(
-                            ".player-form"
-                        );
-
-
-                    if (
-                        !target ||
-                        target === dragging
-                    ) {
-                        return;
-                    }
-
-
-                    const rect =
-                        target.getBoundingClientRect();
-
-
-                    const mouseY =
-                        event.clientY;
-
-
-                    const targetMiddle =
-                        rect.top +
-                        rect.height / 2;
-
-
-                    if (
-                        mouseY <
-                        targetMiddle
-                    ) {
-
-                        container.insertBefore(
-                            dragging,
-                            target
-                        );
-
-                    } else {
-
-                        container.insertBefore(
-                            dragging,
-                            target.nextSibling
-                        );
-
-                    }
-
-                }
-            );
+            });
 
 
             /*
-             * Drop
+             * =========================================
+             * DRAG END
+             * =========================================
              */
 
-            container.addEventListener(
-                "drop",
-                event => {
+            row.addEventListener("dragend", () => {
 
-                    event.preventDefault();
+                row.classList.remove("dragging");
 
-                    updatePlayerRowIndexes(
-                        container
+                updatePlayerRowIndexes(
+                    container
+                );
+
+            });
+
+        });
+
+
+        /*
+         * =========================================
+         * WÄHREND DES ZIEHENS
+         * =========================================
+         */
+
+        container.addEventListener(
+            "dragover",
+            event => {
+
+                event.preventDefault();
+
+
+                const dragging =
+                    container.querySelector(
+                        ".player-form.dragging"
                     );
 
-                }
-            );
 
-        }
-    );
+                if (!dragging) {
+                    return;
+                }
+
+
+                const rows =
+                    [
+                        ...container.querySelectorAll(
+                            ".player-form:not(.dragging)"
+                        )
+                    ];
+
+
+                /*
+                 * Die Zeile bestimmen, über der
+                 * sich die Maus befindet.
+                 */
+
+                let closestRow = null;
+                let closestOffset = -Infinity;
+
+
+                rows.forEach(row => {
+
+                    const box =
+                        row.getBoundingClientRect();
+
+
+                    const offset =
+                        event.clientY -
+                        box.top -
+                        box.height / 2;
+
+
+                    if (
+                        offset < 0 &&
+                        offset > closestOffset
+                    ) {
+
+                        closestOffset = offset;
+
+                        closestRow = row;
+
+                    }
+
+                });
+
+
+                /*
+                 * Keine passende Zeile gefunden:
+                 * ganz nach unten.
+                 */
+
+                if (closestRow === null) {
+
+                    container.appendChild(
+                        dragging
+                    );
+
+                    return;
+
+                }
+
+
+                /*
+                 * Vor die entsprechende Zeile setzen.
+                 */
+
+                container.insertBefore(
+                    dragging,
+                    closestRow
+                );
+
+            }
+        );
+
+
+        /*
+         * =========================================
+         * DROP
+         * =========================================
+         */
+
+        container.addEventListener(
+            "drop",
+            event => {
+
+                event.preventDefault();
+
+                updatePlayerRowIndexes(
+                    container
+                );
+
+            }
+        );
+
+    });
 
 }
 
