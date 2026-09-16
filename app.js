@@ -3561,12 +3561,11 @@ if (screenshotFileInput) {
                     }
 
 
-                    const sortedKoi =
-                        sortScreenshotPlayers(
-                            game.koi,
-                            detectedChampions.koi,
-                            currentTeam?.name
-                        );
+                    const sortedKoi = sortScreenshotPlayers(
+                        game.koi,
+                        detectedChampions.koi,
+                        currentTeam.name
+                    );
 
                     const sortedEnemy = {
                         players: game.enemy,
