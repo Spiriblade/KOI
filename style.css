@@ -3788,3 +3788,26 @@ span {
 .teamcomp-header {
     cursor: pointer;
 }
+
+.player-form {
+    position: relative;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.player-form.dragging {
+    opacity: 0.55;
+}
+
+.player-drag-handle {
+    cursor: grab;
+    user-select: none;
+    font-size: 20px;
+    line-height: 1;
+    width: 24px;
+    text-align: center;
+    color: #888;
+}
+
+.player-drag-handle:active {
+    cursor: grabbing;
+}

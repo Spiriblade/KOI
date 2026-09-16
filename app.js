@@ -465,9 +465,9 @@ const teamData = {
 
         players: [
             "tarrossilver",
-            "KOI Kohaku Jungle",
+            "KOI Treadas",
             "DönerohneTomate",
-            "Stay aggressive",
+            "KOI Greedy",
             "CrueLOr"
         ]
     }
@@ -762,6 +762,8 @@ document.addEventListener("championsLoaded", () => {
             .forEach(input => {
                 updateChampionPreview(input);
             });
+
+        initializePlayerRowDragAndDrop();    
     }
 });
 
@@ -3768,6 +3770,7 @@ function sortScreenshotPlayers(
     players,
     detectedChampions = []
 ) {
+
     if (!Array.isArray(players)) {
         return {
             players: [],
@@ -3783,65 +3786,209 @@ function sortScreenshotPlayers(
         "Support": 4
     };
 
-    const combinedPlayers = players
-        .slice(0, 5)
-        .map((player, originalIndex) => {
-            return {
-                player: player,
 
-                champion:
-                    detectedChampions?.[originalIndex] || "",
+    /*
+     * =========================================================
+     * FESTE SPIELER-ROLLEN
+     * =========================================================
+     *
+     * Bei bekannten Spielern wird die von der KI erkannte
+     * Rolle bewusst ignoriert.
+     *
+     * Dadurch sind Rollentausch / falsche Role-Quest-Erkennung
+     * kein Problem mehr.
+     */
 
-                originalIndex:
-                    originalIndex
-            };
-        });
+    const fixedPlayerRoles = {
 
-    combinedPlayers.sort((a, b) => {
-        const roleA =
-            roleOrder[a.player?.role];
+        // KOI Gaming
 
-        const roleB =
-            roleOrder[b.player?.role];
+        "Dietrich Aden": "Top",
 
-        if (
-            roleA !== undefined &&
-            roleB !== undefined
-        ) {
-            return roleA - roleB;
+        "KOI eraZer": "Jungle",
+
+        "SlimShady": "Mid",
+
+        "Shinki Hiiro": "ADC",
+
+        "BrokenPromises": "Support",
+
+
+        // KOI Kohaku
+
+        "tarrossilver": "Top",
+
+        "KOI Treadas": "Jungle",
+
+        "DönerohneTomate": "Mid",
+
+        "KOI Greedy": "ADC",
+
+        "CrueLOr": "Support"
+
+    };
+
+
+    /*
+     * =========================================================
+     * SPIELER + CHAMPION ZUSAMMENHALTEN
+     * =========================================================
+     */
+
+    const combinedPlayers =
+        players
+            .slice(0, 5)
+            .map(
+                (player, originalIndex) => {
+
+                    const playerName =
+                        String(
+                            player?.name || ""
+                        ).trim();
+
+
+                    const fixedRole =
+                        fixedPlayerRoles[
+                            playerName
+                        ];
+
+
+                    const correctedPlayer = {
+                        ...player
+                    };
+
+
+                    /*
+                     * Bekannter Spieler:
+                     * feste Rolle verwenden.
+                     */
+
+                    if (fixedRole) {
+
+                        correctedPlayer.role =
+                            fixedRole;
+
+                    }
+
+
+                    return {
+
+                        player:
+                            correctedPlayer,
+
+                        champion:
+                            detectedChampions?.[
+                                originalIndex
+                            ] || "",
+
+                        originalIndex:
+                            originalIndex
+
+                    };
+
+                }
+            );
+
+
+    /*
+     * =========================================================
+     * NACH ROLLE SORTIEREN
+     * =========================================================
+     */
+
+    combinedPlayers.sort(
+        (a, b) => {
+
+            const roleA =
+                roleOrder[
+                    a.player?.role
+                ];
+
+
+            const roleB =
+                roleOrder[
+                    b.player?.role
+                ];
+
+
+            /*
+             * Beide Rollen bekannt
+             */
+
+            if (
+                roleA !== undefined &&
+                roleB !== undefined
+            ) {
+
+                return roleA - roleB;
+
+            }
+
+
+            /*
+             * Nur A bekannt
+             */
+
+            if (
+                roleA !== undefined &&
+                roleB === undefined
+            ) {
+
+                return -1;
+
+            }
+
+
+            /*
+             * Nur B bekannt
+             */
+
+            if (
+                roleA === undefined &&
+                roleB !== undefined
+            ) {
+
+                return 1;
+
+            }
+
+
+            /*
+             * Beide unbekannt:
+             * ursprüngliche Reihenfolge behalten.
+             */
+
+            return (
+                a.originalIndex -
+                b.originalIndex
+            );
+
         }
+    );
 
-        if (
-            roleA !== undefined &&
-            roleB === undefined
-        ) {
-            return -1;
-        }
 
-        if (
-            roleA === undefined &&
-            roleB !== undefined
-        ) {
-            return 1;
-        }
-
-        return (
-            a.originalIndex -
-            b.originalIndex
-        );
-    });
+    /*
+     * =========================================================
+     * ERGEBNIS
+     * =========================================================
+     */
 
     return {
+
         players:
             combinedPlayers.map(
-                item => item.player
+                item =>
+                    item.player
             ),
 
         champions:
             combinedPlayers.map(
-                item => item.champion
+                item =>
+                    item.champion
             )
+
     };
+
 }
 
 
@@ -4401,137 +4548,429 @@ function createDefaultPlayers(names) {
 }
 
 
-function createPlayerFormsHtml(team, players) {
+function createPlayerFormsHtml(
+    team,
+    players
+) {
 
-    return players.map((player, index) => {
+    return players
+        .map(
+            (player, index) => {
 
-        return `
-            <div class="player-form">
-
-                <div class="player-role">
-                    ${roles[index]}
-                </div>
-
-
-                <div class="player-grid">
-
-                    <div class="form-group">
-                        <label>
-                            Spieler
-                        </label>
-
-                        <input
-                            type="text"
-                            class="${team}-name"
-                            data-index="${index}"
-                            value="${escapeHtml(player.name)}"
-                        >
-                    </div>
-
-
-                    <div class="form-group champion-form-group">
-
-                        <label>
-                            Champion
-                        </label>
-
-                        <input
-                            type="text"
-                            class="${team}-champion"
-                            data-index="${index}"
-                            placeholder="Champion suchen..."
-                            value="${escapeHtml(player.champion || "")}"
-                            autocomplete="off"
-                        >
+                return `
+                    <div
+                        class="player-form"
+                        draggable="true"
+                        data-player-team="${team}"
+                    >
 
                         <div
-                            class="champion-preview"
-                            id="${team}-champion-preview-${index}"
-                        ></div>
-
-                    </div>
-
-
-                    <div class="form-group">
-                        <label>
-                            Kills
-                        </label>
-
-                        <input
-                            type="number"
-                            min="0"
-                            class="${team}-kills"
-                            data-index="${index}"
-                            value="${Number(player.kills) || 0}"
+                            class="player-drag-handle"
+                            title="Spieler verschieben"
                         >
+                            ⋮⋮
+                        </div>
+
+
+                        <div class="player-role">
+                            ${roles[index]}
+                        </div>
+
+
+                        <div class="player-grid">
+
+                            <div class="form-group">
+
+                                <label>
+                                    Spieler
+                                </label>
+
+                                <input
+                                    type="text"
+                                    class="${team}-name"
+                                    data-index="${index}"
+                                    value="${escapeHtml(
+                                        player.name
+                                    )}"
+                                >
+
+                            </div>
+
+
+                            <div class="form-group champion-form-group">
+
+                                <label>
+                                    Champion
+                                </label>
+
+                                <input
+                                    type="text"
+                                    class="${team}-champion"
+                                    data-index="${index}"
+                                    placeholder="Champion suchen..."
+                                    value="${escapeHtml(
+                                        player.champion || ""
+                                    )}"
+                                    autocomplete="off"
+                                >
+
+                                <div
+                                    class="champion-preview"
+                                    id="${team}-champion-preview-${index}"
+                                ></div>
+
+                            </div>
+
+
+                            <div class="form-group">
+
+                                <label>
+                                    Kills
+                                </label>
+
+                                <input
+                                    type="number"
+                                    min="0"
+                                    class="${team}-kills"
+                                    data-index="${index}"
+                                    value="${Number(
+                                        player.kills
+                                    ) || 0}"
+                                >
+
+                            </div>
+
+
+                            <div class="form-group">
+
+                                <label>
+                                    Deaths
+                                </label>
+
+                                <input
+                                    type="number"
+                                    min="0"
+                                    class="${team}-deaths"
+                                    data-index="${index}"
+                                    value="${Number(
+                                        player.deaths
+                                    ) || 0}"
+                                >
+
+                            </div>
+
+
+                            <div class="form-group">
+
+                                <label>
+                                    Assists
+                                </label>
+
+                                <input
+                                    type="number"
+                                    min="0"
+                                    class="${team}-assists"
+                                    data-index="${index}"
+                                    value="${Number(
+                                        player.assists
+                                    ) || 0}"
+                                >
+
+                            </div>
+
+
+                            <div class="form-group">
+
+                                <label>
+                                    CS
+                                </label>
+
+                                <input
+                                    type="number"
+                                    min="0"
+                                    class="${team}-cs"
+                                    data-index="${index}"
+                                    value="${Number(
+                                        player.cs
+                                    ) || 0}"
+                                >
+
+                            </div>
+
+
+                            <div class="form-group">
+
+                                <label>
+                                    Damage
+                                </label>
+
+                                <input
+                                    type="number"
+                                    min="0"
+                                    class="${team}-damage"
+                                    data-index="${index}"
+                                    value="${Number(
+                                        player.damage
+                                    ) || 0}"
+                                >
+
+                            </div>
+
+                        </div>
+
                     </div>
+                `;
+
+            }
+        )
+        .join("");
+
+}
+
+function updatePlayerRowIndexes(container) {
+
+    if (!container) {
+        return;
+    }
 
 
-                    <div class="form-group">
-                        <label>
-                            Deaths
-                        </label>
-
-                        <input
-                            type="number"
-                            min="0"
-                            class="${team}-deaths"
-                            data-index="${index}"
-                            value="${Number(player.deaths) || 0}"
-                        >
-                    </div>
+    const rows =
+        Array.from(
+            container.querySelectorAll(
+                ".player-form"
+            )
+        );
 
 
-                    <div class="form-group">
-                        <label>
-                            Assists
-                        </label>
+    rows.forEach(
+        (row, index) => {
 
-                        <input
-                            type="number"
-                            min="0"
-                            class="${team}-assists"
-                            data-index="${index}"
-                            value="${Number(player.assists) || 0}"
-                        >
-                    </div>
+            /*
+             * Rolle aktualisieren
+             */
+
+            const roleElement =
+                row.querySelector(
+                    ".player-role"
+                );
 
 
-                    <div class="form-group">
-                        <label>
-                            CS
-                        </label>
+            if (roleElement) {
 
-                        <input
-                            type="number"
-                            min="0"
-                            class="${team}-cs"
-                            data-index="${index}"
-                            value="${Number(player.cs) || 0}"
-                        >
-                    </div>
+                roleElement.textContent =
+                    roles[index];
+
+            }
 
 
-                    <div class="form-group">
-                        <label>
-                            Damage
-                        </label>
+            /*
+             * Alle Inputs auf den neuen
+             * data-index setzen.
+             */
 
-                        <input
-                            type="number"
-                            min="0"
-                            class="${team}-damage"
-                            data-index="${index}"
-                            value="${Number(player.damage) || 0}"
-                        >
-                    </div>
+            row.querySelectorAll(
+                "input"
+            ).forEach(
+                input => {
 
-                </div>
+                    input.dataset.index =
+                        index;
 
-            </div>
-        `;
+                }
+            );
 
-    }).join("");
+
+            /*
+             * Champion-Preview-ID aktualisieren.
+             */
+
+            const team =
+                row.dataset.playerTeam;
+
+
+            const preview =
+                row.querySelector(
+                    ".champion-preview"
+                );
+
+
+            if (preview && team) {
+
+                preview.id =
+                    `${team}-champion-preview-${index}`;
+
+            }
+
+        }
+    );
+
+}
+
+function initializePlayerRowDragAndDrop() {
+
+    const containers = [
+        document.getElementById(
+            "editor-koi-players"
+        ),
+
+        document.getElementById(
+            "editor-enemy-players"
+        )
+    ];
+
+
+    containers.forEach(
+        container => {
+
+            if (!container) {
+                return;
+            }
+
+
+            /*
+             * Drag starten
+             */
+
+            container
+                .querySelectorAll(
+                    ".player-form"
+                )
+                .forEach(
+                    row => {
+
+                        row.addEventListener(
+                            "dragstart",
+                            event => {
+
+                                row.classList.add(
+                                    "dragging"
+                                );
+
+
+                                event.dataTransfer.effectAllowed =
+                                    "move";
+
+
+                                event.dataTransfer.setData(
+                                    "text/plain",
+                                    "player-row"
+                                );
+
+                            }
+                        );
+
+
+                        row.addEventListener(
+                            "dragend",
+                            () => {
+
+                                row.classList.remove(
+                                    "dragging"
+                                );
+
+                                updatePlayerRowIndexes(
+                                    container
+                                );
+
+                            }
+                        );
+
+                    }
+                );
+
+
+            /*
+             * Während des Ziehens
+             */
+
+            container.addEventListener(
+                "dragover",
+                event => {
+
+                    event.preventDefault();
+
+
+                    const dragging =
+                        container.querySelector(
+                            ".player-form.dragging"
+                        );
+
+
+                    if (!dragging) {
+                        return;
+                    }
+
+
+                    const target =
+                        event.target.closest(
+                            ".player-form"
+                        );
+
+
+                    if (
+                        !target ||
+                        target === dragging
+                    ) {
+                        return;
+                    }
+
+
+                    const rect =
+                        target.getBoundingClientRect();
+
+
+                    const mouseY =
+                        event.clientY;
+
+
+                    const targetMiddle =
+                        rect.top +
+                        rect.height / 2;
+
+
+                    if (
+                        mouseY <
+                        targetMiddle
+                    ) {
+
+                        container.insertBefore(
+                            dragging,
+                            target
+                        );
+
+                    } else {
+
+                        container.insertBefore(
+                            dragging,
+                            target.nextSibling
+                        );
+
+                    }
+
+                }
+            );
+
+
+            /*
+             * Drop
+             */
+
+            container.addEventListener(
+                "drop",
+                event => {
+
+                    event.preventDefault();
+
+                    updatePlayerRowIndexes(
+                        container
+                    );
+
+                }
+            );
+
+        }
+    );
+
 }
 
 function captureCurrentGameDraft() {
