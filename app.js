@@ -12414,11 +12414,6 @@ function setupScheduleHourClicks() {
             hours.forEach(
                 (hour, index) => {
 
-                    /*
-                     * Bereits gesetzten Listener entfernen,
-                     * indem wir den Knoten klonen.
-                     */
-
                     const newHour =
                         hour.cloneNode(
                             true
@@ -12431,13 +12426,14 @@ function setupScheduleHourClicks() {
 
 
                     newHour.addEventListener(
-                        "click",
+                        "dblclick",
                         event => {
 
                             /*
-                             * Klick auf einen Termin
-                             * darf keinen neuen Termin
-                             * öffnen.
+                             * Falls direkt auf einen
+                             * bestehenden Termin
+                             * doppelt geklickt wurde,
+                             * keinen neuen erstellen.
                              */
 
                             if (
@@ -12445,7 +12441,9 @@ function setupScheduleHourClicks() {
                                     ".schedule-event"
                                 )
                             ) {
+
                                 return;
+
                             }
 
 
@@ -12459,7 +12457,8 @@ function setupScheduleHourClicks() {
 
 
                             /*
-                             * Kalender beginnt um 08:00.
+                             * Der Kalender beginnt
+                             * um 08:00 Uhr.
                              */
 
                             const hourValue =
@@ -12504,6 +12503,29 @@ function setupScheduleHourClicks() {
 
 }
 
+function formatScheduleDateInput(date) {
+
+    const year =
+        date.getFullYear();
+
+    const month =
+        String(
+            date.getMonth() + 1
+        ).padStart(
+            2,
+            "0"
+        );
+
+    const day =
+        String(
+            date.getDate()
+        ).padStart(
+            2,
+            "0"
+        );
+
+    return `${year}-${month}-${day}`;
+}
 
 /* =========================================================
    TERMIN-ERSTELLEN-MODAL ÖFFNEN
@@ -12513,11 +12535,6 @@ function openScheduleCreateModal(
     startDate,
     endDate
 ) {
-
-    /*
-     * Falls bereits ein Modal existiert,
-     * entfernen.
-     */
 
     const existingModal =
         document.getElementById(
@@ -12529,10 +12546,6 @@ function openScheduleCreateModal(
         existingModal.remove();
     }
 
-
-    /* -----------------------------------------------------
-       MODAL
-    ----------------------------------------------------- */
 
     const modal =
         document.createElement(
@@ -12568,10 +12581,6 @@ function openScheduleCreateModal(
     modal.style.padding =
         "20px";
 
-
-    /* -----------------------------------------------------
-       MODAL-INHALT
-    ----------------------------------------------------- */
 
     const box =
         document.createElement(
@@ -12657,7 +12666,7 @@ function openScheduleCreateModal(
                 <input
                     id="schedule-create-title"
                     type="text"
-                    placeholder="z. B. Training"
+                    placeholder="z. B. Urlaub"
                     style="
                         width:100%;
                         box-sizing:border-box;
@@ -12739,6 +12748,10 @@ function openScheduleCreateModal(
                         Besprechung
                     </option>
 
+                    <option value="vacation">
+                        Urlaub
+                    </option>
+
                     <option value="other">
                         Sonstiges
                     </option>
@@ -12746,7 +12759,35 @@ function openScheduleCreateModal(
             </label>
 
 
+            <label
+                style="
+                    display:flex;
+                    align-items:center;
+                    gap:10px;
+                    cursor:pointer;
+                    padding:4px 0;
+                "
+            >
+
+                <input
+                    id="schedule-create-all-day"
+                    type="checkbox"
+                    style="
+                        width:18px;
+                        height:18px;
+                        cursor:pointer;
+                    "
+                >
+
+                <span>
+                    Ganztägiger Termin
+                </span>
+
+            </label>
+
+
             <div
+                id="schedule-create-normal-time"
                 style="
                     display:grid;
                     grid-template-columns:1fr 1fr;
@@ -12795,6 +12836,71 @@ function openScheduleCreateModal(
                     <input
                         id="schedule-create-end"
                         type="datetime-local"
+                        style="
+                            width:100%;
+                            box-sizing:border-box;
+                            padding:10px;
+                            border-radius:6px;
+                            border:1px solid #444;
+                            background:#2a2a2a;
+                            color:#fff;
+                        "
+                    >
+                </label>
+
+            </div>
+
+
+            <div
+                id="schedule-create-all-day-fields"
+                style="
+                    display:none;
+                    grid-template-columns:1fr 1fr;
+                    gap:12px;
+                "
+            >
+
+                <label
+                    style="
+                        display:flex;
+                        flex-direction:column;
+                        gap:6px;
+                    "
+                >
+                    <span>
+                        Von
+                    </span>
+
+                    <input
+                        id="schedule-create-all-day-start"
+                        type="date"
+                        style="
+                            width:100%;
+                            box-sizing:border-box;
+                            padding:10px;
+                            border-radius:6px;
+                            border:1px solid #444;
+                            background:#2a2a2a;
+                            color:#fff;
+                        "
+                    >
+                </label>
+
+
+                <label
+                    style="
+                        display:flex;
+                        flex-direction:column;
+                        gap:6px;
+                    "
+                >
+                    <span>
+                        Bis
+                    </span>
+
+                    <input
+                        id="schedule-create-all-day-end"
+                        type="date"
                         style="
                             width:100%;
                             box-sizing:border-box;
@@ -12881,7 +12987,7 @@ function openScheduleCreateModal(
 
 
     /* -----------------------------------------------------
-       START / ENDE SETZEN
+       ELEMENTE
     ----------------------------------------------------- */
 
     const startInput =
@@ -12896,6 +13002,40 @@ function openScheduleCreateModal(
         );
 
 
+    const allDayCheckbox =
+        document.getElementById(
+            "schedule-create-all-day"
+        );
+
+
+    const normalTimeFields =
+        document.getElementById(
+            "schedule-create-normal-time"
+        );
+
+
+    const allDayFields =
+        document.getElementById(
+            "schedule-create-all-day-fields"
+        );
+
+
+    const allDayStart =
+        document.getElementById(
+            "schedule-create-all-day-start"
+        );
+
+
+    const allDayEnd =
+        document.getElementById(
+            "schedule-create-all-day-end"
+        );
+
+
+    /* -----------------------------------------------------
+       NORMALE START-/ENDZEIT
+    ----------------------------------------------------- */
+
     startInput.value =
         formatScheduleDateTimeLocal(
             startDate
@@ -12909,22 +13049,68 @@ function openScheduleCreateModal(
 
 
     /* -----------------------------------------------------
-       TITEL FOKUSSIEREN
+       GANZTÄGIGER STANDARD
     ----------------------------------------------------- */
 
-    const titleInput =
-        document.getElementById(
-            "schedule-create-title"
+    allDayStart.value =
+        formatScheduleDateInput(
+            startDate
         );
 
 
-    setTimeout(
+    allDayEnd.value =
+        formatScheduleDateInput(
+            startDate
+        );
+
+
+    /* -----------------------------------------------------
+       GANZTÄGIG UMSCHALTEN
+    ----------------------------------------------------- */
+
+    allDayCheckbox.addEventListener(
+        "change",
         () => {
 
-            titleInput.focus();
+            if (
+                allDayCheckbox.checked
+            ) {
 
-        },
-        50
+                normalTimeFields.style.display =
+                    "none";
+
+                allDayFields.style.display =
+                    "grid";
+
+
+                /*
+                 * Standardmäßig den Tag
+                 * des angeklickten Zeitfensters
+                 * verwenden.
+                 */
+
+                allDayStart.value =
+                    formatScheduleDateInput(
+                        startDate
+                    );
+
+
+                allDayEnd.value =
+                    formatScheduleDateInput(
+                        startDate
+                    );
+
+            } else {
+
+                normalTimeFields.style.display =
+                    "grid";
+
+                allDayFields.style.display =
+                    "none";
+
+            }
+
+        }
     );
 
 
@@ -12960,11 +13146,6 @@ function openScheduleCreateModal(
         );
 
 
-    /*
-     * Klick auf den dunklen Hintergrund
-     * schließt das Fenster.
-     */
-
     modal.addEventListener(
         "click",
         event => {
@@ -12993,6 +13174,24 @@ function openScheduleCreateModal(
             "click",
             createScheduleEvent
         );
+
+
+    /* -----------------------------------------------------
+       FOKUS
+    ----------------------------------------------------- */
+
+    setTimeout(
+        () => {
+
+            document
+                .getElementById(
+                    "schedule-create-title"
+                )
+                .focus();
+
+        },
+        50
+    );
 
 }
 
@@ -13033,6 +13232,24 @@ async function createScheduleEvent() {
         );
 
 
+    const allDayCheckbox =
+        document.getElementById(
+            "schedule-create-all-day"
+        );
+
+
+    const allDayStartInput =
+        document.getElementById(
+            "schedule-create-all-day-start"
+        );
+
+
+    const allDayEndInput =
+        document.getElementById(
+            "schedule-create-all-day-end"
+        );
+
+
     const errorElement =
         document.getElementById(
             "schedule-create-error"
@@ -13046,7 +13263,7 @@ async function createScheduleEvent() {
 
 
     /* -----------------------------------------------------
-       TEAM PRÜFEN
+       TEAM
     ----------------------------------------------------- */
 
     if (
@@ -13065,7 +13282,7 @@ async function createScheduleEvent() {
 
 
     /* -----------------------------------------------------
-       EINGABEN
+       GRUNDWERTE
     ----------------------------------------------------- */
 
     const title =
@@ -13080,17 +13297,18 @@ async function createScheduleEvent() {
         typeInput.value;
 
 
-    const startTime =
-        scheduleLocalDateTimeToISO(
-            startInput.value
-        );
+    const isAllDay =
+        allDayCheckbox.checked;
 
 
-    const endTime =
-        scheduleLocalDateTimeToISO(
-            endInput.value
-        );
+    let startTime = null;
 
+    let endTime = null;
+
+
+    /* -----------------------------------------------------
+       TITEL
+    ----------------------------------------------------- */
 
     if (!title) {
 
@@ -13106,42 +13324,174 @@ async function createScheduleEvent() {
     }
 
 
-    if (
-        !startTime ||
-        !endTime
-    ) {
+    /* =====================================================
+       GANZTÄGIGER TERMIN
+    ===================================================== */
 
-        errorElement.textContent =
-            "Bitte gib gültige Start- und Endzeiten ein.";
+    if (isAllDay) {
 
-        errorElement.style.display =
-            "block";
+        const startDate =
+            allDayStartInput.value;
 
-        return;
+
+        const endDate =
+            allDayEndInput.value;
+
+
+        if (
+            !startDate ||
+            !endDate
+        ) {
+
+            errorElement.textContent =
+                "Bitte gib Start- und Enddatum ein.";
+
+            errorElement.style.display =
+                "block";
+
+            return;
+        }
+
+
+        /*
+         * Das Enddatum ist inklusiv.
+         *
+         * Beispiel:
+         *
+         * 22.09. – 06.10.
+         *
+         * wird intern zu:
+         *
+         * 22.09. 00:00
+         * 07.10. 00:00
+         *
+         * Dadurch wird der 06.10.
+         * vollständig eingeschlossen.
+         */
+
+        const startDateObject =
+            new Date(
+                `${startDate}T00:00:00`
+            );
+
+
+        const endDateObject =
+            new Date(
+                `${endDate}T00:00:00`
+            );
+
+
+        if (
+            Number.isNaN(
+                startDateObject.getTime()
+            ) ||
+            Number.isNaN(
+                endDateObject.getTime()
+            )
+        ) {
+
+            errorElement.textContent =
+                "Die eingegebenen Daten sind ungültig.";
+
+            errorElement.style.display =
+                "block";
+
+            return;
+        }
+
+
+        if (
+            endDateObject <
+            startDateObject
+        ) {
+
+            errorElement.textContent =
+                "Das Enddatum muss am gleichen oder nach dem Startdatum liegen.";
+
+            errorElement.style.display =
+                "block";
+
+            return;
+        }
+
+
+        /*
+         * Einen Tag zum Enddatum addieren,
+         * damit das Enddatum inklusiv ist.
+         */
+
+        endDateObject.setDate(
+            endDateObject.getDate() + 1
+        );
+
+
+        startTime =
+            startDateObject.toISOString();
+
+
+        endTime =
+            endDateObject.toISOString();
+
     }
 
 
-    if (
-        new Date(endTime) <=
-        new Date(startTime)
-    ) {
+    /* =====================================================
+       NORMALER TERMIN
+    ===================================================== */
 
-        errorElement.textContent =
-            "Die Endzeit muss nach der Startzeit liegen.";
+    else {
 
-        errorElement.style.display =
-            "block";
+        startTime =
+            scheduleLocalDateTimeToISO(
+                startInput.value
+            );
 
-        return;
+
+        endTime =
+            scheduleLocalDateTimeToISO(
+                endInput.value
+            );
+
+
+        if (
+            !startTime ||
+            !endTime
+        ) {
+
+            errorElement.textContent =
+                "Bitte gib gültige Start- und Endzeiten ein.";
+
+            errorElement.style.display =
+                "block";
+
+            return;
+        }
+
+
+        if (
+            new Date(endTime) <=
+            new Date(startTime)
+        ) {
+
+            errorElement.textContent =
+                "Die Endzeit muss nach der Startzeit liegen.";
+
+            errorElement.style.display =
+                "block";
+
+            return;
+        }
+
     }
 
 
     /* -----------------------------------------------------
-       BUTTON DEAKTIVIEREN
+       BUTTON
     ----------------------------------------------------- */
 
     saveButton.disabled =
         true;
+
 
     saveButton.textContent =
         "Wird erstellt...";
@@ -13152,7 +13502,7 @@ async function createScheduleEvent() {
 
 
     /* -----------------------------------------------------
-       SUPABASE INSERT
+       SUPABASE
     ----------------------------------------------------- */
 
     const {
@@ -13179,7 +13529,10 @@ async function createScheduleEvent() {
                         endTime,
 
                     event_type:
-                        eventType
+                        eventType,
+
+                    all_day:
+                        isAllDay
                 }
             ])
             .select()
@@ -13350,6 +13703,7 @@ async function loadScheduleEvents() {
                 start_time,
                 end_time,
                 event_type,
+                all_day,
                 created_at,
                 updated_at
             `)
