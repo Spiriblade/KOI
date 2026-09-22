@@ -15220,6 +15220,10 @@ function renderScheduleAllDayEvent(
     );
 
 
+    /*
+     * Außerhalb der aktuellen Woche?
+     */
+
     if (
         end <= monday ||
         start >= nextMonday
@@ -15240,9 +15244,90 @@ function renderScheduleAllDayEvent(
             : end;
 
 
-    /* -----------------------------------------------------
-       BALKEN FÜR JEDEN TAG
-    ----------------------------------------------------- */
+    /*
+     * Tatsächliches letztes Datum des Termins.
+     *
+     * Bei:
+     *
+     * 26.09. – 06.10.
+     *
+     * ist end intern:
+     *
+     * 07.10. 00:00
+     *
+     * Das tatsächliche Enddatum ist also:
+     *
+     * 06.10.
+     */
+
+    const actualEnd =
+        new Date(
+            end
+        );
+
+
+    actualEnd.setDate(
+        actualEnd.getDate() - 1
+    );
+
+
+    const title =
+        escapeScheduleHtml(
+            eventData.title ||
+            "Ganztägiger Termin"
+        );
+
+
+    const createdBy =
+        escapeScheduleHtml(
+            eventData.created_by ||
+            ""
+        );
+
+
+    /*
+     * Geht der Termin über die aktuelle
+     * Woche hinaus?
+     */
+
+    const continuesAfterWeek =
+        end > nextMonday;
+
+
+    /*
+     * Beginnt der Termin vor der aktuellen Woche?
+     */
+
+    const continuesBeforeWeek =
+        start < monday;
+
+
+    /*
+     * Letzter sichtbarer Tag der Woche
+     */
+
+    const lastVisibleDate =
+        new Date(
+            visibleEnd
+        );
+
+
+    lastVisibleDate.setDate(
+        lastVisibleDate.getDate() - 1
+    );
+
+
+    lastVisibleDate.setHours(
+        0,
+        0,
+        0,
+        0
+    );
+
+
+    /*
+     * Balken für jeden sichtbaren Tag
+     */
 
     const currentDate =
         new Date(
@@ -15297,7 +15382,7 @@ function renderScheduleAllDayEvent(
         if (column) {
 
             /* -------------------------------------------------
-               BALKEN
+               TERMIN-ELEMENT
             ------------------------------------------------- */
 
             const eventElement =
@@ -15317,34 +15402,51 @@ function renderScheduleAllDayEvent(
             eventElement.style.position =
                 "absolute";
 
+
+            /*
+             * Keine Lücke zwischen den Tagen.
+             *
+             * Wir gehen leicht über die Spaltenkante,
+             * damit der Balken wirklich durchgehend wirkt.
+             */
+
             eventElement.style.left =
-                "4px";
+                "-1px";
+
 
             eventElement.style.right =
-                "4px";
+                "-1px";
+
 
             eventElement.style.top =
                 "5px";
 
+
             eventElement.style.height =
                 "28px";
+
 
             eventElement.style.boxSizing =
                 "border-box";
 
+
             eventElement.style.zIndex =
                 "20";
+
 
             eventElement.style.padding =
                 "5px 8px";
 
+
+            /*
+             * Standardmäßig keine Rundung.
+             * Rundung kommt nur am echten Anfang
+             * und am echten Ende des Urlaubs.
+             */
+
             eventElement.style.borderRadius =
-                "5px";
+                "0";
 
-
-            /* -------------------------------------------------
-               FARBE
-            ------------------------------------------------- */
 
             eventElement.style.background =
                 getScheduleEventColor(
@@ -15372,56 +15474,77 @@ function renderScheduleAllDayEvent(
                 "600";
 
 
-            /* -------------------------------------------------
-               ÜBERGÄNGE BEI MEHRTÄGIGEN TERMINEN
-            ------------------------------------------------- */
+            /*
+             * Ist dies der tatsächliche Anfang
+             * des Termins?
+             */
 
-            const dayIndex =
-                currentDate.getDay();
+            const isActualStart =
+                !continuesBeforeWeek &&
+                currentDate.getTime() ===
+                    start.getTime();
 
+
+            /*
+             * Ist dies der tatsächliche letzte Tag?
+             */
+
+            const isActualEnd =
+                currentDate.getTime() ===
+                actualEnd.getTime();
+
+
+            /*
+             * Nur am echten Anfang abrunden.
+             */
 
             if (
-                dayIndex !== 1
+                isActualStart
             ) {
 
                 eventElement.style.borderTopLeftRadius =
-                    "0";
+                    "5px";
+
 
                 eventElement.style.borderBottomLeftRadius =
-                    "0";
+                    "5px";
 
             }
 
 
+            /*
+             * Nur am echten Ende abrunden.
+             */
+
             if (
-                dayIndex !== 0
+                isActualEnd
             ) {
 
                 eventElement.style.borderTopRightRadius =
-                    "0";
+                    "5px";
+
 
                 eventElement.style.borderBottomRightRadius =
-                    "0";
+                    "5px";
 
             }
 
 
-            /* -------------------------------------------------
-               TITEL
-            ------------------------------------------------- */
+            /*
+             * Wenn der Urlaub über die aktuelle Woche
+             * hinausgeht, bekommt der letzte sichtbare
+             * Tag einen Pfeil mit dem tatsächlichen
+             * Enddatum.
+             */
 
-            const title =
-                escapeScheduleHtml(
-                    eventData.title ||
-                    "Ganztägiger Termin"
-                );
+            const isLastVisibleDay =
+                currentDate.getTime() ===
+                lastVisibleDate.getTime();
 
 
-            const createdBy =
-                escapeScheduleHtml(
-                    eventData.created_by ||
-                    ""
-                );
+            const showEndArrow =
+                continuesAfterWeek &&
+                isLastVisibleDay;
 
 
             /* -------------------------------------------------
@@ -15435,7 +15558,11 @@ function renderScheduleAllDayEvent(
                         position:absolute;
                         left:8px;
                         top:5px;
-                        right:${createdBy ? "120px" : "8px"};
+                        right:${
+                            createdBy
+                                ? "125px"
+                                : "8px"
+                        };
                         overflow:hidden;
                         white-space:nowrap;
                         text-overflow:ellipsis;
@@ -15446,13 +15573,39 @@ function renderScheduleAllDayEvent(
 
 
                 ${
+                    showEndArrow
+                        ? `
+                            <div
+                                style="
+                                    position:absolute;
+                                    right:8px;
+                                    top:5px;
+                                    font-size:11px;
+                                    font-weight:700;
+                                    white-space:nowrap;
+                                "
+                            >
+                                → ${actualEnd.toLocaleDateString(
+                                    "de-DE",
+                                    {
+                                        day:"2-digit",
+                                        month:"2-digit"
+                                    }
+                                )}
+                            </div>
+                        `
+                        : ""
+                }
+
+
+                ${
                     createdBy
                         ? `
                             <div
                                 style="
                                     position:absolute;
                                     right:8px;
-                                    bottom:5px;
+                                    bottom:4px;
                                     max-width:45%;
                                     overflow:hidden;
                                     white-space:nowrap;
@@ -15475,17 +15628,6 @@ function renderScheduleAllDayEvent(
             /* -------------------------------------------------
                TOOLTIP
             ------------------------------------------------- */
-
-            const actualEnd =
-                new Date(
-                    end
-                );
-
-
-            actualEnd.setDate(
-                actualEnd.getDate() - 1
-            );
-
 
             const startText =
                 start.toLocaleDateString(
@@ -15553,9 +15695,9 @@ function renderScheduleAllDayEvent(
         }
 
 
-        /* -------------------------------------------------
-           NÄCHSTER TAG
-        ------------------------------------------------- */
+        /*
+         * Nächster Tag
+         */
 
         currentDate.setDate(
             currentDate.getDate() + 1
