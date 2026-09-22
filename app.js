@@ -14692,6 +14692,7 @@ function renderScheduleEvent(
         return;
     }
 
+
     if (
         !eventData ||
         !eventData.start_time ||
@@ -15029,6 +15030,13 @@ function renderScheduleEvent(
         );
 
 
+    const createdBy =
+        escapeScheduleHtml(
+            eventData.created_by ||
+            ""
+        );
+
+
     const startText =
         formatScheduleTime(
             start
@@ -15053,6 +15061,7 @@ function renderScheduleEvent(
             ${title}
         </div>
 
+
         <div
             style="
                 font-size:11px;
@@ -15061,6 +15070,7 @@ function renderScheduleEvent(
         >
             ${startText} – ${endText}
         </div>
+
 
         ${
             type
@@ -15077,13 +15087,40 @@ function renderScheduleEvent(
                 `
                 : ""
         }
+
+
+        ${
+            createdBy
+                ? `
+                    <div
+                        style="
+                            font-size:10px;
+                            opacity:.75;
+                            margin-top:3px;
+                            white-space:nowrap;
+                            overflow:hidden;
+                            text-overflow:ellipsis;
+                        "
+                    >
+                        Von: ${createdBy}
+                    </div>
+                `
+                : ""
+        }
     `;
 
 
     eventElement.title =
-        description
-            ? `${eventData.title || "Termin"}\n\n${eventData.description}`
-            : `${eventData.title || "Termin"}\n${startText} – ${endText}`;
+        (
+            eventData.description
+                ? `${eventData.title || "Termin"}\n\n${eventData.description}`
+                : `${eventData.title || "Termin"}\n${startText} – ${endText}`
+        ) +
+        (
+            eventData.created_by
+                ? `\nErstellt von: ${eventData.created_by}`
+                : ""
+        );
 
 
     /* -----------------------------------------------------
@@ -15095,6 +15132,7 @@ function renderScheduleEvent(
         event => {
 
             event.stopPropagation();
+
 
             showScheduleEventDetails(
                 eventData
@@ -16222,6 +16260,12 @@ function showScheduleEventDetails(
     box.style.width =
         "min(500px, 100%)";
 
+    box.style.maxHeight =
+        "90vh";
+
+    box.style.overflowY =
+        "auto";
+
     box.style.background =
         "#1e1e1e";
 
@@ -16258,6 +16302,13 @@ function showScheduleEventDetails(
     const eventType =
         escapeScheduleHtml(
             eventData.event_type ||
+            ""
+        );
+
+
+    const createdBy =
+        escapeScheduleHtml(
+            eventData.created_by ||
             ""
         );
 
@@ -16315,7 +16366,173 @@ function showScheduleEventDetails(
     }
 
 
+    /* -----------------------------------------------------
+       TEAM-TEILNEHMER VORBEREITEN
+    ----------------------------------------------------- */
+
+    const teamPlayers =
+        eventData.team_event
+            ? getScheduleTeamPlayers()
+            : [];
+
+
+    const participants =
+        Array.isArray(
+            eventData._participants
+        )
+            ? eventData._participants
+            : [];
+
+
+    const participantMap =
+        new Map();
+
+
+    participants.forEach(
+        participant => {
+
+            if (
+                participant?.player_name
+            ) {
+
+                participantMap.set(
+                    participant.player_name,
+                    participant.response
+                );
+
+            }
+
+        }
+    );
+
+
+    const acceptedCount =
+        teamPlayers.filter(
+            player =>
+                participantMap.get(
+                    player
+                ) === "accepted"
+        ).length;
+
+
+    /* -----------------------------------------------------
+       TEILNEHMERLISTE
+    ----------------------------------------------------- */
+
+    let participantListHtml =
+        "";
+
+
+    if (
+        eventData.team_event &&
+        teamPlayers.length
+    ) {
+
+        participantListHtml =
+            teamPlayers
+                .map(
+                    player => {
+
+                        const response =
+                            participantMap.get(
+                                player
+                            );
+
+
+                        let symbol =
+                            "○";
+
+
+                        let symbolColor =
+                            "#999";
+
+
+                        if (
+                            response ===
+                            "accepted"
+                        ) {
+
+                            symbol =
+                                "✓";
+
+                            symbolColor =
+                                "#4ade80";
+
+                        } else if (
+                            response ===
+                            "declined"
+                        ) {
+
+                            symbol =
+                                "✕";
+
+                            symbolColor =
+                                "#f87171";
+
+                        }
+
+
+                        return `
+                            <div
+                                style="
+                                    display:flex;
+                                    align-items:center;
+                                    gap:8px;
+                                    padding:5px 0;
+                                    font-size:13px;
+                                "
+                            >
+
+                                <span
+                                    style="
+                                        width:18px;
+                                        text-align:center;
+                                        color:${symbolColor};
+                                        font-weight:700;
+                                    "
+                                >
+                                    ${symbol}
+                                </span>
+
+                                <span>
+                                    ${escapeScheduleHtml(
+                                        player
+                                    )}
+                                </span>
+
+                            </div>
+                        `;
+
+                    }
+                )
+                .join("");
+
+
+    } else if (
+        eventData.team_event
+    ) {
+
+        participantListHtml =
+            `
+                <div
+                    style="
+                        color:#999;
+                        font-size:12px;
+                    "
+                >
+                    Für dieses Team sind keine Spieler hinterlegt.
+                </div>
+            `;
+
+    }
+
+
+    /* -----------------------------------------------------
+       HTML
+    ----------------------------------------------------- */
+
     box.innerHTML = `
+
         <div
             style="
                 display:flex;
@@ -16408,6 +16625,24 @@ function showScheduleEventDetails(
 
 
             ${
+                createdBy
+                    ? `
+                        <div
+                            style="
+                                color:#999;
+                                font-size:12px;
+                                margin-top:-4px;
+                            "
+                        >
+                            Erstellt von:
+                            ${createdBy}
+                        </div>
+                    `
+                    : ""
+            }
+
+
+            ${
                 description
                     ? `
                         <div
@@ -16427,95 +16662,80 @@ function showScheduleEventDetails(
                     : ""
             }
 
+
             ${
-    eventData.team_event
-        ? `
-            <div
-                style="
-                    margin-top:8px;
-                    padding:12px;
-                    border-radius:7px;
-                    background:#292929;
-                "
-            >
+                eventData.team_event
+                    ? `
 
-                <div
-                    style="
-                        display:flex;
-                        justify-content:space-between;
-                        align-items:center;
-                        gap:10px;
-                        margin-bottom:8px;
-                    "
-                >
+                        <div
+                            style="
+                                margin-top:8px;
+                                padding:12px;
+                                border-radius:7px;
+                                background:#292929;
+                            "
+                        >
 
-                    <strong>
-                        Team
-                    </strong>
-
-                    <span
-                        style="
-                            color:#aaa;
-                            font-size:12px;
-                        "
-                    >
-                        ${
-                            (
-                                eventData._participants ||
-                                []
-                            ).filter(
-                                participant =>
-                                    participant.response ===
-                                    "accepted"
-                            ).length
-                        }/${getScheduleTeamPlayers().length}
-                        zugesagt
-                    </span>
-
-                </div>
-
-
-                ${
-                    eventData.created_by
-                        ? `
                             <div
                                 style="
-                                    color:#999;
-                                    font-size:12px;
-                                    margin-bottom:10px;
+                                    display:flex;
+                                    justify-content:space-between;
+                                    align-items:center;
+                                    gap:10px;
+                                    margin-bottom:8px;
                                 "
                             >
-                                Erstellt von:
-                                ${escapeScheduleHtml(
-                                    eventData.created_by
-                                )}
+
+                                <strong>
+                                    Team
+                                </strong>
+
+
+                                <span
+                                    style="
+                                        color:#aaa;
+                                        font-size:12px;
+                                    "
+                                >
+                                    ${acceptedCount}/${teamPlayers.length}
+                                    zugesagt
+                                </span>
+
                             </div>
-                        `
-                        : ""
-                }
 
 
-                <button
-                    type="button"
-                    id="schedule-team-participation"
-                    style="
-                        width:100%;
-                        padding:10px 14px;
-                        border-radius:6px;
-                        border:0;
-                        background:#2563eb;
-                        color:#fff;
-                        cursor:pointer;
-                        font-weight:600;
-                    "
-                >
-                    Teilnahme verwalten
-                </button>
+                            <div
+                                style="
+                                    margin-top:4px;
+                                    margin-bottom:12px;
+                                "
+                            >
+                                ${participantListHtml}
+                            </div>
 
-            </div>
-        `
-        : ""
-}
+
+                            <button
+                                type="button"
+                                id="schedule-team-participation"
+                                style="
+                                    width:100%;
+                                    padding:10px 14px;
+                                    border-radius:6px;
+                                    border:0;
+                                    background:#2563eb;
+                                    color:#fff;
+                                    cursor:pointer;
+                                    font-weight:600;
+                                "
+                            >
+                                Teilnahme verwalten
+                            </button>
+
+                        </div>
+
+                    `
+                    : ""
+            }
 
 
             <div
@@ -16570,20 +16790,10 @@ function showScheduleEventDetails(
     );
 
 
-   document.body.appendChild(
+    document.body.appendChild(
         modal
     );
 
-    const createErrorElement =
-        document.getElementById(
-            "schedule-create-error"
-        );
-
-    if (createErrorElement) {
-
-        addScheduleTeamFields();
-
-    }
 
     /* -----------------------------------------------------
        SCHLIESSEN
@@ -16619,26 +16829,33 @@ function showScheduleEventDetails(
     );
 
 
-    if (eventData.team_event) {
+    /* -----------------------------------------------------
+       TEAM-TEILNAHME
+    ----------------------------------------------------- */
 
-    document
-        .getElementById(
-            "schedule-team-participation"
-        )
-        ?.addEventListener(
-            "click",
-            () => {
+    if (
+        eventData.team_event
+    ) {
 
-                modal.remove();
+        document
+            .getElementById(
+                "schedule-team-participation"
+            )
+            ?.addEventListener(
+                "click",
+                () => {
 
-                openScheduleParticipationModal(
-                    eventData
-                );
+                    modal.remove();
 
-            }
-        );
+                    openScheduleParticipationModal(
+                        eventData
+                    );
 
-}
+                }
+            );
+
+    }
+
 
     /* -----------------------------------------------------
        BEARBEITEN
