@@ -12242,7 +12242,7 @@ function getScheduleEventColor(
         case "meeting":
             return "#059669";
 
-        case "urlaub":
+        case "vacation":
             return "#dc2626";
 
         case "other":
@@ -15220,21 +15220,6 @@ function renderScheduleAllDayEvent(
     );
 
 
-    /*
-     * Ein ganztägiger Termin endet intern
-     * am Folgetag des tatsächlichen Enddatums.
-     *
-     * Beispiel:
-     *
-     * 22.09 – 06.10
-     *
-     * intern:
-     *
-     * 22.09 00:00
-     * 07.10 00:00
-     */
-
-
     if (
         end <= monday ||
         start >= nextMonday
@@ -15256,7 +15241,7 @@ function renderScheduleAllDayEvent(
 
 
     /* -----------------------------------------------------
-       BALKEN FÜR JEDEN BETROFFENEN TAG
+       BALKEN FÜR JEDEN TAG
     ----------------------------------------------------- */
 
     const currentDate =
@@ -15332,42 +15317,34 @@ function renderScheduleAllDayEvent(
             eventElement.style.position =
                 "absolute";
 
-
             eventElement.style.left =
                 "4px";
-
 
             eventElement.style.right =
                 "4px";
 
-
-            /*
-             * Ganz oben in der Tages-Spalte.
-             */
-
             eventElement.style.top =
                 "5px";
-
 
             eventElement.style.height =
                 "28px";
 
-
             eventElement.style.boxSizing =
                 "border-box";
-
 
             eventElement.style.zIndex =
                 "20";
 
-
             eventElement.style.padding =
                 "5px 8px";
-
 
             eventElement.style.borderRadius =
                 "5px";
 
+
+            /* -------------------------------------------------
+               FARBE
+            ------------------------------------------------- */
 
             eventElement.style.background =
                 getScheduleEventColor(
@@ -15387,14 +15364,6 @@ function renderScheduleAllDayEvent(
                 "hidden";
 
 
-            eventElement.style.whiteSpace =
-                "nowrap";
-
-
-            eventElement.style.textOverflow =
-                "ellipsis";
-
-
             eventElement.style.fontSize =
                 "12px";
 
@@ -15403,10 +15372,9 @@ function renderScheduleAllDayEvent(
                 "600";
 
 
-            /*
-             * An den Übergängen der Tage
-             * keine großen Lücken.
-             */
+            /* -------------------------------------------------
+               ÜBERGÄNGE BEI MEHRTÄGIGEN TERMINEN
+            ------------------------------------------------- */
 
             const dayIndex =
                 currentDate.getDay();
@@ -15449,15 +15417,59 @@ function renderScheduleAllDayEvent(
                 );
 
 
-            /*
-             * Am ersten Tag Titel mit Datum,
-             * an den Folgetagen nur den Titel.
-             */
+            const createdBy =
+                escapeScheduleHtml(
+                    eventData.created_by ||
+                    ""
+                );
 
-            eventElement.innerHTML =
-                `
+
+            /* -------------------------------------------------
+               INHALT
+            ------------------------------------------------- */
+
+            eventElement.innerHTML = `
+
+                <div
+                    style="
+                        position:absolute;
+                        left:8px;
+                        top:5px;
+                        right:${createdBy ? "120px" : "8px"};
+                        overflow:hidden;
+                        white-space:nowrap;
+                        text-overflow:ellipsis;
+                    "
+                >
                     ${title}
-                `;
+                </div>
+
+
+                ${
+                    createdBy
+                        ? `
+                            <div
+                                style="
+                                    position:absolute;
+                                    right:8px;
+                                    bottom:5px;
+                                    max-width:45%;
+                                    overflow:hidden;
+                                    white-space:nowrap;
+                                    text-overflow:ellipsis;
+                                    text-align:right;
+                                    font-size:10px;
+                                    font-weight:600;
+                                    opacity:.95;
+                                "
+                            >
+                                ${createdBy}
+                            </div>
+                        `
+                        : ""
+                }
+
+            `;
 
 
             /* -------------------------------------------------
@@ -15500,6 +15512,11 @@ function renderScheduleAllDayEvent(
             eventElement.title =
                 `${eventData.title || "Termin"}\n${startText} – ${endText}` +
                 (
+                    eventData.created_by
+                        ? `\nErstellt von: ${eventData.created_by}`
+                        : ""
+                ) +
+                (
                     eventData.description
                         ? `\n\n${eventData.description}`
                         : ""
@@ -15536,9 +15553,9 @@ function renderScheduleAllDayEvent(
         }
 
 
-        /*
-         * Einen Tag weiter.
-         */
+        /* -------------------------------------------------
+           NÄCHSTER TAG
+        ------------------------------------------------- */
 
         currentDate.setDate(
             currentDate.getDate() + 1
