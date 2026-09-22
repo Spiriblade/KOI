@@ -13195,6 +13195,440 @@ function openScheduleCreateModal(
 
 }
 
+/* =========================================================
+   TEAM-TEILNAHME – HILFSFUNKTIONEN
+========================================================= */
+
+function getScheduleTeamPlayers() {
+
+    if (!currentTeam?.name) {
+        return [];
+    }
+
+    return (
+        teamData[currentTeam.name]?.players ||
+        []
+    );
+
+}
+
+
+function getScheduleSavedParticipantName() {
+
+    if (!currentTeam?.id) {
+        return "";
+    }
+
+    return (
+        localStorage.getItem(
+            `schedule-participant-name-${currentTeam.id}`
+        ) ||
+        ""
+    );
+
+}
+
+
+function setScheduleSavedParticipantName(
+    playerName
+) {
+
+    if (!currentTeam?.id || !playerName) {
+        return;
+    }
+
+    localStorage.setItem(
+        `schedule-participant-name-${currentTeam.id}`,
+        playerName
+    );
+
+}
+
+
+/* =========================================================
+   TEAM-FELDER IN EIN TERMIN-MODAL EINBAUEN
+========================================================= */
+
+function addScheduleTeamFields(
+    existingCreatedBy = "",
+    existingTeamEvent = false
+) {
+
+    const errorElement =
+        document.getElementById(
+            "schedule-create-error"
+        );
+
+    if (!errorElement) {
+        return;
+    }
+
+
+    const players =
+        getScheduleTeamPlayers();
+
+
+    const wrapper =
+        document.createElement("div");
+
+
+    wrapper.id =
+        "schedule-team-fields";
+
+
+    wrapper.style.display =
+        "flex";
+
+    wrapper.style.flexDirection =
+        "column";
+
+    wrapper.style.gap =
+        "12px";
+
+
+    const playerOptions =
+        players.map(
+            player => `
+                <option
+                    value="${escapeScheduleHtml(player)}"
+                    ${
+                        player === existingCreatedBy
+                            ? "selected"
+                            : ""
+                    }
+                >
+                    ${escapeScheduleHtml(player)}
+                </option>
+            `
+        ).join("");
+
+
+    wrapper.innerHTML = `
+
+        <label
+            style="
+                display:flex;
+                flex-direction:column;
+                gap:6px;
+            "
+        >
+
+            <span>
+                Erstellt von
+            </span>
+
+            <select
+                id="schedule-create-created-by"
+                style="
+                    width:100%;
+                    box-sizing:border-box;
+                    padding:10px;
+                    border-radius:6px;
+                    border:1px solid #444;
+                    background:#2a2a2a;
+                    color:#fff;
+                "
+            >
+
+                <option value="">
+                    Name auswählen
+                </option>
+
+                ${playerOptions}
+
+            </select>
+
+        </label>
+
+
+        <label
+            style="
+                display:flex;
+                align-items:center;
+                gap:10px;
+                cursor:pointer;
+                padding:4px 0;
+            "
+        >
+
+            <input
+                id="schedule-create-team-event"
+                type="checkbox"
+                ${
+                    existingTeamEvent
+                        ? "checked"
+                        : ""
+                }
+                style="
+                    width:18px;
+                    height:18px;
+                    cursor:pointer;
+                "
+            >
+
+            <span>
+                Team
+            </span>
+
+        </label>
+
+
+        <div
+            style="
+                color:#999;
+                font-size:12px;
+                line-height:1.4;
+            "
+        >
+            Wenn „Team“ aktiviert ist, können alle
+            Spieler ihre Teilnahme bestätigen oder ablehnen.
+        </div>
+
+    `;
+
+
+    errorElement.parentNode.insertBefore(
+        wrapper,
+        errorElement
+    );
+
+
+    const savedName =
+        getScheduleSavedParticipantName();
+
+
+    const createdBySelect =
+        document.getElementById(
+            "schedule-create-created-by"
+        );
+
+
+    if (
+        createdBySelect &&
+        !existingCreatedBy &&
+        savedName &&
+        players.includes(savedName)
+    ) {
+
+        createdBySelect.value =
+            savedName;
+
+    }
+
+
+    if (createdBySelect) {
+
+        createdBySelect.addEventListener(
+            "change",
+            () => {
+
+                if (
+                    createdBySelect.value
+                ) {
+
+                    setScheduleSavedParticipantName(
+                        createdBySelect.value
+                    );
+
+                }
+
+            }
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   TEAM-STATUS EINES TERMINS
+========================================================= */
+
+function getScheduleParticipantStatus(
+    eventData
+) {
+
+    const participantName =
+        getScheduleSavedParticipantName();
+
+
+    if (
+        !participantName ||
+        !Array.isArray(
+            eventData?._participants
+        )
+    ) {
+
+        return null;
+
+    }
+
+
+    return (
+        eventData._participants.find(
+            participant =>
+                participant.player_name ===
+                participantName
+        ) ||
+        null
+    );
+
+}
+
+
+/* =========================================================
+   TEAM-STATUS AUF TERMINE ANZEIGEN
+========================================================= */
+
+function decorateScheduleTeamEvents(
+    events
+) {
+
+    if (!Array.isArray(events)) {
+        return;
+    }
+
+
+    events.forEach(
+        eventData => {
+
+            if (!eventData.team_event) {
+                return;
+            }
+
+
+            const eventElements =
+                document.querySelectorAll(
+                    `.schedule-event[data-event-id="${eventData.id}"]`
+                );
+
+
+            const participants =
+                Array.isArray(
+                    eventData._participants
+                )
+                    ? eventData._participants
+                    : [];
+
+
+            const accepted =
+                participants.filter(
+                    participant =>
+                        participant.response ===
+                        "accepted"
+                ).length;
+
+
+            const declined =
+                participants.filter(
+                    participant =>
+                        participant.response ===
+                        "declined"
+                ).length;
+
+
+            const status =
+                getScheduleParticipantStatus(
+                    eventData
+                );
+
+
+            let statusSymbol =
+                "○";
+
+
+            if (
+                status?.response ===
+                "accepted"
+            ) {
+
+                statusSymbol =
+                    "✓";
+
+            } else if (
+                status?.response ===
+                "declined"
+            ) {
+
+                statusSymbol =
+                    "✕";
+
+            }
+
+
+            eventElements.forEach(
+                eventElement => {
+
+                    if (
+                        eventElement.querySelector(
+                            ".schedule-team-status"
+                        )
+                    ) {
+                        return;
+                    }
+
+
+                    const badge =
+                        document.createElement(
+                            "div"
+                        );
+
+
+                    badge.className =
+                        "schedule-team-status";
+
+
+                    badge.style.position =
+                        "absolute";
+
+                    badge.style.right =
+                        "6px";
+
+                    badge.style.top =
+                        "5px";
+
+                    badge.style.padding =
+                        "2px 5px";
+
+                    badge.style.borderRadius =
+                        "4px";
+
+                    badge.style.background =
+                        "rgba(0,0,0,0.30)";
+
+                    badge.style.fontSize =
+                        "10px";
+
+                    badge.style.fontWeight =
+                        "700";
+
+                    badge.style.lineHeight =
+                        "1.2";
+
+                    badge.style.pointerEvents =
+                        "none";
+
+
+                    badge.textContent =
+                        `Team ${accepted}/${getScheduleTeamPlayers().length} ${statusSymbol}`;
+
+
+                    eventElement.style.paddingRight =
+                        "55px";
+
+
+                    eventElement.appendChild(
+                        badge
+                    );
+
+                }
+            );
+
+        }
+    );
+
+}
+
 
 /* =========================================================
    TERMIN IN SUPABASE ERSTELLEN
@@ -13250,6 +13684,18 @@ async function createScheduleEvent() {
         );
 
 
+    const createdByInput =
+        document.getElementById(
+            "schedule-create-created-by"
+        );
+
+
+    const teamEventInput =
+        document.getElementById(
+            "schedule-create-team-event"
+        );
+
+
     const errorElement =
         document.getElementById(
             "schedule-create-error"
@@ -13297,6 +13743,16 @@ async function createScheduleEvent() {
         typeInput.value;
 
 
+    const createdBy =
+        createdByInput?.value.trim() ||
+        "";
+
+
+    const teamEvent =
+        teamEventInput?.checked ||
+        false;
+
+
     const isAllDay =
         allDayCheckbox.checked;
 
@@ -13322,6 +13778,33 @@ async function createScheduleEvent() {
 
         return;
     }
+
+
+    /* -----------------------------------------------------
+       ERSTELLT VON
+    ----------------------------------------------------- */
+
+    if (!createdBy) {
+
+        errorElement.textContent =
+            "Bitte wähle aus, wer den Termin erstellt hat.";
+
+        errorElement.style.display =
+            "block";
+
+        createdByInput?.focus();
+
+        return;
+    }
+
+
+    /* -----------------------------------------------------
+       NAMEN MERKEN
+    ----------------------------------------------------- */
+
+    setScheduleSavedParticipantName(
+        createdBy
+    );
 
 
     /* =====================================================
@@ -13352,22 +13835,6 @@ async function createScheduleEvent() {
             return;
         }
 
-
-        /*
-         * Das Enddatum ist inklusiv.
-         *
-         * Beispiel:
-         *
-         * 22.09. – 06.10.
-         *
-         * wird intern zu:
-         *
-         * 22.09. 00:00
-         * 07.10. 00:00
-         *
-         * Dadurch wird der 06.10.
-         * vollständig eingeschlossen.
-         */
 
         const startDateObject =
             new Date(
@@ -13414,11 +13881,6 @@ async function createScheduleEvent() {
             return;
         }
 
-
-        /*
-         * Einen Tag zum Enddatum addieren,
-         * damit das Enddatum inklusiv ist.
-         */
 
         endDateObject.setDate(
             endDateObject.getDate() + 1
@@ -13532,7 +13994,13 @@ async function createScheduleEvent() {
                         eventType,
 
                     all_day:
-                        isAllDay
+                        isAllDay,
+
+                    created_by:
+                        createdBy,
+
+                    team_event:
+                        teamEvent
                 }
             ])
             .select()
@@ -13686,7 +14154,7 @@ async function loadScheduleEvents() {
 
 
     /* -----------------------------------------------------
-       SUPABASE ABFRAGE
+       TERMINE LADEN
     ----------------------------------------------------- */
 
     const {
@@ -13704,6 +14172,8 @@ async function loadScheduleEvents() {
                 end_time,
                 event_type,
                 all_day,
+                created_by,
+                team_event,
                 created_at,
                 updated_at
             `)
@@ -13748,6 +14218,87 @@ async function loadScheduleEvents() {
 
 
     /* -----------------------------------------------------
+       TEAM-TEILNEHMER LADEN
+    ----------------------------------------------------- */
+
+    const teamEventIds =
+        data
+            .filter(
+                eventData =>
+                    eventData.team_event
+            )
+            .map(
+                eventData =>
+                    eventData.id
+            );
+
+
+    let participantRows = [];
+
+
+    if (
+        teamEventIds.length > 0
+    ) {
+
+        const {
+            data: participants,
+            error: participantError
+        } =
+            await supabaseClient
+                .from(
+                    "team_event_participants"
+                )
+                .select(`
+                    id,
+                    event_id,
+                    team_id,
+                    player_name,
+                    response,
+                    created_at,
+                    updated_at
+                `)
+                .in(
+                    "event_id",
+                    teamEventIds
+                );
+
+
+        if (participantError) {
+
+            console.error(
+                "Fehler beim Laden der Team-Teilnahmen:",
+                participantError
+            );
+
+        } else {
+
+            participantRows =
+                participants || [];
+
+        }
+
+    }
+
+
+    /* -----------------------------------------------------
+       TEILNEHMER AN TERMINE HÄNGEN
+    ----------------------------------------------------- */
+
+    data.forEach(
+        eventData => {
+
+            eventData._participants =
+                participantRows.filter(
+                    participant =>
+                        participant.event_id ===
+                        eventData.id
+                );
+
+        }
+    );
+
+
+    /* -----------------------------------------------------
        TERMINE RENDERN
     ----------------------------------------------------- */
 
@@ -13759,6 +14310,15 @@ async function loadScheduleEvents() {
             );
 
         }
+    );
+
+
+    /* -----------------------------------------------------
+       TEAM-STATUS ANZEIGEN
+    ----------------------------------------------------- */
+
+    decorateScheduleTeamEvents(
+        data
     );
 
 }
@@ -14581,6 +15141,656 @@ function renderScheduleAllDayEvent(
 
 }
 
+/* =========================================================
+   TEAM-TEILNAHME
+========================================================= */
+
+async function openScheduleParticipationModal(
+    eventData
+) {
+
+    const existingModal =
+        document.getElementById(
+            "schedule-participation-modal"
+        );
+
+
+    if (existingModal) {
+        existingModal.remove();
+    }
+
+
+    const players =
+        getScheduleTeamPlayers();
+
+
+    if (!players.length) {
+
+        alert(
+            "Für dieses Team sind keine Spieler hinterlegt."
+        );
+
+        return;
+    }
+
+
+    const participants =
+        Array.isArray(
+            eventData._participants
+        )
+            ? eventData._participants
+            : [];
+
+
+    const savedName =
+        getScheduleSavedParticipantName();
+
+
+    const modal =
+        document.createElement(
+            "div"
+        );
+
+
+    modal.id =
+        "schedule-participation-modal";
+
+
+    modal.style.position =
+        "fixed";
+
+    modal.style.inset =
+        "0";
+
+    modal.style.background =
+        "rgba(0,0,0,0.55)";
+
+    modal.style.display =
+        "flex";
+
+    modal.style.alignItems =
+        "center";
+
+    modal.style.justifyContent =
+        "center";
+
+    modal.style.zIndex =
+        "100000";
+
+    modal.style.padding =
+        "20px";
+
+
+    const box =
+        document.createElement(
+            "div"
+        );
+
+
+    box.style.width =
+        "min(500px, 100%)";
+
+    box.style.background =
+        "#1e1e1e";
+
+    box.style.color =
+        "#fff";
+
+    box.style.borderRadius =
+        "12px";
+
+    box.style.padding =
+        "24px";
+
+    box.style.boxSizing =
+        "border-box";
+
+    box.style.boxShadow =
+        "0 20px 60px rgba(0,0,0,0.45)";
+
+
+    const title =
+        escapeScheduleHtml(
+            eventData.title ||
+            "Team-Termin"
+        );
+
+
+    box.innerHTML = `
+
+        <div
+            style="
+                display:flex;
+                align-items:center;
+                justify-content:space-between;
+                margin-bottom:20px;
+            "
+        >
+
+            <h2
+                style="
+                    margin:0;
+                    font-size:20px;
+                "
+            >
+                Team-Teilnahme
+            </h2>
+
+            <button
+                type="button"
+                id="schedule-participation-close"
+                style="
+                    border:0;
+                    background:transparent;
+                    color:#aaa;
+                    font-size:24px;
+                    cursor:pointer;
+                "
+            >
+                ×
+            </button>
+
+        </div>
+
+
+        <div
+            style="
+                margin-bottom:16px;
+                color:#bbb;
+                font-size:14px;
+            "
+        >
+            ${title}
+        </div>
+
+
+        <label
+            style="
+                display:flex;
+                flex-direction:column;
+                gap:6px;
+                margin-bottom:16px;
+            "
+        >
+
+            <span>
+                Name
+            </span>
+
+            <select
+                id="schedule-participation-player"
+                style="
+                    width:100%;
+                    box-sizing:border-box;
+                    padding:10px;
+                    border-radius:6px;
+                    border:1px solid #444;
+                    background:#2a2a2a;
+                    color:#fff;
+                "
+            >
+
+                <option value="">
+                    Name auswählen
+                </option>
+
+                ${players.map(
+                    player => `
+                        <option
+                            value="${escapeScheduleHtml(player)}"
+                            ${
+                                player === savedName
+                                    ? "selected"
+                                    : ""
+                            }
+                        >
+                            ${escapeScheduleHtml(player)}
+                        </option>
+                    `
+                ).join("")}
+
+            </select>
+
+        </label>
+
+
+        <div
+            id="schedule-participation-status"
+            style="
+                min-height:20px;
+                margin-bottom:16px;
+                color:#aaa;
+                font-size:13px;
+            "
+        ></div>
+
+
+        <div
+            style="
+                display:flex;
+                gap:10px;
+                justify-content:flex-end;
+            "
+        >
+
+            <button
+                type="button"
+                id="schedule-participation-decline"
+                style="
+                    padding:10px 16px;
+                    border-radius:6px;
+                    border:1px solid #7f1d1d;
+                    background:#451a1a;
+                    color:#ffb3b3;
+                    cursor:pointer;
+                "
+            >
+                ✕ Ablehnen
+            </button>
+
+
+            <button
+                type="button"
+                id="schedule-participation-accept"
+                style="
+                    padding:10px 16px;
+                    border-radius:6px;
+                    border:0;
+                    background:#2563eb;
+                    color:#fff;
+                    cursor:pointer;
+                    font-weight:600;
+                "
+            >
+                ✓ Bestätigen
+            </button>
+
+        </div>
+
+    `;
+
+
+    modal.appendChild(
+        box
+    );
+
+
+    document.body.appendChild(
+        modal
+    );
+
+
+    const playerSelect =
+        document.getElementById(
+            "schedule-participation-player"
+        );
+
+
+    const statusElement =
+        document.getElementById(
+            "schedule-participation-status"
+        );
+
+
+    function updateStatus() {
+
+        const playerName =
+            playerSelect.value;
+
+
+        if (!playerName) {
+
+            statusElement.textContent =
+                "";
+
+            return;
+        }
+
+
+        const existing =
+            participants.find(
+                participant =>
+                    participant.player_name ===
+                    playerName
+            );
+
+
+        if (
+            existing?.response ===
+            "accepted"
+        ) {
+
+            statusElement.textContent =
+                "✓ Du hast bereits zugesagt.";
+
+            statusElement.style.color =
+                "#86efac";
+
+        } else if (
+            existing?.response ===
+            "declined"
+        ) {
+
+            statusElement.textContent =
+                "✕ Du hast bereits abgesagt.";
+
+            statusElement.style.color =
+                "#fca5a5";
+
+        } else {
+
+            statusElement.textContent =
+                "Noch keine Antwort.";
+
+            statusElement.style.color =
+                "#aaa";
+
+        }
+
+    }
+
+
+    updateStatus();
+
+
+    playerSelect.addEventListener(
+        "change",
+        () => {
+
+            if (
+                playerSelect.value
+            ) {
+
+                setScheduleSavedParticipantName(
+                    playerSelect.value
+                );
+
+            }
+
+            updateStatus();
+
+        }
+    );
+
+
+    async function saveParticipation(
+        response
+    ) {
+
+        const playerName =
+            playerSelect.value.trim();
+
+
+        if (!playerName) {
+
+            statusElement.textContent =
+                "Bitte wähle zuerst deinen Namen.";
+
+            statusElement.style.color =
+                "#ffb3b3";
+
+            return;
+        }
+
+
+        setScheduleSavedParticipantName(
+            playerName
+        );
+
+
+        const acceptButton =
+            document.getElementById(
+                "schedule-participation-accept"
+            );
+
+
+        const declineButton =
+            document.getElementById(
+                "schedule-participation-decline"
+            );
+
+
+        acceptButton.disabled =
+            true;
+
+        declineButton.disabled =
+            true;
+
+
+        const {
+            error
+        } =
+            await supabaseClient
+                .from(
+                    "team_event_participants"
+                )
+                .upsert(
+                    {
+                        event_id:
+                            eventData.id,
+
+                        team_id:
+                            currentTeam.id,
+
+                        player_name:
+                            playerName,
+
+                        response:
+                            response,
+
+                        updated_at:
+                            new Date().toISOString()
+                    },
+                    {
+                        onConflict:
+                            "event_id,player_name"
+                    }
+                );
+
+
+        if (error) {
+
+            console.error(
+                "Fehler beim Speichern der Teilnahme:",
+                error
+            );
+
+
+            statusElement.textContent =
+                "Die Antwort konnte nicht gespeichert werden.";
+
+            statusElement.style.color =
+                "#ffb3b3";
+
+
+            acceptButton.disabled =
+                false;
+
+            declineButton.disabled =
+                false;
+
+            return;
+        }
+
+
+        modal.remove();
+
+
+        await loadScheduleEvents();
+
+
+        const refreshedEvent =
+            await getScheduleEventById(
+                eventData.id
+            );
+
+
+        if (
+            refreshedEvent
+        ) {
+
+            openScheduleParticipationModal(
+                refreshedEvent
+            );
+
+        }
+
+    }
+
+
+    document
+        .getElementById(
+            "schedule-participation-accept"
+        )
+        .addEventListener(
+            "click",
+            () => {
+
+                saveParticipation(
+                    "accepted"
+                );
+
+            }
+        );
+
+
+    document
+        .getElementById(
+            "schedule-participation-decline"
+        )
+        .addEventListener(
+            "click",
+            () => {
+
+                saveParticipation(
+                    "declined"
+                );
+
+            }
+        );
+
+
+    document
+        .getElementById(
+            "schedule-participation-close"
+        )
+        .addEventListener(
+            "click",
+            () => {
+
+                modal.remove();
+
+            }
+        );
+
+
+    modal.addEventListener(
+        "click",
+        event => {
+
+            if (
+                event.target === modal
+            ) {
+
+                modal.remove();
+
+            }
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   EINEN TERMIN MIT TEILNEHMERN NEU LADEN
+========================================================= */
+
+async function getScheduleEventById(
+    eventId
+) {
+
+    const {
+        data,
+        error
+    } =
+        await supabaseClient
+            .from("team_events")
+            .select(`
+                id,
+                team_id,
+                title,
+                description,
+                start_time,
+                end_time,
+                event_type,
+                all_day,
+                created_by,
+                team_event,
+                created_at,
+                updated_at
+            `)
+            .eq(
+                "id",
+                eventId
+            )
+            .single();
+
+
+    if (error || !data) {
+
+        console.error(
+            "Fehler beim Laden des Termins:",
+            error
+        );
+
+        return null;
+    }
+
+
+    const {
+        data: participants,
+        error: participantError
+    } =
+        await supabaseClient
+            .from(
+                "team_event_participants"
+            )
+            .select(`
+                id,
+                event_id,
+                team_id,
+                player_name,
+                response,
+                created_at,
+                updated_at
+            `)
+            .eq(
+                "event_id",
+                eventId
+            );
+
+
+    if (participantError) {
+
+        console.error(
+            "Fehler beim Laden der Teilnehmer:",
+            participantError
+        );
+
+        data._participants = [];
+
+    } else {
+
+        data._participants =
+            participants || [];
+
+    }
+
+
+    return data;
+
+}
 
 /* =========================================================
    TERMINDETAILS
@@ -14866,6 +16076,96 @@ function showScheduleEventDetails(
                     : ""
             }
 
+            ${
+    eventData.team_event
+        ? `
+            <div
+                style="
+                    margin-top:8px;
+                    padding:12px;
+                    border-radius:7px;
+                    background:#292929;
+                "
+            >
+
+                <div
+                    style="
+                        display:flex;
+                        justify-content:space-between;
+                        align-items:center;
+                        gap:10px;
+                        margin-bottom:8px;
+                    "
+                >
+
+                    <strong>
+                        Team
+                    </strong>
+
+                    <span
+                        style="
+                            color:#aaa;
+                            font-size:12px;
+                        "
+                    >
+                        ${
+                            (
+                                eventData._participants ||
+                                []
+                            ).filter(
+                                participant =>
+                                    participant.response ===
+                                    "accepted"
+                            ).length
+                        }/${getScheduleTeamPlayers().length}
+                        zugesagt
+                    </span>
+
+                </div>
+
+
+                ${
+                    eventData.created_by
+                        ? `
+                            <div
+                                style="
+                                    color:#999;
+                                    font-size:12px;
+                                    margin-bottom:10px;
+                                "
+                            >
+                                Erstellt von:
+                                ${escapeScheduleHtml(
+                                    eventData.created_by
+                                )}
+                            </div>
+                        `
+                        : ""
+                }
+
+
+                <button
+                    type="button"
+                    id="schedule-team-participation"
+                    style="
+                        width:100%;
+                        padding:10px 14px;
+                        border-radius:6px;
+                        border:0;
+                        background:#2563eb;
+                        color:#fff;
+                        cursor:pointer;
+                        font-weight:600;
+                    "
+                >
+                    Teilnahme verwalten
+                </button>
+
+            </div>
+        `
+        : ""
+}
+
 
             <div
                 style="
@@ -14923,6 +16223,7 @@ function showScheduleEventDetails(
         modal
     );
 
+    addScheduleTeamFields();
 
     /* -----------------------------------------------------
        SCHLIESSEN
@@ -14957,6 +16258,27 @@ function showScheduleEventDetails(
         }
     );
 
+
+    if (eventData.team_event) {
+
+    document
+        .getElementById(
+            "schedule-team-participation"
+        )
+        ?.addEventListener(
+            "click",
+            () => {
+
+                modal.remove();
+
+                openScheduleParticipationModal(
+                    eventData
+                );
+
+            }
+        );
+
+}
 
     /* -----------------------------------------------------
        BEARBEITEN
@@ -15550,6 +16872,11 @@ function openScheduleEditModal(
         modal
     );
 
+    addScheduleTeamFields(
+        eventData.created_by || "",
+        !!eventData.team_event
+    );
+
 
     /* -----------------------------------------------------
        ELEMENTE
@@ -15719,6 +17046,24 @@ async function updateScheduleEvent(
             "schedule-create-all-day-start"
         );
 
+    const createdByInput =
+        document.getElementById(
+            "schedule-create-created-by"
+        );
+
+    const teamEventInput =
+        document.getElementById(
+            "schedule-create-team-event"
+        );
+
+
+    const createdBy =
+        createdByInput?.value.trim() ||
+        "";
+
+    const teamEvent =
+        teamEventInput?.checked ||
+        false;
 
     const allDayEndInput =
         document.getElementById(
