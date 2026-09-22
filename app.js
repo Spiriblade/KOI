@@ -12242,6 +12242,9 @@ function getScheduleEventColor(
         case "meeting":
             return "#059669";
 
+        case "urlaub":
+            return "#dc2626";
+
         case "other":
             return "#64748b";
 
@@ -14990,16 +14993,24 @@ function renderScheduleEvent(
     eventElement.style.borderRadius =
         "6px";
 
+
+    /* -----------------------------------------------------
+       FARBE
+    ----------------------------------------------------- */
+
     eventElement.style.background =
         getScheduleEventColor(
             eventData.event_type
         );
 
+
     eventElement.style.color =
         "#ffffff";
 
+
     eventElement.style.cursor =
         "pointer";
+
 
     eventElement.style.boxShadow =
         "0 2px 6px rgba(0,0,0,0.20)";
@@ -15049,7 +15060,12 @@ function renderScheduleEvent(
         );
 
 
+    /* -----------------------------------------------------
+       TERMIN-INHALT
+    ----------------------------------------------------- */
+
     eventElement.innerHTML = `
+
         <div
             style="
                 font-weight:700;
@@ -15094,33 +15110,36 @@ function renderScheduleEvent(
                 ? `
                     <div
                         style="
+                            position:absolute;
+                            right:8px;
+                            bottom:5px;
+                            max-width:70%;
                             font-size:10px;
-                            opacity:.75;
-                            margin-top:3px;
+                            font-weight:600;
+                            text-align:right;
                             white-space:nowrap;
                             overflow:hidden;
                             text-overflow:ellipsis;
+                            opacity:.95;
                         "
                     >
-                        Von: ${createdBy}
+                        ${createdBy}
                     </div>
                 `
                 : ""
         }
+
     `;
 
 
+    /* -----------------------------------------------------
+       TOOLTIP
+    ----------------------------------------------------- */
+
     eventElement.title =
-        (
-            eventData.description
-                ? `${eventData.title || "Termin"}\n\n${eventData.description}`
-                : `${eventData.title || "Termin"}\n${startText} – ${endText}`
-        ) +
-        (
-            eventData.created_by
-                ? `\nErstellt von: ${eventData.created_by}`
-                : ""
-        );
+        description
+            ? `${eventData.title || "Termin"}\n\n${eventData.description}`
+            : `${eventData.title || "Termin"}\n${startText} – ${endText}`;
 
 
     /* -----------------------------------------------------
@@ -15132,7 +15151,6 @@ function renderScheduleEvent(
         event => {
 
             event.stopPropagation();
-
 
             showScheduleEventDetails(
                 eventData
