@@ -12527,6 +12527,298 @@ function formatScheduleDateInput(date) {
     return `${year}-${month}-${day}`;
 }
 
+
+function addScheduleTeamFields(
+    existingCreatedBy = "",
+    existingTeamEvent = false
+) {
+
+    const oldWrapper =
+        document.getElementById(
+            "schedule-team-fields"
+        );
+
+    if (oldWrapper) {
+        oldWrapper.remove();
+    }
+
+
+    const players =
+        currentTeam?.name &&
+        teamData[currentTeam.name]
+            ? teamData[currentTeam.name].players
+            : [];
+
+
+    const wrapper =
+        document.createElement(
+            "div"
+        );
+
+    wrapper.id =
+        "schedule-team-fields";
+
+    wrapper.style.display =
+        "flex";
+
+    wrapper.style.flexDirection =
+        "column";
+
+    wrapper.style.gap =
+        "10px";
+
+    wrapper.style.marginTop =
+        "12px";
+
+
+    /* -------------------------------------------------
+       ERSTELLT VON
+    ------------------------------------------------- */
+
+    const createdByLabel =
+        document.createElement(
+            "label"
+        );
+
+    createdByLabel.style.display =
+        "flex";
+
+    createdByLabel.style.flexDirection =
+        "column";
+
+    createdByLabel.style.gap =
+        "6px";
+
+
+    const createdByText =
+        document.createElement(
+            "span"
+        );
+
+    createdByText.textContent =
+        "Erstellt von";
+
+
+    const createdBySelect =
+        document.createElement(
+            "select"
+        );
+
+    createdBySelect.id =
+        "schedule-create-created-by";
+
+    createdBySelect.style.width =
+        "100%";
+
+    createdBySelect.style.boxSizing =
+        "border-box";
+
+    createdBySelect.style.padding =
+        "10px";
+
+    createdBySelect.style.borderRadius =
+        "6px";
+
+    createdBySelect.style.border =
+        "1px solid #444";
+
+    createdBySelect.style.background =
+        "#2a2a2a";
+
+    createdBySelect.style.color =
+        "#fff";
+
+
+    const emptyOption =
+        document.createElement(
+            "option"
+        );
+
+    emptyOption.value =
+        "";
+
+    emptyOption.textContent =
+        "Name auswählen";
+
+    createdBySelect.appendChild(
+        emptyOption
+    );
+
+
+    players.forEach(
+        player => {
+
+            const option =
+                document.createElement(
+                    "option"
+                );
+
+            option.value =
+                player;
+
+            option.textContent =
+                player;
+
+            createdBySelect.appendChild(
+                option
+            );
+
+        }
+    );
+
+
+    const savedName =
+        existingCreatedBy ||
+        getScheduleSavedParticipantName();
+
+
+    if (
+        savedName &&
+        players.includes(savedName)
+    ) {
+
+        createdBySelect.value =
+            savedName;
+
+    }
+
+
+    createdBySelect.addEventListener(
+        "change",
+        () => {
+
+            if (
+                createdBySelect.value
+            ) {
+
+                setScheduleSavedParticipantName(
+                    createdBySelect.value
+                );
+
+            }
+
+        }
+    );
+
+
+    createdByLabel.appendChild(
+        createdByText
+    );
+
+    createdByLabel.appendChild(
+        createdBySelect
+    );
+
+
+    wrapper.appendChild(
+        createdByLabel
+    );
+
+
+    /* -------------------------------------------------
+       TEAM
+    ------------------------------------------------- */
+
+    const teamLabel =
+        document.createElement(
+            "label"
+        );
+
+    teamLabel.style.display =
+        "flex";
+
+    teamLabel.style.alignItems =
+        "center";
+
+    teamLabel.style.gap =
+        "8px";
+
+    teamLabel.style.cursor =
+        "pointer";
+
+
+    const teamCheckbox =
+        document.createElement(
+            "input"
+        );
+
+    teamCheckbox.type =
+        "checkbox";
+
+    teamCheckbox.id =
+        "schedule-create-team-event";
+
+    teamCheckbox.checked =
+        existingTeamEvent;
+
+
+    const teamText =
+        document.createElement(
+            "span"
+        );
+
+    teamText.textContent =
+        "Team";
+
+
+    teamLabel.appendChild(
+        teamCheckbox
+    );
+
+    teamLabel.appendChild(
+        teamText
+    );
+
+
+    wrapper.appendChild(
+        teamLabel
+    );
+
+
+    /* -------------------------------------------------
+       ERKLÄRUNG
+    ------------------------------------------------- */
+
+    const info =
+        document.createElement(
+            "div"
+        );
+
+    info.textContent =
+        "Bei einem Team-Termin können alle Spieler ihre Teilnahme bestätigen oder ablehnen.";
+
+    info.style.fontSize =
+        "12px";
+
+    info.style.color =
+        "#999";
+
+
+    wrapper.appendChild(
+        info
+    );
+
+
+    /* -------------------------------------------------
+       EINFÜGEN
+    ------------------------------------------------- */
+
+    const errorElement =
+        document.getElementById(
+            "schedule-create-error"
+        );
+
+    if (errorElement) {
+
+        errorElement.parentNode.insertBefore(
+            wrapper,
+            errorElement
+        );
+
+    }
+
+}
+
 /* =========================================================
    TERMIN-ERSTELLEN-MODAL ÖFFNEN
 ========================================================= */
@@ -12981,10 +13273,17 @@ function openScheduleCreateModal(
     );
 
 
-    document.body.appendChild(
+   document.body.appendChild(
         modal
     );
 
+
+    addScheduleTeamFields();
+
+
+/* -----------------------------------------------------
+   ELEMENTE
+----------------------------------------------------- */
 
     /* -----------------------------------------------------
        ELEMENTE
