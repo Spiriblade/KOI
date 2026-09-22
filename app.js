@@ -13772,6 +13772,15 @@ function renderScheduleEvent(
     eventData
 ) {
 
+    if (eventData.all_day) {
+
+        renderScheduleAllDayEvent(
+            eventData
+        );
+
+        return;
+    }
+
     if (
         !eventData ||
         !eventData.start_time ||
@@ -14187,6 +14196,388 @@ function renderScheduleEvent(
     column.appendChild(
         eventElement
     );
+
+}
+
+function renderScheduleAllDayEvent(
+    eventData
+) {
+
+    if (
+        !eventData ||
+        !eventData.start_time ||
+        !eventData.end_time
+    ) {
+        return;
+    }
+
+
+    const start =
+        new Date(
+            eventData.start_time
+        );
+
+
+    const end =
+        new Date(
+            eventData.end_time
+        );
+
+
+    if (
+        Number.isNaN(
+            start.getTime()
+        ) ||
+        Number.isNaN(
+            end.getTime()
+        )
+    ) {
+        return;
+    }
+
+
+    const monday =
+        getStartOfWeek(
+            scheduleCurrentWeek
+        );
+
+
+    const nextMonday =
+        new Date(
+            monday
+        );
+
+
+    nextMonday.setDate(
+        nextMonday.getDate() + 7
+    );
+
+
+    /*
+     * Ein ganztägiger Termin endet intern
+     * am Folgetag des tatsächlichen Enddatums.
+     *
+     * Beispiel:
+     *
+     * 22.09 – 06.10
+     *
+     * intern:
+     *
+     * 22.09 00:00
+     * 07.10 00:00
+     */
+
+
+    if (
+        end <= monday ||
+        start >= nextMonday
+    ) {
+        return;
+    }
+
+
+    const visibleStart =
+        start < monday
+            ? monday
+            : start;
+
+
+    const visibleEnd =
+        end > nextMonday
+            ? nextMonday
+            : end;
+
+
+    /* -----------------------------------------------------
+       BALKEN FÜR JEDEN BETROFFENEN TAG
+    ----------------------------------------------------- */
+
+    const currentDate =
+        new Date(
+            visibleStart
+        );
+
+
+    currentDate.setHours(
+        0,
+        0,
+        0,
+        0
+    );
+
+
+    while (
+        currentDate < visibleEnd
+    ) {
+
+        const dateKey =
+            getScheduleDateKey(
+                currentDate
+            );
+
+
+        const columns =
+            document.querySelectorAll(
+                ".schedule-day-column"
+            );
+
+
+        let column = null;
+
+
+        columns.forEach(
+            currentColumn => {
+
+                if (
+                    currentColumn.dataset.date ===
+                    dateKey
+                ) {
+
+                    column =
+                        currentColumn;
+
+                }
+
+            }
+        );
+
+
+        if (column) {
+
+            /* -------------------------------------------------
+               BALKEN
+            ------------------------------------------------- */
+
+            const eventElement =
+                document.createElement(
+                    "div"
+                );
+
+
+            eventElement.className =
+                "schedule-event schedule-all-day-event";
+
+
+            eventElement.dataset.eventId =
+                eventData.id;
+
+
+            eventElement.style.position =
+                "absolute";
+
+
+            eventElement.style.left =
+                "4px";
+
+
+            eventElement.style.right =
+                "4px";
+
+
+            /*
+             * Ganz oben in der Tages-Spalte.
+             */
+
+            eventElement.style.top =
+                "5px";
+
+
+            eventElement.style.height =
+                "28px";
+
+
+            eventElement.style.boxSizing =
+                "border-box";
+
+
+            eventElement.style.zIndex =
+                "20";
+
+
+            eventElement.style.padding =
+                "5px 8px";
+
+
+            eventElement.style.borderRadius =
+                "5px";
+
+
+            eventElement.style.background =
+                getScheduleEventColor(
+                    eventData.event_type
+                );
+
+
+            eventElement.style.color =
+                "#ffffff";
+
+
+            eventElement.style.cursor =
+                "pointer";
+
+
+            eventElement.style.overflow =
+                "hidden";
+
+
+            eventElement.style.whiteSpace =
+                "nowrap";
+
+
+            eventElement.style.textOverflow =
+                "ellipsis";
+
+
+            eventElement.style.fontSize =
+                "12px";
+
+
+            eventElement.style.fontWeight =
+                "600";
+
+
+            /*
+             * An den Übergängen der Tage
+             * keine großen Lücken.
+             */
+
+            const dayIndex =
+                currentDate.getDay();
+
+
+            if (
+                dayIndex !== 1
+            ) {
+
+                eventElement.style.borderTopLeftRadius =
+                    "0";
+
+                eventElement.style.borderBottomLeftRadius =
+                    "0";
+
+            }
+
+
+            if (
+                dayIndex !== 0
+            ) {
+
+                eventElement.style.borderTopRightRadius =
+                    "0";
+
+                eventElement.style.borderBottomRightRadius =
+                    "0";
+
+            }
+
+
+            /* -------------------------------------------------
+               TITEL
+            ------------------------------------------------- */
+
+            const title =
+                escapeScheduleHtml(
+                    eventData.title ||
+                    "Ganztägiger Termin"
+                );
+
+
+            /*
+             * Am ersten Tag Titel mit Datum,
+             * an den Folgetagen nur den Titel.
+             */
+
+            eventElement.innerHTML =
+                `
+                    ${title}
+                `;
+
+
+            /* -------------------------------------------------
+               TOOLTIP
+            ------------------------------------------------- */
+
+            const actualEnd =
+                new Date(
+                    end
+                );
+
+
+            actualEnd.setDate(
+                actualEnd.getDate() - 1
+            );
+
+
+            const startText =
+                start.toLocaleDateString(
+                    "de-DE",
+                    {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric"
+                    }
+                );
+
+
+            const endText =
+                actualEnd.toLocaleDateString(
+                    "de-DE",
+                    {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric"
+                    }
+                );
+
+
+            eventElement.title =
+                `${eventData.title || "Termin"}\n${startText} – ${endText}` +
+                (
+                    eventData.description
+                        ? `\n\n${eventData.description}`
+                        : ""
+                );
+
+
+            /* -------------------------------------------------
+               KLICK
+            ------------------------------------------------- */
+
+            eventElement.addEventListener(
+                "click",
+                event => {
+
+                    event.stopPropagation();
+
+
+                    showScheduleEventDetails(
+                        eventData
+                    );
+
+                }
+            );
+
+
+            column.style.position =
+                "relative";
+
+
+            column.appendChild(
+                eventElement
+            );
+
+        }
+
+
+        /*
+         * Einen Tag weiter.
+         */
+
+        currentDate.setDate(
+            currentDate.getDate() + 1
+        );
+
+    }
 
 }
 
