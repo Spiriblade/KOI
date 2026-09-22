@@ -12011,15 +12011,25 @@ function makeMapArrowDraggable(
 let scheduleCurrentWeek = new Date();
 
 
+/* =========================================================
+   WOCHENANFANG
+========================================================= */
+
 function getStartOfWeek(date) {
 
-    const result = new Date(date);
+    const result =
+        new Date(date);
 
-    result.setHours(0, 0, 0, 0);
+    result.setHours(
+        0,
+        0,
+        0,
+        0
+    );
 
-    const day = result.getDay();
+    const day =
+        result.getDay();
 
-    // Montag als Wochenanfang
     const difference =
         day === 0
             ? -6
@@ -12033,6 +12043,10 @@ function getStartOfWeek(date) {
 }
 
 
+/* =========================================================
+   DATUM FORMATIEREN
+========================================================= */
+
 function formatScheduleDate(date) {
 
     return date.toLocaleDateString(
@@ -12045,6 +12059,203 @@ function formatScheduleDate(date) {
 
 }
 
+
+/* =========================================================
+   DATUM ALS YYYY-MM-DD
+========================================================= */
+
+function getScheduleDateKey(date) {
+
+    const year =
+        date.getFullYear();
+
+    const month =
+        String(
+            date.getMonth() + 1
+        ).padStart(
+            2,
+            "0"
+        );
+
+    const day =
+        String(
+            date.getDate()
+        ).padStart(
+            2,
+            "0"
+        );
+
+    return `${year}-${month}-${day}`;
+}
+
+
+/* =========================================================
+   HTML ESCAPEN
+========================================================= */
+
+function escapeScheduleHtml(value) {
+
+    return String(
+        value ?? ""
+    )
+        .replace(
+            /&/g,
+            "&amp;"
+        )
+        .replace(
+            /</g,
+            "&lt;"
+        )
+        .replace(
+            />/g,
+            "&gt;"
+        )
+        .replace(
+            /"/g,
+            "&quot;"
+        )
+        .replace(
+            /'/g,
+            "&#039;"
+        );
+
+}
+
+
+/* =========================================================
+   UHRZEIT FORMATIEREN
+========================================================= */
+
+function formatScheduleTime(date) {
+
+    return date.toLocaleTimeString(
+        "de-DE",
+        {
+            hour: "2-digit",
+            minute: "2-digit"
+        }
+    );
+
+}
+
+
+/* =========================================================
+   DATETIME-LOCAL FORMATIEREN
+========================================================= */
+
+function formatScheduleDateTimeLocal(
+    date
+) {
+
+    const year =
+        date.getFullYear();
+
+    const month =
+        String(
+            date.getMonth() + 1
+        ).padStart(
+            2,
+            "0"
+        );
+
+    const day =
+        String(
+            date.getDate()
+        ).padStart(
+            2,
+            "0"
+        );
+
+    const hours =
+        String(
+            date.getHours()
+        ).padStart(
+            2,
+            "0"
+        );
+
+    const minutes =
+        String(
+            date.getMinutes()
+        ).padStart(
+            2,
+            "0"
+        );
+
+    return (
+        `${year}-${month}-${day}` +
+        `T${hours}:${minutes}`
+    );
+}
+
+
+/* =========================================================
+   DATETIME-LOCAL → ISO
+========================================================= */
+
+function scheduleLocalDateTimeToISO(
+    value
+) {
+
+    const date =
+        new Date(
+            value
+        );
+
+    if (
+        Number.isNaN(
+            date.getTime()
+        )
+    ) {
+
+        return null;
+
+    }
+
+    return date.toISOString();
+}
+
+
+/* =========================================================
+   TERMIN-TYP FARBE
+========================================================= */
+
+function getScheduleEventColor(
+    eventType
+) {
+
+    switch (
+        String(
+            eventType || ""
+        ).toLowerCase()
+    ) {
+
+        case "training":
+            return "#2563eb";
+
+        case "scrim":
+            return "#7c3aed";
+
+        case "match":
+            return "#dc2626";
+
+        case "meeting":
+            return "#059669";
+
+        case "other":
+            return "#64748b";
+
+        default:
+            return "#2563eb";
+
+    }
+
+}
+
+
+/* =========================================================
+   TERMINPLANER WOCHE AKTUALISIEREN
+========================================================= */
 
 function updateScheduleWeek() {
 
@@ -12065,9 +12276,9 @@ function updateScheduleWeek() {
     ];
 
 
-    /*
-     * Die 7 Tages-Header holen.
-     */
+    /* -----------------------------------------------------
+       TAGES-HEADER
+    ----------------------------------------------------- */
 
     const headers =
         document.querySelectorAll(
@@ -12084,8 +12295,9 @@ function updateScheduleWeek() {
 
 
             const date =
-                new Date(monday);
-
+                new Date(
+                    monday
+                );
 
             date.setDate(
                 monday.getDate() + index
@@ -12125,9 +12337,9 @@ function updateScheduleWeek() {
     );
 
 
-    /*
-     * Die 7 Tages-Spalten holen.
-     */
+    /* -----------------------------------------------------
+       TAGES-SPALTEN
+    ----------------------------------------------------- */
 
     const columns =
         document.querySelectorAll(
@@ -12144,32 +12356,1576 @@ function updateScheduleWeek() {
 
 
             const date =
-                new Date(monday);
-
+                new Date(
+                    monday
+                );
 
             date.setDate(
                 monday.getDate() + index
             );
 
 
-            /*
-             * Das Datum für später
-             * an der Spalte speichern.
-             */
-
             column.dataset.date =
-                date
-                    .toISOString()
-                    .split("T")[0];
+                getScheduleDateKey(
+                    date
+                );
+
+        }
+    );
+
+
+    /*
+     * Stunden klickbar machen.
+     */
+
+    setupScheduleHourClicks();
+
+
+    /*
+     * Termine laden.
+     */
+
+    loadScheduleEvents();
+
+}
+
+
+/* =========================================================
+   FREIE STUNDEN KLICKBAR MACHEN
+========================================================= */
+
+function setupScheduleHourClicks() {
+
+    const columns =
+        document.querySelectorAll(
+            ".schedule-day-column"
+        );
+
+
+    columns.forEach(
+        column => {
+
+            const hours =
+                column.querySelectorAll(
+                    ".schedule-hour"
+                );
+
+
+            hours.forEach(
+                (hour, index) => {
+
+                    /*
+                     * Bereits gesetzten Listener entfernen,
+                     * indem wir den Knoten klonen.
+                     */
+
+                    const newHour =
+                        hour.cloneNode(
+                            true
+                        );
+
+
+                    hour.replaceWith(
+                        newHour
+                    );
+
+
+                    newHour.addEventListener(
+                        "click",
+                        event => {
+
+                            /*
+                             * Klick auf einen Termin
+                             * darf keinen neuen Termin
+                             * öffnen.
+                             */
+
+                            if (
+                                event.target.closest(
+                                    ".schedule-event"
+                                )
+                            ) {
+                                return;
+                            }
+
+
+                            const dateKey =
+                                column.dataset.date;
+
+
+                            if (!dateKey) {
+                                return;
+                            }
+
+
+                            /*
+                             * Kalender beginnt um 08:00.
+                             */
+
+                            const hourValue =
+                                8 + index;
+
+
+                            const startDate =
+                                new Date(
+                                    `${dateKey}T${String(
+                                        hourValue
+                                    ).padStart(
+                                        2,
+                                        "0"
+                                    )}:00`
+                                );
+
+
+                            const endDate =
+                                new Date(
+                                    startDate
+                                );
+
+
+                            endDate.setHours(
+                                endDate.getHours() + 1
+                            );
+
+
+                            openScheduleCreateModal(
+                                startDate,
+                                endDate
+                            );
+
+                        }
+                    );
+
+                }
+            );
 
         }
     );
 
 }
 
-/*
- * Eine Woche zurück
- */
+
+/* =========================================================
+   TERMIN-ERSTELLEN-MODAL ÖFFNEN
+========================================================= */
+
+function openScheduleCreateModal(
+    startDate,
+    endDate
+) {
+
+    /*
+     * Falls bereits ein Modal existiert,
+     * entfernen.
+     */
+
+    const existingModal =
+        document.getElementById(
+            "schedule-create-modal"
+        );
+
+
+    if (existingModal) {
+        existingModal.remove();
+    }
+
+
+    /* -----------------------------------------------------
+       MODAL
+    ----------------------------------------------------- */
+
+    const modal =
+        document.createElement(
+            "div"
+        );
+
+
+    modal.id =
+        "schedule-create-modal";
+
+
+    modal.style.position =
+        "fixed";
+
+    modal.style.inset =
+        "0";
+
+    modal.style.background =
+        "rgba(0, 0, 0, 0.55)";
+
+    modal.style.display =
+        "flex";
+
+    modal.style.alignItems =
+        "center";
+
+    modal.style.justifyContent =
+        "center";
+
+    modal.style.zIndex =
+        "99999";
+
+    modal.style.padding =
+        "20px";
+
+
+    /* -----------------------------------------------------
+       MODAL-INHALT
+    ----------------------------------------------------- */
+
+    const box =
+        document.createElement(
+            "div"
+        );
+
+
+    box.style.width =
+        "min(500px, 100%)";
+
+    box.style.background =
+        "#1e1e1e";
+
+    box.style.color =
+        "#ffffff";
+
+    box.style.borderRadius =
+        "12px";
+
+    box.style.padding =
+        "24px";
+
+    box.style.boxSizing =
+        "border-box";
+
+    box.style.boxShadow =
+        "0 20px 60px rgba(0,0,0,0.45)";
+
+
+    box.innerHTML = `
+        <div
+            style="
+                display:flex;
+                align-items:center;
+                justify-content:space-between;
+                margin-bottom:20px;
+            "
+        >
+            <h2
+                style="
+                    margin:0;
+                    font-size:20px;
+                "
+            >
+                Termin erstellen
+            </h2>
+
+            <button
+                type="button"
+                id="schedule-modal-close"
+                style="
+                    border:0;
+                    background:transparent;
+                    color:#aaa;
+                    font-size:24px;
+                    cursor:pointer;
+                "
+            >
+                ×
+            </button>
+        </div>
+
+
+        <div
+            style="
+                display:flex;
+                flex-direction:column;
+                gap:14px;
+            "
+        >
+
+            <label
+                style="
+                    display:flex;
+                    flex-direction:column;
+                    gap:6px;
+                "
+            >
+                <span>
+                    Titel
+                </span>
+
+                <input
+                    id="schedule-create-title"
+                    type="text"
+                    placeholder="z. B. Training"
+                    style="
+                        width:100%;
+                        box-sizing:border-box;
+                        padding:10px;
+                        border-radius:6px;
+                        border:1px solid #444;
+                        background:#2a2a2a;
+                        color:#fff;
+                    "
+                >
+            </label>
+
+
+            <label
+                style="
+                    display:flex;
+                    flex-direction:column;
+                    gap:6px;
+                "
+            >
+                <span>
+                    Beschreibung
+                </span>
+
+                <textarea
+                    id="schedule-create-description"
+                    placeholder="Optionale Beschreibung"
+                    rows="3"
+                    style="
+                        width:100%;
+                        box-sizing:border-box;
+                        padding:10px;
+                        border-radius:6px;
+                        border:1px solid #444;
+                        background:#2a2a2a;
+                        color:#fff;
+                        resize:vertical;
+                    "
+                ></textarea>
+            </label>
+
+
+            <label
+                style="
+                    display:flex;
+                    flex-direction:column;
+                    gap:6px;
+                "
+            >
+                <span>
+                    Terminart
+                </span>
+
+                <select
+                    id="schedule-create-type"
+                    style="
+                        width:100%;
+                        box-sizing:border-box;
+                        padding:10px;
+                        border-radius:6px;
+                        border:1px solid #444;
+                        background:#2a2a2a;
+                        color:#fff;
+                    "
+                >
+                    <option value="training">
+                        Training
+                    </option>
+
+                    <option value="scrim">
+                        Scrim
+                    </option>
+
+                    <option value="match">
+                        Match
+                    </option>
+
+                    <option value="meeting">
+                        Besprechung
+                    </option>
+
+                    <option value="other">
+                        Sonstiges
+                    </option>
+                </select>
+            </label>
+
+
+            <div
+                style="
+                    display:grid;
+                    grid-template-columns:1fr 1fr;
+                    gap:12px;
+                "
+            >
+
+                <label
+                    style="
+                        display:flex;
+                        flex-direction:column;
+                        gap:6px;
+                    "
+                >
+                    <span>
+                        Beginn
+                    </span>
+
+                    <input
+                        id="schedule-create-start"
+                        type="datetime-local"
+                        style="
+                            width:100%;
+                            box-sizing:border-box;
+                            padding:10px;
+                            border-radius:6px;
+                            border:1px solid #444;
+                            background:#2a2a2a;
+                            color:#fff;
+                        "
+                    >
+                </label>
+
+
+                <label
+                    style="
+                        display:flex;
+                        flex-direction:column;
+                        gap:6px;
+                    "
+                >
+                    <span>
+                        Ende
+                    </span>
+
+                    <input
+                        id="schedule-create-end"
+                        type="datetime-local"
+                        style="
+                            width:100%;
+                            box-sizing:border-box;
+                            padding:10px;
+                            border-radius:6px;
+                            border:1px solid #444;
+                            background:#2a2a2a;
+                            color:#fff;
+                        "
+                    >
+                </label>
+
+            </div>
+
+
+            <div
+                id="schedule-create-error"
+                style="
+                    display:none;
+                    padding:10px;
+                    border-radius:6px;
+                    background:#4a1f1f;
+                    color:#ffb3b3;
+                    font-size:13px;
+                "
+            ></div>
+
+
+            <div
+                style="
+                    display:flex;
+                    justify-content:flex-end;
+                    gap:10px;
+                    margin-top:6px;
+                "
+            >
+
+                <button
+                    type="button"
+                    id="schedule-create-cancel"
+                    style="
+                        padding:10px 16px;
+                        border-radius:6px;
+                        border:1px solid #444;
+                        background:#2a2a2a;
+                        color:#fff;
+                        cursor:pointer;
+                    "
+                >
+                    Abbrechen
+                </button>
+
+
+                <button
+                    type="button"
+                    id="schedule-create-save"
+                    style="
+                        padding:10px 16px;
+                        border-radius:6px;
+                        border:0;
+                        background:#2563eb;
+                        color:#fff;
+                        cursor:pointer;
+                        font-weight:600;
+                    "
+                >
+                    Termin erstellen
+                </button>
+
+            </div>
+
+        </div>
+    `;
+
+
+    modal.appendChild(
+        box
+    );
+
+
+    document.body.appendChild(
+        modal
+    );
+
+
+    /* -----------------------------------------------------
+       START / ENDE SETZEN
+    ----------------------------------------------------- */
+
+    const startInput =
+        document.getElementById(
+            "schedule-create-start"
+        );
+
+
+    const endInput =
+        document.getElementById(
+            "schedule-create-end"
+        );
+
+
+    startInput.value =
+        formatScheduleDateTimeLocal(
+            startDate
+        );
+
+
+    endInput.value =
+        formatScheduleDateTimeLocal(
+            endDate
+        );
+
+
+    /* -----------------------------------------------------
+       TITEL FOKUSSIEREN
+    ----------------------------------------------------- */
+
+    const titleInput =
+        document.getElementById(
+            "schedule-create-title"
+        );
+
+
+    setTimeout(
+        () => {
+
+            titleInput.focus();
+
+        },
+        50
+    );
+
+
+    /* -----------------------------------------------------
+       SCHLIESSEN
+    ----------------------------------------------------- */
+
+    document
+        .getElementById(
+            "schedule-modal-close"
+        )
+        .addEventListener(
+            "click",
+            () => {
+
+                modal.remove();
+
+            }
+        );
+
+
+    document
+        .getElementById(
+            "schedule-create-cancel"
+        )
+        .addEventListener(
+            "click",
+            () => {
+
+                modal.remove();
+
+            }
+        );
+
+
+    /*
+     * Klick auf den dunklen Hintergrund
+     * schließt das Fenster.
+     */
+
+    modal.addEventListener(
+        "click",
+        event => {
+
+            if (
+                event.target === modal
+            ) {
+
+                modal.remove();
+
+            }
+
+        }
+    );
+
+
+    /* -----------------------------------------------------
+       SPEICHERN
+    ----------------------------------------------------- */
+
+    document
+        .getElementById(
+            "schedule-create-save"
+        )
+        .addEventListener(
+            "click",
+            createScheduleEvent
+        );
+
+}
+
+
+/* =========================================================
+   TERMIN IN SUPABASE ERSTELLEN
+========================================================= */
+
+async function createScheduleEvent() {
+
+    const titleInput =
+        document.getElementById(
+            "schedule-create-title"
+        );
+
+
+    const descriptionInput =
+        document.getElementById(
+            "schedule-create-description"
+        );
+
+
+    const typeInput =
+        document.getElementById(
+            "schedule-create-type"
+        );
+
+
+    const startInput =
+        document.getElementById(
+            "schedule-create-start"
+        );
+
+
+    const endInput =
+        document.getElementById(
+            "schedule-create-end"
+        );
+
+
+    const errorElement =
+        document.getElementById(
+            "schedule-create-error"
+        );
+
+
+    const saveButton =
+        document.getElementById(
+            "schedule-create-save"
+        );
+
+
+    /* -----------------------------------------------------
+       TEAM PRÜFEN
+    ----------------------------------------------------- */
+
+    if (
+        !currentTeam ||
+        !currentTeam.id
+    ) {
+
+        errorElement.textContent =
+            "Es ist kein Team angemeldet.";
+
+        errorElement.style.display =
+            "block";
+
+        return;
+    }
+
+
+    /* -----------------------------------------------------
+       EINGABEN
+    ----------------------------------------------------- */
+
+    const title =
+        titleInput.value.trim();
+
+
+    const description =
+        descriptionInput.value.trim();
+
+
+    const eventType =
+        typeInput.value;
+
+
+    const startTime =
+        scheduleLocalDateTimeToISO(
+            startInput.value
+        );
+
+
+    const endTime =
+        scheduleLocalDateTimeToISO(
+            endInput.value
+        );
+
+
+    if (!title) {
+
+        errorElement.textContent =
+            "Bitte gib einen Titel ein.";
+
+        errorElement.style.display =
+            "block";
+
+        titleInput.focus();
+
+        return;
+    }
+
+
+    if (
+        !startTime ||
+        !endTime
+    ) {
+
+        errorElement.textContent =
+            "Bitte gib gültige Start- und Endzeiten ein.";
+
+        errorElement.style.display =
+            "block";
+
+        return;
+    }
+
+
+    if (
+        new Date(endTime) <=
+        new Date(startTime)
+    ) {
+
+        errorElement.textContent =
+            "Die Endzeit muss nach der Startzeit liegen.";
+
+        errorElement.style.display =
+            "block";
+
+        return;
+    }
+
+
+    /* -----------------------------------------------------
+       BUTTON DEAKTIVIEREN
+    ----------------------------------------------------- */
+
+    saveButton.disabled =
+        true;
+
+    saveButton.textContent =
+        "Wird erstellt...";
+
+
+    errorElement.style.display =
+        "none";
+
+
+    /* -----------------------------------------------------
+       SUPABASE INSERT
+    ----------------------------------------------------- */
+
+    const {
+        data,
+        error
+    } =
+        await supabaseClient
+            .from("team_events")
+            .insert([
+                {
+                    team_id:
+                        currentTeam.id,
+
+                    title:
+                        title,
+
+                    description:
+                        description || null,
+
+                    start_time:
+                        startTime,
+
+                    end_time:
+                        endTime,
+
+                    event_type:
+                        eventType
+                }
+            ])
+            .select()
+            .single();
+
+
+    /* -----------------------------------------------------
+       FEHLER
+    ----------------------------------------------------- */
+
+    if (error) {
+
+        console.error(
+            "Fehler beim Erstellen des Termins:",
+            error
+        );
+
+
+        errorElement.textContent =
+            "Der Termin konnte nicht erstellt werden: " +
+            error.message;
+
+
+        errorElement.style.display =
+            "block";
+
+
+        saveButton.disabled =
+            false;
+
+
+        saveButton.textContent =
+            "Termin erstellen";
+
+
+        return;
+    }
+
+
+    console.log(
+        "Termin erfolgreich erstellt:",
+        data
+    );
+
+
+    /* -----------------------------------------------------
+       MODAL SCHLIESSEN
+    ----------------------------------------------------- */
+
+    const modal =
+        document.getElementById(
+            "schedule-create-modal"
+        );
+
+
+    if (modal) {
+        modal.remove();
+    }
+
+
+    /* -----------------------------------------------------
+       KALENDER NEU LADEN
+    ----------------------------------------------------- */
+
+    await loadScheduleEvents();
+
+}
+
+
+/* =========================================================
+   TERMINE AUS SUPABASE LADEN
+========================================================= */
+
+async function loadScheduleEvents() {
+
+    const columns =
+        document.querySelectorAll(
+            ".schedule-day-column"
+        );
+
+
+    if (!columns.length) {
+        return;
+    }
+
+
+    /* -----------------------------------------------------
+       ALTE TERMINE ENTFERNEN
+    ----------------------------------------------------- */
+
+    columns.forEach(
+        column => {
+
+            column
+                .querySelectorAll(
+                    ".schedule-event"
+                )
+                .forEach(
+                    event =>
+                        event.remove()
+                );
+
+        }
+    );
+
+
+    /* -----------------------------------------------------
+       TEAM PRÜFEN
+    ----------------------------------------------------- */
+
+    if (
+        !currentTeam ||
+        !currentTeam.id
+    ) {
+
+        console.log(
+            "Terminplaner: Kein aktuelles Team."
+        );
+
+        return;
+    }
+
+
+    /* -----------------------------------------------------
+       WOCHENGRENZEN
+    ----------------------------------------------------- */
+
+    const monday =
+        getStartOfWeek(
+            scheduleCurrentWeek
+        );
+
+
+    const nextMonday =
+        new Date(
+            monday
+        );
+
+
+    nextMonday.setDate(
+        nextMonday.getDate() + 7
+    );
+
+
+    const weekStart =
+        monday.toISOString();
+
+
+    const weekEnd =
+        nextMonday.toISOString();
+
+
+    /* -----------------------------------------------------
+       SUPABASE ABFRAGE
+    ----------------------------------------------------- */
+
+    const {
+        data,
+        error
+    } =
+        await supabaseClient
+            .from("team_events")
+            .select(`
+                id,
+                team_id,
+                title,
+                description,
+                start_time,
+                end_time,
+                event_type,
+                created_at,
+                updated_at
+            `)
+            .eq(
+                "team_id",
+                currentTeam.id
+            )
+            .lt(
+                "start_time",
+                weekEnd
+            )
+            .gte(
+                "end_time",
+                weekStart
+            )
+            .order(
+                "start_time",
+                {
+                    ascending: true
+                }
+            );
+
+
+    if (error) {
+
+        console.error(
+            "Fehler beim Laden der Termine:",
+            error
+        );
+
+        return;
+    }
+
+
+    if (
+        !data ||
+        data.length === 0
+    ) {
+
+        return;
+    }
+
+
+    /* -----------------------------------------------------
+       TERMINE RENDERN
+    ----------------------------------------------------- */
+
+    data.forEach(
+        eventData => {
+
+            renderScheduleEvent(
+                eventData
+            );
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   EINEN TERMIN RENDERN
+========================================================= */
+
+function renderScheduleEvent(
+    eventData
+) {
+
+    if (
+        !eventData ||
+        !eventData.start_time ||
+        !eventData.end_time
+    ) {
+        return;
+    }
+
+
+    const start =
+        new Date(
+            eventData.start_time
+        );
+
+
+    const end =
+        new Date(
+            eventData.end_time
+        );
+
+
+    if (
+        Number.isNaN(
+            start.getTime()
+        ) ||
+        Number.isNaN(
+            end.getTime()
+        )
+    ) {
+
+        return;
+    }
+
+
+    const monday =
+        getStartOfWeek(
+            scheduleCurrentWeek
+        );
+
+
+    const nextMonday =
+        new Date(
+            monday
+        );
+
+
+    nextMonday.setDate(
+        nextMonday.getDate() + 7
+    );
+
+
+    if (
+        end <= monday ||
+        start >= nextMonday
+    ) {
+        return;
+    }
+
+
+    /* -----------------------------------------------------
+       TAG BESTIMMEN
+    ----------------------------------------------------- */
+
+    const eventDateKey =
+        getScheduleDateKey(
+            start
+        );
+
+
+    const columns =
+        document.querySelectorAll(
+            ".schedule-day-column"
+        );
+
+
+    let column = null;
+
+
+    columns.forEach(
+        currentColumn => {
+
+            if (
+                currentColumn.dataset.date ===
+                eventDateKey
+            ) {
+
+                column =
+                    currentColumn;
+
+            }
+
+        }
+    );
+
+
+    if (!column) {
+        return;
+    }
+
+
+    /* -----------------------------------------------------
+       STUNDEN
+    ----------------------------------------------------- */
+
+    const hours =
+        column.querySelectorAll(
+            ".schedule-hour"
+        );
+
+
+    if (!hours.length) {
+        return;
+    }
+
+
+    const calendarStartHour =
+        8;
+
+
+    const calendarEndHour =
+        23;
+
+
+    const startMinutes =
+        start.getHours() * 60 +
+        start.getMinutes();
+
+
+    const endMinutes =
+        end.getHours() * 60 +
+        end.getMinutes();
+
+
+    const calendarStartMinutes =
+        calendarStartHour * 60;
+
+
+    const calendarEndMinutes =
+        calendarEndHour * 60;
+
+
+    const visibleStart =
+        Math.max(
+            startMinutes,
+            calendarStartMinutes
+        );
+
+
+    const visibleEnd =
+        Math.min(
+            endMinutes,
+            calendarEndMinutes
+        );
+
+
+    if (
+        visibleEnd <= visibleStart
+    ) {
+        return;
+    }
+
+
+    /* -----------------------------------------------------
+       HÖHE EINER STUNDE
+    ----------------------------------------------------- */
+
+    let hourHeight =
+        hours[0]
+            .getBoundingClientRect()
+            .height;
+
+
+    if (
+        hours.length >= 2
+    ) {
+
+        const firstTop =
+            hours[0].offsetTop;
+
+
+        const secondTop =
+            hours[1].offsetTop;
+
+
+        const difference =
+            secondTop - firstTop;
+
+
+        if (
+            difference > 0
+        ) {
+
+            hourHeight =
+                difference;
+
+        }
+
+    }
+
+
+    if (
+        !hourHeight ||
+        hourHeight <= 0
+    ) {
+
+        hourHeight =
+            60;
+
+    }
+
+
+    /* -----------------------------------------------------
+       POSITION
+    ----------------------------------------------------- */
+
+    const topMinutes =
+        visibleStart -
+        calendarStartMinutes;
+
+
+    const durationMinutes =
+        visibleEnd -
+        visibleStart;
+
+
+    const top =
+        (
+            topMinutes / 60
+        ) *
+        hourHeight;
+
+
+    const height =
+        Math.max(
+            30,
+            (
+                durationMinutes / 60
+            ) *
+            hourHeight
+        );
+
+
+    /* -----------------------------------------------------
+       TERMIN-ELEMENT
+    ----------------------------------------------------- */
+
+    column.style.position =
+        "relative";
+
+
+    const eventElement =
+        document.createElement(
+            "div"
+        );
+
+
+    eventElement.className =
+        "schedule-event";
+
+
+    eventElement.dataset.eventId =
+        eventData.id;
+
+
+    eventElement.style.position =
+        "absolute";
+
+    eventElement.style.left =
+        "4px";
+
+    eventElement.style.right =
+        "4px";
+
+    eventElement.style.top =
+        `${top}px`;
+
+    eventElement.style.height =
+        `${height - 4}px`;
+
+    eventElement.style.minHeight =
+        "30px";
+
+    eventElement.style.boxSizing =
+        "border-box";
+
+    eventElement.style.zIndex =
+        "10";
+
+    eventElement.style.overflow =
+        "hidden";
+
+    eventElement.style.padding =
+        "6px 8px";
+
+    eventElement.style.borderRadius =
+        "6px";
+
+    eventElement.style.background =
+        getScheduleEventColor(
+            eventData.event_type
+        );
+
+    eventElement.style.color =
+        "#ffffff";
+
+    eventElement.style.cursor =
+        "pointer";
+
+    eventElement.style.boxShadow =
+        "0 2px 6px rgba(0,0,0,0.20)";
+
+
+    /* -----------------------------------------------------
+       INHALT
+    ----------------------------------------------------- */
+
+    const title =
+        escapeScheduleHtml(
+            eventData.title ||
+            "Termin"
+        );
+
+
+    const type =
+        escapeScheduleHtml(
+            eventData.event_type ||
+            ""
+        );
+
+
+    const description =
+        escapeScheduleHtml(
+            eventData.description ||
+            ""
+        );
+
+
+    const startText =
+        formatScheduleTime(
+            start
+        );
+
+
+    const endText =
+        formatScheduleTime(
+            end
+        );
+
+
+    eventElement.innerHTML = `
+        <div
+            style="
+                font-weight:700;
+                font-size:13px;
+                line-height:1.2;
+                margin-bottom:3px;
+            "
+        >
+            ${title}
+        </div>
+
+        <div
+            style="
+                font-size:11px;
+                opacity:.95;
+            "
+        >
+            ${startText} – ${endText}
+        </div>
+
+        ${
+            type
+                ? `
+                    <div
+                        style="
+                            font-size:10px;
+                            opacity:.85;
+                            margin-top:3px;
+                        "
+                    >
+                        ${type}
+                    </div>
+                `
+                : ""
+        }
+    `;
+
+
+    eventElement.title =
+        description
+            ? `${eventData.title || "Termin"}\n\n${eventData.description}`
+            : `${eventData.title || "Termin"}\n${startText} – ${endText}`;
+
+
+    /* -----------------------------------------------------
+       TERMIN KLICKEN
+    ----------------------------------------------------- */
+
+    eventElement.addEventListener(
+        "click",
+        event => {
+
+            event.stopPropagation();
+
+            showScheduleEventDetails(
+                eventData
+            );
+
+        }
+    );
+
+
+    column.appendChild(
+        eventElement
+    );
+
+}
+
+
+/* =========================================================
+   TERMINDETAILS
+========================================================= */
+
+function showScheduleEventDetails(
+    eventData
+) {
+
+    const title =
+        eventData?.title ||
+        "Termin";
+
+
+    const start =
+        eventData?.start_time
+            ? new Date(
+                eventData.start_time
+            )
+            : null;
+
+
+    const end =
+        eventData?.end_time
+            ? new Date(
+                eventData.end_time
+            )
+            : null;
+
+
+    let message =
+        title;
+
+
+    if (
+        start &&
+        !Number.isNaN(
+            start.getTime()
+        )
+    ) {
+
+        message +=
+            `\n\n${formatScheduleTime(start)}`;
+
+    }
+
+
+    if (
+        end &&
+        !Number.isNaN(
+            end.getTime()
+        )
+    ) {
+
+        message +=
+            ` – ${formatScheduleTime(end)}`;
+
+    }
+
+
+    if (
+        eventData?.event_type
+    ) {
+
+        message +=
+            `\n${eventData.event_type}`;
+
+    }
+
+
+    if (
+        eventData?.description
+    ) {
+
+        message +=
+            `\n\n${eventData.description}`;
+
+    }
+
+
+    alert(
+        message
+    );
+
+}
+
+
+/* =========================================================
+   EINE WOCHE ZURÜCK
+========================================================= */
 
 function schedulePreviousWeek() {
 
@@ -12189,9 +13945,9 @@ function schedulePreviousWeek() {
 }
 
 
-/*
- * Eine Woche vor
- */
+/* =========================================================
+   EINE WOCHE VOR
+========================================================= */
 
 function scheduleNextWeek() {
 
@@ -12211,9 +13967,9 @@ function scheduleNextWeek() {
 }
 
 
-/*
- * Zur aktuellen Woche springen
- */
+/* =========================================================
+   HEUTIGE WOCHE
+========================================================= */
 
 function scheduleToday() {
 
@@ -12226,13 +13982,13 @@ function scheduleToday() {
 }
 
 
-/*
- * Kalender-Buttons verbinden
- */
+/* =========================================================
+   TERMINPLANER INITIALISIEREN
+========================================================= */
 
 document.addEventListener(
     "DOMContentLoaded",
-    () => {
+    async () => {
 
         const previousButton =
             document.getElementById(
@@ -12283,9 +14039,28 @@ document.addEventListener(
 
 
         /*
-         * Beim Start direkt die aktuelle
-         * Kalenderwoche anzeigen.
+         * Team sicherstellen.
          */
+
+        if (
+            !currentTeam
+        ) {
+
+            try {
+
+                await loadCurrentTeam();
+
+            } catch (error) {
+
+                console.error(
+                    "Terminplaner: Team konnte nicht geladen werden:",
+                    error
+                );
+
+            }
+
+        }
+
 
         updateScheduleWeek();
 
