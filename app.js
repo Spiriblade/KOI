@@ -13264,12 +13264,41 @@ function addScheduleTeamFields(
     }
 
 
+    /* -----------------------------------------------------
+       VERHINDERN, DASS DIE FELDER DOPPELT EINGEFÜGT WERDEN
+    ----------------------------------------------------- */
+
+    const existingFields =
+        document.getElementById(
+            "schedule-team-fields"
+        );
+
+    if (existingFields) {
+        existingFields.remove();
+    }
+
+
+    /* -----------------------------------------------------
+       SPIELER DES AKTUELLEN TEAMS
+    ----------------------------------------------------- */
+
     const players =
         getScheduleTeamPlayers();
 
 
+    if (!players.length) {
+        return;
+    }
+
+
+    /* -----------------------------------------------------
+       WRAPPER
+    ----------------------------------------------------- */
+
     const wrapper =
-        document.createElement("div");
+        document.createElement(
+            "div"
+        );
 
 
     wrapper.id =
@@ -13286,22 +13315,33 @@ function addScheduleTeamFields(
         "12px";
 
 
-    const playerOptions =
-        players.map(
-            player => `
-                <option
-                    value="${escapeScheduleHtml(player)}"
-                    ${
-                        player === existingCreatedBy
-                            ? "selected"
-                            : ""
-                    }
-                >
-                    ${escapeScheduleHtml(player)}
-                </option>
-            `
-        ).join("");
+    /* -----------------------------------------------------
+       SPIELER-OPTIONEN
+    ----------------------------------------------------- */
 
+    const playerOptions =
+        players
+            .map(
+                player => `
+                    <option
+                        value="${escapeScheduleHtml(player)}"
+                        ${
+                            player ===
+                            existingCreatedBy
+                                ? "selected"
+                                : ""
+                        }
+                    >
+                        ${escapeScheduleHtml(player)}
+                    </option>
+                `
+            )
+            .join("");
+
+
+    /* -----------------------------------------------------
+       HTML
+    ----------------------------------------------------- */
 
     wrapper.innerHTML = `
 
@@ -13387,11 +13427,19 @@ function addScheduleTeamFields(
     `;
 
 
+    /* -----------------------------------------------------
+       VOR FEHLERMELDUNG EINFÜGEN
+    ----------------------------------------------------- */
+
     errorElement.parentNode.insertBefore(
         wrapper,
         errorElement
     );
 
+
+    /* -----------------------------------------------------
+       GESPEICHERTEN NAMEN VERWENDEN
+    ----------------------------------------------------- */
 
     const savedName =
         getScheduleSavedParticipantName();
@@ -13415,6 +13463,10 @@ function addScheduleTeamFields(
 
     }
 
+
+    /* -----------------------------------------------------
+       NAMEN SPEICHERN
+    ----------------------------------------------------- */
 
     if (createdBySelect) {
 
@@ -16219,11 +16271,20 @@ function showScheduleEventDetails(
     );
 
 
-    document.body.appendChild(
+   document.body.appendChild(
         modal
     );
 
-    addScheduleTeamFields();
+    const createErrorElement =
+        document.getElementById(
+            "schedule-create-error"
+        );
+
+    if (createErrorElement) {
+
+        addScheduleTeamFields();
+
+    }
 
     /* -----------------------------------------------------
        SCHLIESSEN
