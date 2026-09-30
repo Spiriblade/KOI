@@ -12290,15 +12290,25 @@ function makeMapArrowDraggable(
 let scheduleCurrentWeek = new Date();
 
 
+/* =========================================================
+   WOCHENANFANG
+========================================================= */
+
 function getStartOfWeek(date) {
 
-    const result = new Date(date);
+    const result =
+        new Date(date);
 
-    result.setHours(0, 0, 0, 0);
+    result.setHours(
+        0,
+        0,
+        0,
+        0
+    );
 
-    const day = result.getDay();
+    const day =
+        result.getDay();
 
-    // Montag als Wochenanfang
     const difference =
         day === 0
             ? -6
@@ -12312,6 +12322,10 @@ function getStartOfWeek(date) {
 }
 
 
+/* =========================================================
+   DATUM FORMATIEREN
+========================================================= */
+
 function formatScheduleDate(date) {
 
     return date.toLocaleDateString(
@@ -12324,6 +12338,206 @@ function formatScheduleDate(date) {
 
 }
 
+
+/* =========================================================
+   DATUM ALS YYYY-MM-DD
+========================================================= */
+
+function getScheduleDateKey(date) {
+
+    const year =
+        date.getFullYear();
+
+    const month =
+        String(
+            date.getMonth() + 1
+        ).padStart(
+            2,
+            "0"
+        );
+
+    const day =
+        String(
+            date.getDate()
+        ).padStart(
+            2,
+            "0"
+        );
+
+    return `${year}-${month}-${day}`;
+}
+
+
+/* =========================================================
+   HTML ESCAPEN
+========================================================= */
+
+function escapeScheduleHtml(value) {
+
+    return String(
+        value ?? ""
+    )
+        .replace(
+            /&/g,
+            "&amp;"
+        )
+        .replace(
+            /</g,
+            "&lt;"
+        )
+        .replace(
+            />/g,
+            "&gt;"
+        )
+        .replace(
+            /"/g,
+            "&quot;"
+        )
+        .replace(
+            /'/g,
+            "&#039;"
+        );
+
+}
+
+
+/* =========================================================
+   UHRZEIT FORMATIEREN
+========================================================= */
+
+function formatScheduleTime(date) {
+
+    return date.toLocaleTimeString(
+        "de-DE",
+        {
+            hour: "2-digit",
+            minute: "2-digit"
+        }
+    );
+
+}
+
+
+/* =========================================================
+   DATETIME-LOCAL FORMATIEREN
+========================================================= */
+
+function formatScheduleDateTimeLocal(
+    date
+) {
+
+    const year =
+        date.getFullYear();
+
+    const month =
+        String(
+            date.getMonth() + 1
+        ).padStart(
+            2,
+            "0"
+        );
+
+    const day =
+        String(
+            date.getDate()
+        ).padStart(
+            2,
+            "0"
+        );
+
+    const hours =
+        String(
+            date.getHours()
+        ).padStart(
+            2,
+            "0"
+        );
+
+    const minutes =
+        String(
+            date.getMinutes()
+        ).padStart(
+            2,
+            "0"
+        );
+
+    return (
+        `${year}-${month}-${day}` +
+        `T${hours}:${minutes}`
+    );
+}
+
+
+/* =========================================================
+   DATETIME-LOCAL → ISO
+========================================================= */
+
+function scheduleLocalDateTimeToISO(
+    value
+) {
+
+    const date =
+        new Date(
+            value
+        );
+
+    if (
+        Number.isNaN(
+            date.getTime()
+        )
+    ) {
+
+        return null;
+
+    }
+
+    return date.toISOString();
+}
+
+
+/* =========================================================
+   TERMIN-TYP FARBE
+========================================================= */
+
+function getScheduleEventColor(
+    eventType
+) {
+
+    switch (
+        String(
+            eventType || ""
+        ).toLowerCase()
+    ) {
+
+        case "training":
+            return "#2563eb";
+
+        case "scrim":
+            return "#7c3aed";
+
+        case "match":
+            return "#dc2626";
+
+        case "meeting":
+            return "#059669";
+
+        case "vacation":
+            return "#dc2626";
+
+        case "other":
+            return "#64748b";
+
+        default:
+            return "#2563eb";
+
+    }
+
+}
+
+
+/* =========================================================
+   TERMINPLANER WOCHE AKTUALISIEREN
+========================================================= */
 
 function updateScheduleWeek() {
 
@@ -12344,9 +12558,9 @@ function updateScheduleWeek() {
     ];
 
 
-    /*
-     * Die 7 Tages-Header holen.
-     */
+    /* -----------------------------------------------------
+       TAGES-HEADER
+    ----------------------------------------------------- */
 
     const headers =
         document.querySelectorAll(
@@ -12363,8 +12577,9 @@ function updateScheduleWeek() {
 
 
             const date =
-                new Date(monday);
-
+                new Date(
+                    monday
+                );
 
             date.setDate(
                 monday.getDate() + index
@@ -12404,9 +12619,9 @@ function updateScheduleWeek() {
     );
 
 
-    /*
-     * Die 7 Tages-Spalten holen.
-     */
+    /* -----------------------------------------------------
+       TAGES-SPALTEN
+    ----------------------------------------------------- */
 
     const columns =
         document.querySelectorAll(
@@ -12423,32 +12638,5766 @@ function updateScheduleWeek() {
 
 
             const date =
-                new Date(monday);
-
+                new Date(
+                    monday
+                );
 
             date.setDate(
                 monday.getDate() + index
             );
 
 
-            /*
-             * Das Datum für später
-             * an der Spalte speichern.
-             */
-
             column.dataset.date =
-                date
-                    .toISOString()
-                    .split("T")[0];
+                getScheduleDateKey(
+                    date
+                );
+
+        }
+    );
+
+
+    /*
+     * Stunden klickbar machen.
+     */
+
+    setupScheduleHourClicks();
+
+
+    /*
+     * Termine laden.
+     */
+
+    loadScheduleEvents();
+
+}
+
+
+/* =========================================================
+   FREIE STUNDEN KLICKBAR MACHEN
+========================================================= */
+
+function setupScheduleHourClicks() {
+
+    const columns =
+        document.querySelectorAll(
+            ".schedule-day-column"
+        );
+
+
+    columns.forEach(
+        column => {
+
+            const hours =
+                column.querySelectorAll(
+                    ".schedule-hour"
+                );
+
+
+            hours.forEach(
+                (hour, index) => {
+
+                    const newHour =
+                        hour.cloneNode(
+                            true
+                        );
+
+
+                    hour.replaceWith(
+                        newHour
+                    );
+
+
+                    newHour.addEventListener(
+                        "dblclick",
+                        event => {
+
+                            /*
+                             * Falls direkt auf einen
+                             * bestehenden Termin
+                             * doppelt geklickt wurde,
+                             * keinen neuen erstellen.
+                             */
+
+                            if (
+                                event.target.closest(
+                                    ".schedule-event"
+                                )
+                            ) {
+
+                                return;
+
+                            }
+
+
+                            const dateKey =
+                                column.dataset.date;
+
+
+                            if (!dateKey) {
+                                return;
+                            }
+
+
+                            /*
+                             * Der Kalender beginnt
+                             * um 08:00 Uhr.
+                             */
+
+                            const hourValue =
+                                8 + index;
+
+
+                            const startDate =
+                                new Date(
+                                    `${dateKey}T${String(
+                                        hourValue
+                                    ).padStart(
+                                        2,
+                                        "0"
+                                    )}:00`
+                                );
+
+
+                            const endDate =
+                                new Date(
+                                    startDate
+                                );
+
+
+                            endDate.setHours(
+                                endDate.getHours() + 1
+                            );
+
+
+                            openScheduleCreateModal(
+                                startDate,
+                                endDate
+                            );
+
+                        }
+                    );
+
+                }
+            );
 
         }
     );
 
 }
 
-/*
- * Eine Woche zurück
- */
+function formatScheduleDateInput(date) {
+
+    const year =
+        date.getFullYear();
+
+    const month =
+        String(
+            date.getMonth() + 1
+        ).padStart(
+            2,
+            "0"
+        );
+
+    const day =
+        String(
+            date.getDate()
+        ).padStart(
+            2,
+            "0"
+        );
+
+    return `${year}-${month}-${day}`;
+}
+
+
+function addScheduleTeamFields(
+    existingCreatedBy = "",
+    existingTeamEvent = false
+) {
+
+    const oldWrapper =
+        document.getElementById(
+            "schedule-team-fields"
+        );
+
+    if (oldWrapper) {
+        oldWrapper.remove();
+    }
+
+
+    const players =
+        currentTeam?.name &&
+        teamData[currentTeam.name]
+            ? teamData[currentTeam.name].players
+            : [];
+
+
+    const wrapper =
+        document.createElement(
+            "div"
+        );
+
+    wrapper.id =
+        "schedule-team-fields";
+
+    wrapper.style.display =
+        "flex";
+
+    wrapper.style.flexDirection =
+        "column";
+
+    wrapper.style.gap =
+        "10px";
+
+    wrapper.style.marginTop =
+        "12px";
+
+
+    /* -------------------------------------------------
+       ERSTELLT VON
+    ------------------------------------------------- */
+
+    const createdByLabel =
+        document.createElement(
+            "label"
+        );
+
+    createdByLabel.style.display =
+        "flex";
+
+    createdByLabel.style.flexDirection =
+        "column";
+
+    createdByLabel.style.gap =
+        "6px";
+
+
+    const createdByText =
+        document.createElement(
+            "span"
+        );
+
+    createdByText.textContent =
+        "Erstellt von";
+
+
+    const createdBySelect =
+        document.createElement(
+            "select"
+        );
+
+    createdBySelect.id =
+        "schedule-create-created-by";
+
+    createdBySelect.style.width =
+        "100%";
+
+    createdBySelect.style.boxSizing =
+        "border-box";
+
+    createdBySelect.style.padding =
+        "10px";
+
+    createdBySelect.style.borderRadius =
+        "6px";
+
+    createdBySelect.style.border =
+        "1px solid #444";
+
+    createdBySelect.style.background =
+        "#2a2a2a";
+
+    createdBySelect.style.color =
+        "#fff";
+
+
+    const emptyOption =
+        document.createElement(
+            "option"
+        );
+
+    emptyOption.value =
+        "";
+
+    emptyOption.textContent =
+        "Name auswählen";
+
+    createdBySelect.appendChild(
+        emptyOption
+    );
+
+
+    players.forEach(
+        player => {
+
+            const option =
+                document.createElement(
+                    "option"
+                );
+
+            option.value =
+                player;
+
+            option.textContent =
+                player;
+
+            createdBySelect.appendChild(
+                option
+            );
+
+        }
+    );
+
+
+    const savedName =
+        existingCreatedBy ||
+        getScheduleSavedParticipantName();
+
+
+    if (
+        savedName &&
+        players.includes(savedName)
+    ) {
+
+        createdBySelect.value =
+            savedName;
+
+    }
+
+
+    createdBySelect.addEventListener(
+        "change",
+        () => {
+
+            if (
+                createdBySelect.value
+            ) {
+
+                setScheduleSavedParticipantName(
+                    createdBySelect.value
+                );
+
+            }
+
+        }
+    );
+
+
+    createdByLabel.appendChild(
+        createdByText
+    );
+
+    createdByLabel.appendChild(
+        createdBySelect
+    );
+
+
+    wrapper.appendChild(
+        createdByLabel
+    );
+
+
+    /* -------------------------------------------------
+       TEAM
+    ------------------------------------------------- */
+
+    const teamLabel =
+        document.createElement(
+            "label"
+        );
+
+    teamLabel.style.display =
+        "flex";
+
+    teamLabel.style.alignItems =
+        "center";
+
+    teamLabel.style.gap =
+        "8px";
+
+    teamLabel.style.cursor =
+        "pointer";
+
+
+    const teamCheckbox =
+        document.createElement(
+            "input"
+        );
+
+    teamCheckbox.type =
+        "checkbox";
+
+    teamCheckbox.id =
+        "schedule-create-team-event";
+
+    teamCheckbox.checked =
+        existingTeamEvent;
+
+
+    const teamText =
+        document.createElement(
+            "span"
+        );
+
+    teamText.textContent =
+        "Team";
+
+
+    teamLabel.appendChild(
+        teamCheckbox
+    );
+
+    teamLabel.appendChild(
+        teamText
+    );
+
+
+    wrapper.appendChild(
+        teamLabel
+    );
+
+
+    /* -------------------------------------------------
+       ERKLÄRUNG
+    ------------------------------------------------- */
+
+    const info =
+        document.createElement(
+            "div"
+        );
+
+    info.textContent =
+        "Bei einem Team-Termin können alle Spieler ihre Teilnahme bestätigen oder ablehnen.";
+
+    info.style.fontSize =
+        "12px";
+
+    info.style.color =
+        "#999";
+
+
+    wrapper.appendChild(
+        info
+    );
+
+
+    /* -------------------------------------------------
+       EINFÜGEN
+    ------------------------------------------------- */
+
+    const errorElement =
+        document.getElementById(
+            "schedule-create-error"
+        );
+
+    if (errorElement) {
+
+        errorElement.parentNode.insertBefore(
+            wrapper,
+            errorElement
+        );
+
+    }
+
+}
+
+/* =========================================================
+   TERMIN-ERSTELLEN-MODAL ÖFFNEN
+========================================================= */
+
+function openScheduleCreateModal(
+    startDate,
+    endDate
+) {
+
+    const existingModal =
+        document.getElementById(
+            "schedule-create-modal"
+        );
+
+
+    if (existingModal) {
+        existingModal.remove();
+    }
+
+
+    const modal =
+        document.createElement(
+            "div"
+        );
+
+
+    modal.id =
+        "schedule-create-modal";
+
+
+    modal.style.position =
+        "fixed";
+
+    modal.style.inset =
+        "0";
+
+    modal.style.background =
+        "rgba(0, 0, 0, 0.55)";
+
+    modal.style.display =
+        "flex";
+
+    modal.style.alignItems =
+        "center";
+
+    modal.style.justifyContent =
+        "center";
+
+    modal.style.zIndex =
+        "99999";
+
+    modal.style.padding =
+        "20px";
+
+
+    const box =
+        document.createElement(
+            "div"
+        );
+
+
+    box.style.width =
+        "min(500px, 100%)";
+
+    box.style.background =
+        "#1e1e1e";
+
+    box.style.color =
+        "#ffffff";
+
+    box.style.borderRadius =
+        "12px";
+
+    box.style.padding =
+        "24px";
+
+    box.style.boxSizing =
+        "border-box";
+
+    box.style.boxShadow =
+        "0 20px 60px rgba(0,0,0,0.45)";
+
+
+    box.innerHTML = `
+        <div
+            style="
+                display:flex;
+                align-items:center;
+                justify-content:space-between;
+                margin-bottom:20px;
+            "
+        >
+            <h2
+                style="
+                    margin:0;
+                    font-size:20px;
+                "
+            >
+                Termin erstellen
+            </h2>
+
+            <button
+                type="button"
+                id="schedule-modal-close"
+                style="
+                    border:0;
+                    background:transparent;
+                    color:#aaa;
+                    font-size:24px;
+                    cursor:pointer;
+                "
+            >
+                ×
+            </button>
+        </div>
+
+
+        <div
+            style="
+                display:flex;
+                flex-direction:column;
+                gap:14px;
+            "
+        >
+
+            <label
+                style="
+                    display:flex;
+                    flex-direction:column;
+                    gap:6px;
+                "
+            >
+                <span>
+                    Titel
+                </span>
+
+                <input
+                    id="schedule-create-title"
+                    type="text"
+                    placeholder="z. B. Urlaub"
+                    style="
+                        width:100%;
+                        box-sizing:border-box;
+                        padding:10px;
+                        border-radius:6px;
+                        border:1px solid #444;
+                        background:#2a2a2a;
+                        color:#fff;
+                    "
+                >
+            </label>
+
+
+            <label
+                style="
+                    display:flex;
+                    flex-direction:column;
+                    gap:6px;
+                "
+            >
+                <span>
+                    Beschreibung
+                </span>
+
+                <textarea
+                    id="schedule-create-description"
+                    placeholder="Optionale Beschreibung"
+                    rows="3"
+                    style="
+                        width:100%;
+                        box-sizing:border-box;
+                        padding:10px;
+                        border-radius:6px;
+                        border:1px solid #444;
+                        background:#2a2a2a;
+                        color:#fff;
+                        resize:vertical;
+                    "
+                ></textarea>
+            </label>
+
+
+            <label
+                style="
+                    display:flex;
+                    flex-direction:column;
+                    gap:6px;
+                "
+            >
+                <span>
+                    Terminart
+                </span>
+
+                <select
+                    id="schedule-create-type"
+                    style="
+                        width:100%;
+                        box-sizing:border-box;
+                        padding:10px;
+                        border-radius:6px;
+                        border:1px solid #444;
+                        background:#2a2a2a;
+                        color:#fff;
+                    "
+                >
+                    <option value="training">
+                        Training
+                    </option>
+
+                    <option value="scrim">
+                        Scrim
+                    </option>
+
+                    <option value="match">
+                        Match
+                    </option>
+
+                    <option value="meeting">
+                        Besprechung
+                    </option>
+
+                    <option value="vacation">
+                        Urlaub
+                    </option>
+
+                    <option value="other">
+                        Sonstiges
+                    </option>
+                </select>
+            </label>
+
+
+            <label
+                style="
+                    display:flex;
+                    align-items:center;
+                    gap:10px;
+                    cursor:pointer;
+                    padding:4px 0;
+                "
+            >
+
+                <input
+                    id="schedule-create-all-day"
+                    type="checkbox"
+                    style="
+                        width:18px;
+                        height:18px;
+                        cursor:pointer;
+                    "
+                >
+
+                <span>
+                    Ganztägiger Termin
+                </span>
+
+            </label>
+
+
+            <div
+                id="schedule-create-normal-time"
+                style="
+                    display:grid;
+                    grid-template-columns:1fr 1fr;
+                    gap:12px;
+                "
+            >
+
+                <label
+                    style="
+                        display:flex;
+                        flex-direction:column;
+                        gap:6px;
+                    "
+                >
+                    <span>
+                        Beginn
+                    </span>
+
+                    <input
+                        id="schedule-create-start"
+                        type="datetime-local"
+                        style="
+                            width:100%;
+                            box-sizing:border-box;
+                            padding:10px;
+                            border-radius:6px;
+                            border:1px solid #444;
+                            background:#2a2a2a;
+                            color:#fff;
+                        "
+                    >
+                </label>
+
+
+                <label
+                    style="
+                        display:flex;
+                        flex-direction:column;
+                        gap:6px;
+                    "
+                >
+                    <span>
+                        Ende
+                    </span>
+
+                    <input
+                        id="schedule-create-end"
+                        type="datetime-local"
+                        style="
+                            width:100%;
+                            box-sizing:border-box;
+                            padding:10px;
+                            border-radius:6px;
+                            border:1px solid #444;
+                            background:#2a2a2a;
+                            color:#fff;
+                        "
+                    >
+                </label>
+
+            </div>
+
+
+            <div
+                id="schedule-create-all-day-fields"
+                style="
+                    display:none;
+                    grid-template-columns:1fr 1fr;
+                    gap:12px;
+                "
+            >
+
+                <label
+                    style="
+                        display:flex;
+                        flex-direction:column;
+                        gap:6px;
+                    "
+                >
+                    <span>
+                        Von
+                    </span>
+
+                    <input
+                        id="schedule-create-all-day-start"
+                        type="date"
+                        style="
+                            width:100%;
+                            box-sizing:border-box;
+                            padding:10px;
+                            border-radius:6px;
+                            border:1px solid #444;
+                            background:#2a2a2a;
+                            color:#fff;
+                        "
+                    >
+                </label>
+
+
+                <label
+                    style="
+                        display:flex;
+                        flex-direction:column;
+                        gap:6px;
+                    "
+                >
+                    <span>
+                        Bis
+                    </span>
+
+                    <input
+                        id="schedule-create-all-day-end"
+                        type="date"
+                        style="
+                            width:100%;
+                            box-sizing:border-box;
+                            padding:10px;
+                            border-radius:6px;
+                            border:1px solid #444;
+                            background:#2a2a2a;
+                            color:#fff;
+                        "
+                    >
+                </label>
+
+            </div>
+
+
+            <div
+                id="schedule-create-error"
+                style="
+                    display:none;
+                    padding:10px;
+                    border-radius:6px;
+                    background:#4a1f1f;
+                    color:#ffb3b3;
+                    font-size:13px;
+                "
+            ></div>
+
+
+            <div
+                style="
+                    display:flex;
+                    justify-content:flex-end;
+                    gap:10px;
+                    margin-top:6px;
+                "
+            >
+
+                <button
+                    type="button"
+                    id="schedule-create-cancel"
+                    style="
+                        padding:10px 16px;
+                        border-radius:6px;
+                        border:1px solid #444;
+                        background:#2a2a2a;
+                        color:#fff;
+                        cursor:pointer;
+                    "
+                >
+                    Abbrechen
+                </button>
+
+
+                <button
+                    type="button"
+                    id="schedule-create-save"
+                    style="
+                        padding:10px 16px;
+                        border-radius:6px;
+                        border:0;
+                        background:#2563eb;
+                        color:#fff;
+                        cursor:pointer;
+                        font-weight:600;
+                    "
+                >
+                    Termin erstellen
+                </button>
+
+            </div>
+
+        </div>
+    `;
+
+
+    modal.appendChild(
+        box
+    );
+
+
+   document.body.appendChild(
+        modal
+    );
+
+
+    addScheduleTeamFields();
+
+
+/* -----------------------------------------------------
+   ELEMENTE
+----------------------------------------------------- */
+
+    /* -----------------------------------------------------
+       ELEMENTE
+    ----------------------------------------------------- */
+
+    const startInput =
+        document.getElementById(
+            "schedule-create-start"
+        );
+
+
+    const endInput =
+        document.getElementById(
+            "schedule-create-end"
+        );
+
+
+    const allDayCheckbox =
+        document.getElementById(
+            "schedule-create-all-day"
+        );
+
+
+    const normalTimeFields =
+        document.getElementById(
+            "schedule-create-normal-time"
+        );
+
+
+    const allDayFields =
+        document.getElementById(
+            "schedule-create-all-day-fields"
+        );
+
+
+    const allDayStart =
+        document.getElementById(
+            "schedule-create-all-day-start"
+        );
+
+
+    const allDayEnd =
+        document.getElementById(
+            "schedule-create-all-day-end"
+        );
+
+
+    /* -----------------------------------------------------
+       NORMALE START-/ENDZEIT
+    ----------------------------------------------------- */
+
+    startInput.value =
+        formatScheduleDateTimeLocal(
+            startDate
+        );
+
+
+    endInput.value =
+        formatScheduleDateTimeLocal(
+            endDate
+        );
+
+
+    /* -----------------------------------------------------
+       GANZTÄGIGER STANDARD
+    ----------------------------------------------------- */
+
+    allDayStart.value =
+        formatScheduleDateInput(
+            startDate
+        );
+
+
+    allDayEnd.value =
+        formatScheduleDateInput(
+            startDate
+        );
+
+
+    /* -----------------------------------------------------
+       GANZTÄGIG UMSCHALTEN
+    ----------------------------------------------------- */
+
+    allDayCheckbox.addEventListener(
+        "change",
+        () => {
+
+            if (
+                allDayCheckbox.checked
+            ) {
+
+                normalTimeFields.style.display =
+                    "none";
+
+                allDayFields.style.display =
+                    "grid";
+
+
+                /*
+                 * Standardmäßig den Tag
+                 * des angeklickten Zeitfensters
+                 * verwenden.
+                 */
+
+                allDayStart.value =
+                    formatScheduleDateInput(
+                        startDate
+                    );
+
+
+                allDayEnd.value =
+                    formatScheduleDateInput(
+                        startDate
+                    );
+
+            } else {
+
+                normalTimeFields.style.display =
+                    "grid";
+
+                allDayFields.style.display =
+                    "none";
+
+            }
+
+        }
+    );
+
+
+    /* -----------------------------------------------------
+       SCHLIESSEN
+    ----------------------------------------------------- */
+
+    document
+        .getElementById(
+            "schedule-modal-close"
+        )
+        .addEventListener(
+            "click",
+            () => {
+
+                modal.remove();
+
+            }
+        );
+
+
+    document
+        .getElementById(
+            "schedule-create-cancel"
+        )
+        .addEventListener(
+            "click",
+            () => {
+
+                modal.remove();
+
+            }
+        );
+
+
+    modal.addEventListener(
+        "click",
+        event => {
+
+            if (
+                event.target === modal
+            ) {
+
+                modal.remove();
+
+            }
+
+        }
+    );
+
+
+    /* -----------------------------------------------------
+       SPEICHERN
+    ----------------------------------------------------- */
+
+    document
+        .getElementById(
+            "schedule-create-save"
+        )
+        .addEventListener(
+            "click",
+            createScheduleEvent
+        );
+
+
+    /* -----------------------------------------------------
+       FOKUS
+    ----------------------------------------------------- */
+
+    setTimeout(
+        () => {
+
+            document
+                .getElementById(
+                    "schedule-create-title"
+                )
+                .focus();
+
+        },
+        50
+    );
+
+}
+
+/* =========================================================
+   TEAM-TEILNAHME – HILFSFUNKTIONEN
+========================================================= */
+
+function getScheduleTeamPlayers() {
+
+    if (!currentTeam?.name) {
+        return [];
+    }
+
+    return (
+        teamData[currentTeam.name]?.players ||
+        []
+    );
+
+}
+
+
+function getScheduleSavedParticipantName() {
+
+    if (!currentTeam?.id) {
+        return "";
+    }
+
+    return (
+        localStorage.getItem(
+            `schedule-participant-name-${currentTeam.id}`
+        ) ||
+        ""
+    );
+
+}
+
+
+function setScheduleSavedParticipantName(
+    playerName
+) {
+
+    if (!currentTeam?.id || !playerName) {
+        return;
+    }
+
+    localStorage.setItem(
+        `schedule-participant-name-${currentTeam.id}`,
+        playerName
+    );
+
+}
+
+
+/* =========================================================
+   TEAM-FELDER IN EIN TERMIN-MODAL EINBAUEN
+========================================================= */
+
+function addScheduleTeamFields(
+    existingCreatedBy = "",
+    existingTeamEvent = false
+) {
+
+    const errorElement =
+        document.getElementById(
+            "schedule-create-error"
+        );
+
+    if (!errorElement) {
+        return;
+    }
+
+
+    /* -----------------------------------------------------
+       VERHINDERN, DASS DIE FELDER DOPPELT EINGEFÜGT WERDEN
+    ----------------------------------------------------- */
+
+    const existingFields =
+        document.getElementById(
+            "schedule-team-fields"
+        );
+
+    if (existingFields) {
+        existingFields.remove();
+    }
+
+
+    /* -----------------------------------------------------
+       SPIELER DES AKTUELLEN TEAMS
+    ----------------------------------------------------- */
+
+    const players =
+        getScheduleTeamPlayers();
+
+
+    if (!players.length) {
+        return;
+    }
+
+
+    /* -----------------------------------------------------
+       WRAPPER
+    ----------------------------------------------------- */
+
+    const wrapper =
+        document.createElement(
+            "div"
+        );
+
+
+    wrapper.id =
+        "schedule-team-fields";
+
+
+    wrapper.style.display =
+        "flex";
+
+    wrapper.style.flexDirection =
+        "column";
+
+    wrapper.style.gap =
+        "12px";
+
+
+    /* -----------------------------------------------------
+       SPIELER-OPTIONEN
+    ----------------------------------------------------- */
+
+    const playerOptions =
+        players
+            .map(
+                player => `
+                    <option
+                        value="${escapeScheduleHtml(player)}"
+                        ${
+                            player ===
+                            existingCreatedBy
+                                ? "selected"
+                                : ""
+                        }
+                    >
+                        ${escapeScheduleHtml(player)}
+                    </option>
+                `
+            )
+            .join("");
+
+
+    /* -----------------------------------------------------
+       HTML
+    ----------------------------------------------------- */
+
+    wrapper.innerHTML = `
+
+        <label
+            style="
+                display:flex;
+                flex-direction:column;
+                gap:6px;
+            "
+        >
+
+            <span>
+                Erstellt von
+            </span>
+
+            <select
+                id="schedule-create-created-by"
+                style="
+                    width:100%;
+                    box-sizing:border-box;
+                    padding:10px;
+                    border-radius:6px;
+                    border:1px solid #444;
+                    background:#2a2a2a;
+                    color:#fff;
+                "
+            >
+
+                <option value="">
+                    Name auswählen
+                </option>
+
+                ${playerOptions}
+
+            </select>
+
+        </label>
+
+
+        <label
+            style="
+                display:flex;
+                align-items:center;
+                gap:10px;
+                cursor:pointer;
+                padding:4px 0;
+            "
+        >
+
+            <input
+                id="schedule-create-team-event"
+                type="checkbox"
+                ${
+                    existingTeamEvent
+                        ? "checked"
+                        : ""
+                }
+                style="
+                    width:18px;
+                    height:18px;
+                    cursor:pointer;
+                "
+            >
+
+            <span>
+                Team
+            </span>
+
+        </label>
+
+
+        <div
+            style="
+                color:#999;
+                font-size:12px;
+                line-height:1.4;
+            "
+        >
+            Wenn „Team“ aktiviert ist, können alle
+            Spieler ihre Teilnahme bestätigen oder ablehnen.
+        </div>
+
+    `;
+
+
+    /* -----------------------------------------------------
+       VOR FEHLERMELDUNG EINFÜGEN
+    ----------------------------------------------------- */
+
+    errorElement.parentNode.insertBefore(
+        wrapper,
+        errorElement
+    );
+
+
+    /* -----------------------------------------------------
+       GESPEICHERTEN NAMEN VERWENDEN
+    ----------------------------------------------------- */
+
+    const savedName =
+        getScheduleSavedParticipantName();
+
+
+    const createdBySelect =
+        document.getElementById(
+            "schedule-create-created-by"
+        );
+
+
+    if (
+        createdBySelect &&
+        !existingCreatedBy &&
+        savedName &&
+        players.includes(savedName)
+    ) {
+
+        createdBySelect.value =
+            savedName;
+
+    }
+
+
+    /* -----------------------------------------------------
+       NAMEN SPEICHERN
+    ----------------------------------------------------- */
+
+    if (createdBySelect) {
+
+        createdBySelect.addEventListener(
+            "change",
+            () => {
+
+                if (
+                    createdBySelect.value
+                ) {
+
+                    setScheduleSavedParticipantName(
+                        createdBySelect.value
+                    );
+
+                }
+
+            }
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   TEAM-STATUS EINES TERMINS
+========================================================= */
+
+function getScheduleParticipantStatus(
+    eventData
+) {
+
+    const participantName =
+        getScheduleSavedParticipantName();
+
+
+    if (
+        !participantName ||
+        !Array.isArray(
+            eventData?._participants
+        )
+    ) {
+
+        return null;
+
+    }
+
+
+    return (
+        eventData._participants.find(
+            participant =>
+                participant.player_name ===
+                participantName
+        ) ||
+        null
+    );
+
+}
+
+
+/* =========================================================
+   TEAM-STATUS AUF TERMINE ANZEIGEN
+========================================================= */
+
+function decorateScheduleTeamEvents(
+    events
+) {
+
+    if (!Array.isArray(events)) {
+        return;
+    }
+
+
+    events.forEach(
+        eventData => {
+
+            if (!eventData.team_event) {
+                return;
+            }
+
+
+            const eventElements =
+                document.querySelectorAll(
+                    `.schedule-event[data-event-id="${eventData.id}"]`
+                );
+
+
+            const participants =
+                Array.isArray(
+                    eventData._participants
+                )
+                    ? eventData._participants
+                    : [];
+
+
+            const accepted =
+                participants.filter(
+                    participant =>
+                        participant.response ===
+                        "accepted"
+                ).length;
+
+
+            const declined =
+                participants.filter(
+                    participant =>
+                        participant.response ===
+                        "declined"
+                ).length;
+
+
+            const status =
+                getScheduleParticipantStatus(
+                    eventData
+                );
+
+
+            let statusSymbol =
+                "○";
+
+
+            if (
+                status?.response ===
+                "accepted"
+            ) {
+
+                statusSymbol =
+                    "✓";
+
+            } else if (
+                status?.response ===
+                "declined"
+            ) {
+
+                statusSymbol =
+                    "✕";
+
+            }
+
+
+            eventElements.forEach(
+                eventElement => {
+
+                    if (
+                        eventElement.querySelector(
+                            ".schedule-team-status"
+                        )
+                    ) {
+                        return;
+                    }
+
+
+                    const badge =
+                        document.createElement(
+                            "div"
+                        );
+
+
+                    badge.className =
+                        "schedule-team-status";
+
+
+                    badge.style.position =
+                        "absolute";
+
+                    badge.style.right =
+                        "6px";
+
+                    badge.style.top =
+                        "5px";
+
+                    badge.style.padding =
+                        "2px 5px";
+
+                    badge.style.borderRadius =
+                        "4px";
+
+                    badge.style.background =
+                        "rgba(0,0,0,0.30)";
+
+                    badge.style.fontSize =
+                        "10px";
+
+                    badge.style.fontWeight =
+                        "700";
+
+                    badge.style.lineHeight =
+                        "1.2";
+
+                    badge.style.pointerEvents =
+                        "none";
+
+
+                    badge.textContent =
+                        `Team ${accepted}/${getScheduleTeamPlayers().length} ${statusSymbol}`;
+
+
+                    eventElement.style.paddingRight =
+                        "55px";
+
+
+                    eventElement.appendChild(
+                        badge
+                    );
+
+                }
+            );
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   TERMIN IN SUPABASE ERSTELLEN
+========================================================= */
+
+async function createScheduleEvent() {
+
+    const titleInput =
+        document.getElementById(
+            "schedule-create-title"
+        );
+
+
+    const descriptionInput =
+        document.getElementById(
+            "schedule-create-description"
+        );
+
+
+    const typeInput =
+        document.getElementById(
+            "schedule-create-type"
+        );
+
+
+    const startInput =
+        document.getElementById(
+            "schedule-create-start"
+        );
+
+
+    const endInput =
+        document.getElementById(
+            "schedule-create-end"
+        );
+
+
+    const allDayCheckbox =
+        document.getElementById(
+            "schedule-create-all-day"
+        );
+
+
+    const allDayStartInput =
+        document.getElementById(
+            "schedule-create-all-day-start"
+        );
+
+
+    const allDayEndInput =
+        document.getElementById(
+            "schedule-create-all-day-end"
+        );
+
+
+    const createdByInput =
+        document.getElementById(
+            "schedule-create-created-by"
+        );
+
+
+    const teamEventInput =
+        document.getElementById(
+            "schedule-create-team-event"
+        );
+
+
+    const errorElement =
+        document.getElementById(
+            "schedule-create-error"
+        );
+
+
+    const saveButton =
+        document.getElementById(
+            "schedule-create-save"
+        );
+
+
+    /* -----------------------------------------------------
+       TEAM
+    ----------------------------------------------------- */
+
+    if (
+        !currentTeam ||
+        !currentTeam.id
+    ) {
+
+        errorElement.textContent =
+            "Es ist kein Team angemeldet.";
+
+        errorElement.style.display =
+            "block";
+
+        return;
+    }
+
+
+    /* -----------------------------------------------------
+       GRUNDWERTE
+    ----------------------------------------------------- */
+
+    const title =
+        titleInput.value.trim();
+
+
+    const description =
+        descriptionInput.value.trim();
+
+
+    const eventType =
+        typeInput.value;
+
+
+    const createdBy =
+        createdByInput?.value.trim() ||
+        "";
+
+
+    const teamEvent =
+        teamEventInput?.checked ||
+        false;
+
+
+    const isAllDay =
+        allDayCheckbox.checked;
+
+
+    let startTime = null;
+
+    let endTime = null;
+
+
+    /* -----------------------------------------------------
+       TITEL
+    ----------------------------------------------------- */
+
+    if (!title) {
+
+        errorElement.textContent =
+            "Bitte gib einen Titel ein.";
+
+        errorElement.style.display =
+            "block";
+
+        titleInput.focus();
+
+        return;
+    }
+
+
+    /* -----------------------------------------------------
+       ERSTELLT VON
+    ----------------------------------------------------- */
+
+    if (!createdBy) {
+
+        errorElement.textContent =
+            "Bitte wähle aus, wer den Termin erstellt hat.";
+
+        errorElement.style.display =
+            "block";
+
+        createdByInput?.focus();
+
+        return;
+    }
+
+
+    /* -----------------------------------------------------
+       NAMEN MERKEN
+    ----------------------------------------------------- */
+
+    setScheduleSavedParticipantName(
+        createdBy
+    );
+
+
+    /* =====================================================
+       GANZTÄGIGER TERMIN
+    ===================================================== */
+
+    if (isAllDay) {
+
+        const startDate =
+            allDayStartInput.value;
+
+
+        const endDate =
+            allDayEndInput.value;
+
+
+        if (
+            !startDate ||
+            !endDate
+        ) {
+
+            errorElement.textContent =
+                "Bitte gib Start- und Enddatum ein.";
+
+            errorElement.style.display =
+                "block";
+
+            return;
+        }
+
+
+        const startDateObject =
+            new Date(
+                `${startDate}T00:00:00`
+            );
+
+
+        const endDateObject =
+            new Date(
+                `${endDate}T00:00:00`
+            );
+
+
+        if (
+            Number.isNaN(
+                startDateObject.getTime()
+            ) ||
+            Number.isNaN(
+                endDateObject.getTime()
+            )
+        ) {
+
+            errorElement.textContent =
+                "Die eingegebenen Daten sind ungültig.";
+
+            errorElement.style.display =
+                "block";
+
+            return;
+        }
+
+
+        if (
+            endDateObject <
+            startDateObject
+        ) {
+
+            errorElement.textContent =
+                "Das Enddatum muss am gleichen oder nach dem Startdatum liegen.";
+
+            errorElement.style.display =
+                "block";
+
+            return;
+        }
+
+
+        endDateObject.setDate(
+            endDateObject.getDate() + 1
+        );
+
+
+        startTime =
+            startDateObject.toISOString();
+
+
+        endTime =
+            endDateObject.toISOString();
+
+    }
+
+
+    /* =====================================================
+       NORMALER TERMIN
+    ===================================================== */
+
+    else {
+
+        startTime =
+            scheduleLocalDateTimeToISO(
+                startInput.value
+            );
+
+
+        endTime =
+            scheduleLocalDateTimeToISO(
+                endInput.value
+            );
+
+
+        if (
+            !startTime ||
+            !endTime
+        ) {
+
+            errorElement.textContent =
+                "Bitte gib gültige Start- und Endzeiten ein.";
+
+            errorElement.style.display =
+                "block";
+
+            return;
+        }
+
+
+        if (
+            new Date(endTime) <=
+            new Date(startTime)
+        ) {
+
+            errorElement.textContent =
+                "Die Endzeit muss nach der Startzeit liegen.";
+
+            errorElement.style.display =
+                "block";
+
+            return;
+        }
+
+    }
+
+
+    /* -----------------------------------------------------
+       BUTTON
+    ----------------------------------------------------- */
+
+    saveButton.disabled =
+        true;
+
+
+    saveButton.textContent =
+        "Wird erstellt...";
+
+
+    errorElement.style.display =
+        "none";
+
+
+    /* -----------------------------------------------------
+       SUPABASE
+    ----------------------------------------------------- */
+
+    const {
+        data,
+        error
+    } =
+        await supabaseClient
+            .from("team_events")
+            .insert([
+                {
+                    team_id:
+                        currentTeam.id,
+
+                    title:
+                        title,
+
+                    description:
+                        description || null,
+
+                    start_time:
+                        startTime,
+
+                    end_time:
+                        endTime,
+
+                    event_type:
+                        eventType,
+
+                    all_day:
+                        isAllDay,
+
+                    created_by:
+                        createdBy,
+
+                    team_event:
+                        teamEvent
+                }
+            ])
+            .select()
+            .single();
+
+
+    /* -----------------------------------------------------
+       FEHLER
+    ----------------------------------------------------- */
+
+    if (error) {
+
+        console.error(
+            "Fehler beim Erstellen des Termins:",
+            error
+        );
+
+
+        errorElement.textContent =
+            "Der Termin konnte nicht erstellt werden: " +
+            error.message;
+
+
+        errorElement.style.display =
+            "block";
+
+
+        saveButton.disabled =
+            false;
+
+
+        saveButton.textContent =
+            "Termin erstellen";
+
+
+        return;
+    }
+
+
+    console.log(
+        "Termin erfolgreich erstellt:",
+        data
+    );
+
+
+    /* -----------------------------------------------------
+       MODAL SCHLIESSEN
+    ----------------------------------------------------- */
+
+    const modal =
+        document.getElementById(
+            "schedule-create-modal"
+        );
+
+
+    if (modal) {
+        modal.remove();
+    }
+
+
+    /* -----------------------------------------------------
+       KALENDER NEU LADEN
+    ----------------------------------------------------- */
+
+    await loadScheduleEvents();
+
+}
+
+
+/* =========================================================
+   TERMINE AUS SUPABASE LADEN
+========================================================= */
+
+async function loadScheduleEvents() {
+
+    const columns =
+        document.querySelectorAll(
+            ".schedule-day-column"
+        );
+
+
+    if (!columns.length) {
+        return;
+    }
+
+
+    /* -----------------------------------------------------
+       ALTE TERMINE ENTFERNEN
+    ----------------------------------------------------- */
+
+    columns.forEach(
+        column => {
+
+            column
+                .querySelectorAll(
+                    ".schedule-event"
+                )
+                .forEach(
+                    event =>
+                        event.remove()
+                );
+
+        }
+    );
+
+
+    /* -----------------------------------------------------
+       TEAM PRÜFEN
+    ----------------------------------------------------- */
+
+    if (
+        !currentTeam ||
+        !currentTeam.id
+    ) {
+
+        console.log(
+            "Terminplaner: Kein aktuelles Team."
+        );
+
+        return;
+    }
+
+
+    /* -----------------------------------------------------
+       WOCHENGRENZEN
+    ----------------------------------------------------- */
+
+    const monday =
+        getStartOfWeek(
+            scheduleCurrentWeek
+        );
+
+
+    const nextMonday =
+        new Date(
+            monday
+        );
+
+
+    nextMonday.setDate(
+        nextMonday.getDate() + 7
+    );
+
+
+    const weekStart =
+        monday.toISOString();
+
+
+    const weekEnd =
+        nextMonday.toISOString();
+
+
+    /* -----------------------------------------------------
+       TERMINE LADEN
+    ----------------------------------------------------- */
+
+    const {
+        data,
+        error
+    } =
+        await supabaseClient
+            .from("team_events")
+            .select(`
+                id,
+                team_id,
+                title,
+                description,
+                start_time,
+                end_time,
+                event_type,
+                all_day,
+                created_by,
+                team_event,
+                created_at,
+                updated_at
+            `)
+            .eq(
+                "team_id",
+                currentTeam.id
+            )
+            .lt(
+                "start_time",
+                weekEnd
+            )
+            .gte(
+                "end_time",
+                weekStart
+            )
+            .order(
+                "start_time",
+                {
+                    ascending: true
+                }
+            );
+
+
+    if (error) {
+
+        console.error(
+            "Fehler beim Laden der Termine:",
+            error
+        );
+
+        return;
+    }
+
+
+    if (
+        !data ||
+        data.length === 0
+    ) {
+
+        return;
+    }
+
+
+    /* -----------------------------------------------------
+       TEAM-TEILNEHMER LADEN
+    ----------------------------------------------------- */
+
+    const teamEventIds =
+        data
+            .filter(
+                eventData =>
+                    eventData.team_event
+            )
+            .map(
+                eventData =>
+                    eventData.id
+            );
+
+
+    let participantRows = [];
+
+
+    if (
+        teamEventIds.length > 0
+    ) {
+
+        const {
+            data: participants,
+            error: participantError
+        } =
+            await supabaseClient
+                .from(
+                    "team_event_participants"
+                )
+                .select(`
+                    id,
+                    event_id,
+                    team_id,
+                    player_name,
+                    response,
+                    created_at,
+                    updated_at
+                `)
+                .in(
+                    "event_id",
+                    teamEventIds
+                );
+
+
+        if (participantError) {
+
+            console.error(
+                "Fehler beim Laden der Team-Teilnahmen:",
+                participantError
+            );
+
+        } else {
+
+            participantRows =
+                participants || [];
+
+        }
+
+    }
+
+
+    /* -----------------------------------------------------
+       TEILNEHMER AN TERMINE HÄNGEN
+    ----------------------------------------------------- */
+
+    data.forEach(
+        eventData => {
+
+            eventData._participants =
+                participantRows.filter(
+                    participant =>
+                        participant.event_id ===
+                        eventData.id
+                );
+
+        }
+    );
+
+
+    /* -----------------------------------------------------
+       TERMINE RENDERN
+    ----------------------------------------------------- */
+
+    data.forEach(
+        eventData => {
+
+            renderScheduleEvent(
+                eventData
+            );
+
+        }
+    );
+
+
+    /* -----------------------------------------------------
+       TEAM-STATUS ANZEIGEN
+    ----------------------------------------------------- */
+
+    decorateScheduleTeamEvents(
+        data
+    );
+
+}
+
+
+/* =========================================================
+   EINEN TERMIN RENDERN
+========================================================= */
+
+function renderScheduleEvent(
+    eventData
+) {
+
+    if (eventData.all_day) {
+
+        renderScheduleAllDayEvent(
+            eventData
+        );
+
+        return;
+    }
+
+
+    if (
+        !eventData ||
+        !eventData.start_time ||
+        !eventData.end_time
+    ) {
+        return;
+    }
+
+
+    const start =
+        new Date(
+            eventData.start_time
+        );
+
+
+    const end =
+        new Date(
+            eventData.end_time
+        );
+
+
+    if (
+        Number.isNaN(
+            start.getTime()
+        ) ||
+        Number.isNaN(
+            end.getTime()
+        )
+    ) {
+
+        return;
+    }
+
+
+    const monday =
+        getStartOfWeek(
+            scheduleCurrentWeek
+        );
+
+
+    const nextMonday =
+        new Date(
+            monday
+        );
+
+
+    nextMonday.setDate(
+        nextMonday.getDate() + 7
+    );
+
+
+    if (
+        end <= monday ||
+        start >= nextMonday
+    ) {
+        return;
+    }
+
+
+    /* -----------------------------------------------------
+       TAG BESTIMMEN
+    ----------------------------------------------------- */
+
+    const eventDateKey =
+        getScheduleDateKey(
+            start
+        );
+
+
+    const columns =
+        document.querySelectorAll(
+            ".schedule-day-column"
+        );
+
+
+    let column = null;
+
+
+    columns.forEach(
+        currentColumn => {
+
+            if (
+                currentColumn.dataset.date ===
+                eventDateKey
+            ) {
+
+                column =
+                    currentColumn;
+
+            }
+
+        }
+    );
+
+
+    if (!column) {
+        return;
+    }
+
+
+    /* -----------------------------------------------------
+       STUNDEN
+    ----------------------------------------------------- */
+
+    const hours =
+        column.querySelectorAll(
+            ".schedule-hour"
+        );
+
+
+    if (!hours.length) {
+        return;
+    }
+
+
+    const calendarStartHour =
+        8;
+
+
+    const calendarEndHour =
+        23;
+
+
+    const startMinutes =
+        start.getHours() * 60 +
+        start.getMinutes();
+
+
+    const endMinutes =
+        end.getHours() * 60 +
+        end.getMinutes();
+
+
+    const calendarStartMinutes =
+        calendarStartHour * 60;
+
+
+    const calendarEndMinutes =
+        calendarEndHour * 60;
+
+
+    const visibleStart =
+        Math.max(
+            startMinutes,
+            calendarStartMinutes
+        );
+
+
+    const visibleEnd =
+        Math.min(
+            endMinutes,
+            calendarEndMinutes
+        );
+
+
+    if (
+        visibleEnd <= visibleStart
+    ) {
+        return;
+    }
+
+
+    /* -----------------------------------------------------
+       HÖHE EINER STUNDE
+    ----------------------------------------------------- */
+
+    let hourHeight =
+        hours[0]
+            .getBoundingClientRect()
+            .height;
+
+
+    if (
+        hours.length >= 2
+    ) {
+
+        const firstTop =
+            hours[0].offsetTop;
+
+
+        const secondTop =
+            hours[1].offsetTop;
+
+
+        const difference =
+            secondTop - firstTop;
+
+
+        if (
+            difference > 0
+        ) {
+
+            hourHeight =
+                difference;
+
+        }
+
+    }
+
+
+    if (
+        !hourHeight ||
+        hourHeight <= 0
+    ) {
+
+        hourHeight =
+            60;
+
+    }
+
+
+    /* -----------------------------------------------------
+       POSITION
+    ----------------------------------------------------- */
+
+    const topMinutes =
+        visibleStart -
+        calendarStartMinutes;
+
+
+    const durationMinutes =
+        visibleEnd -
+        visibleStart;
+
+
+    const top =
+        (
+            topMinutes / 60
+        ) *
+        hourHeight;
+
+
+    const height =
+        Math.max(
+            30,
+            (
+                durationMinutes / 60
+            ) *
+            hourHeight
+        );
+
+
+    /* -----------------------------------------------------
+       TERMIN-ELEMENT
+    ----------------------------------------------------- */
+
+    column.style.position =
+        "relative";
+
+
+    const eventElement =
+        document.createElement(
+            "div"
+        );
+
+
+    eventElement.className =
+        "schedule-event";
+
+
+    eventElement.dataset.eventId =
+        eventData.id;
+
+
+    eventElement.style.position =
+        "absolute";
+
+    eventElement.style.left =
+        "4px";
+
+    eventElement.style.right =
+        "4px";
+
+    eventElement.style.top =
+        `${top}px`;
+
+    eventElement.style.height =
+        `${height - 4}px`;
+
+    eventElement.style.minHeight =
+        "30px";
+
+    eventElement.style.boxSizing =
+        "border-box";
+
+    eventElement.style.zIndex =
+        "10";
+
+    eventElement.style.overflow =
+        "hidden";
+
+    eventElement.style.padding =
+        "6px 8px";
+
+    eventElement.style.borderRadius =
+        "6px";
+
+
+    /* -----------------------------------------------------
+       FARBE
+    ----------------------------------------------------- */
+
+    eventElement.style.background =
+        getScheduleEventColor(
+            eventData.event_type
+        );
+
+
+    eventElement.style.color =
+        "#ffffff";
+
+
+    eventElement.style.cursor =
+        "pointer";
+
+
+    eventElement.style.boxShadow =
+        "0 2px 6px rgba(0,0,0,0.20)";
+
+
+    /* -----------------------------------------------------
+       INHALT
+    ----------------------------------------------------- */
+
+    const title =
+        escapeScheduleHtml(
+            eventData.title ||
+            "Termin"
+        );
+
+
+    const type =
+        escapeScheduleHtml(
+            eventData.event_type ||
+            ""
+        );
+
+
+    const description =
+        escapeScheduleHtml(
+            eventData.description ||
+            ""
+        );
+
+
+    const createdBy =
+        escapeScheduleHtml(
+            eventData.created_by ||
+            ""
+        );
+
+
+    const startText =
+        formatScheduleTime(
+            start
+        );
+
+
+    const endText =
+        formatScheduleTime(
+            end
+        );
+
+
+    /* -----------------------------------------------------
+       TERMIN-INHALT
+    ----------------------------------------------------- */
+
+    eventElement.innerHTML = `
+
+        <div
+            style="
+                font-weight:700;
+                font-size:13px;
+                line-height:1.2;
+                margin-bottom:3px;
+            "
+        >
+            ${title}
+        </div>
+
+
+        <div
+            style="
+                font-size:11px;
+                opacity:.95;
+            "
+        >
+            ${startText} – ${endText}
+        </div>
+
+
+        ${
+            type
+                ? `
+                    <div
+                        style="
+                            font-size:10px;
+                            opacity:.85;
+                            margin-top:3px;
+                        "
+                    >
+                        ${type}
+                    </div>
+                `
+                : ""
+        }
+
+
+        ${
+            createdBy
+                ? `
+                    <div
+                        style="
+                            position:absolute;
+                            right:8px;
+                            bottom:5px;
+                            max-width:70%;
+                            font-size:10px;
+                            font-weight:600;
+                            text-align:right;
+                            white-space:nowrap;
+                            overflow:hidden;
+                            text-overflow:ellipsis;
+                            opacity:.95;
+                        "
+                    >
+                        ${createdBy}
+                    </div>
+                `
+                : ""
+        }
+
+    `;
+
+
+    /* -----------------------------------------------------
+       TOOLTIP
+    ----------------------------------------------------- */
+
+    eventElement.title =
+        description
+            ? `${eventData.title || "Termin"}\n\n${eventData.description}`
+            : `${eventData.title || "Termin"}\n${startText} – ${endText}`;
+
+
+    /* -----------------------------------------------------
+       TERMIN KLICKEN
+    ----------------------------------------------------- */
+
+    eventElement.addEventListener(
+        "click",
+        event => {
+
+            event.stopPropagation();
+
+            showScheduleEventDetails(
+                eventData
+            );
+
+        }
+    );
+
+
+    column.appendChild(
+        eventElement
+    );
+
+}
+
+function renderScheduleAllDayEvent(
+    eventData
+) {
+
+    if (
+        !eventData ||
+        !eventData.start_time ||
+        !eventData.end_time
+    ) {
+        return;
+    }
+
+
+    const start =
+        new Date(
+            eventData.start_time
+        );
+
+
+    const end =
+        new Date(
+            eventData.end_time
+        );
+
+
+    if (
+        Number.isNaN(
+            start.getTime()
+        ) ||
+        Number.isNaN(
+            end.getTime()
+        )
+    ) {
+        return;
+    }
+
+
+    const monday =
+        getStartOfWeek(
+            scheduleCurrentWeek
+        );
+
+
+    const nextMonday =
+        new Date(
+            monday
+        );
+
+
+    nextMonday.setDate(
+        nextMonday.getDate() + 7
+    );
+
+
+    /*
+     * Außerhalb der aktuellen Woche?
+     */
+
+    if (
+        end <= monday ||
+        start >= nextMonday
+    ) {
+        return;
+    }
+
+
+    const visibleStart =
+        start < monday
+            ? monday
+            : start;
+
+
+    const visibleEnd =
+        end > nextMonday
+            ? nextMonday
+            : end;
+
+
+    /*
+     * Tatsächliches letztes Datum des Termins.
+     *
+     * Bei:
+     *
+     * 26.09. – 06.10.
+     *
+     * ist end intern:
+     *
+     * 07.10. 00:00
+     *
+     * Das tatsächliche Enddatum ist also:
+     *
+     * 06.10.
+     */
+
+    const actualEnd =
+        new Date(
+            end
+        );
+
+
+    actualEnd.setDate(
+        actualEnd.getDate() - 1
+    );
+
+
+    const title =
+        escapeScheduleHtml(
+            eventData.title ||
+            "Ganztägiger Termin"
+        );
+
+
+    const createdBy =
+        escapeScheduleHtml(
+            eventData.created_by ||
+            ""
+        );
+
+
+    /*
+     * Geht der Termin über die aktuelle
+     * Woche hinaus?
+     */
+
+    const continuesAfterWeek =
+        end > nextMonday;
+
+
+    /*
+     * Beginnt der Termin vor der aktuellen Woche?
+     */
+
+    const continuesBeforeWeek =
+        start < monday;
+
+
+    /*
+     * Letzter sichtbarer Tag der Woche
+     */
+
+    const lastVisibleDate =
+        new Date(
+            visibleEnd
+        );
+
+
+    lastVisibleDate.setDate(
+        lastVisibleDate.getDate() - 1
+    );
+
+
+    lastVisibleDate.setHours(
+        0,
+        0,
+        0,
+        0
+    );
+
+
+    /*
+     * Balken für jeden sichtbaren Tag
+     */
+
+    const currentDate =
+        new Date(
+            visibleStart
+        );
+
+
+    currentDate.setHours(
+        0,
+        0,
+        0,
+        0
+    );
+
+
+    while (
+        currentDate < visibleEnd
+    ) {
+
+        const dateKey =
+            getScheduleDateKey(
+                currentDate
+            );
+
+
+        const columns =
+            document.querySelectorAll(
+                ".schedule-day-column"
+            );
+
+
+        let column = null;
+
+
+        columns.forEach(
+            currentColumn => {
+
+                if (
+                    currentColumn.dataset.date ===
+                    dateKey
+                ) {
+
+                    column =
+                        currentColumn;
+
+                }
+
+            }
+        );
+
+
+        if (column) {
+
+            /* -------------------------------------------------
+               TERMIN-ELEMENT
+            ------------------------------------------------- */
+
+            const eventElement =
+                document.createElement(
+                    "div"
+                );
+
+
+            eventElement.className =
+                "schedule-event schedule-all-day-event";
+
+
+            eventElement.dataset.eventId =
+                eventData.id;
+
+
+            eventElement.style.position =
+                "absolute";
+
+
+            /*
+             * Keine Lücke zwischen den Tagen.
+             *
+             * Wir gehen leicht über die Spaltenkante,
+             * damit der Balken wirklich durchgehend wirkt.
+             */
+
+            eventElement.style.left =
+                "-1px";
+
+
+            eventElement.style.right =
+                "-1px";
+
+
+            eventElement.style.top =
+                "5px";
+
+
+            eventElement.style.height =
+                "28px";
+
+
+            eventElement.style.boxSizing =
+                "border-box";
+
+
+            eventElement.style.zIndex =
+                "20";
+
+
+            eventElement.style.padding =
+                "5px 8px";
+
+
+            /*
+             * Standardmäßig keine Rundung.
+             * Rundung kommt nur am echten Anfang
+             * und am echten Ende des Urlaubs.
+             */
+
+            eventElement.style.borderRadius =
+                "0";
+
+
+            eventElement.style.background =
+                getScheduleEventColor(
+                    eventData.event_type
+                );
+
+
+            eventElement.style.color =
+                "#ffffff";
+
+
+            eventElement.style.cursor =
+                "pointer";
+
+
+            eventElement.style.overflow =
+                "hidden";
+
+
+            eventElement.style.fontSize =
+                "12px";
+
+
+            eventElement.style.fontWeight =
+                "600";
+
+
+            /*
+             * Ist dies der tatsächliche Anfang
+             * des Termins?
+             */
+
+            const isActualStart =
+                !continuesBeforeWeek &&
+                currentDate.getTime() ===
+                    start.getTime();
+
+
+            /*
+             * Ist dies der tatsächliche letzte Tag?
+             */
+
+            const isActualEnd =
+                currentDate.getTime() ===
+                actualEnd.getTime();
+
+
+            /*
+             * Nur am echten Anfang abrunden.
+             */
+
+            if (
+                isActualStart
+            ) {
+
+                eventElement.style.borderTopLeftRadius =
+                    "5px";
+
+
+                eventElement.style.borderBottomLeftRadius =
+                    "5px";
+
+            }
+
+
+            /*
+             * Nur am echten Ende abrunden.
+             */
+
+            if (
+                isActualEnd
+            ) {
+
+                eventElement.style.borderTopRightRadius =
+                    "5px";
+
+
+                eventElement.style.borderBottomRightRadius =
+                    "5px";
+
+            }
+
+
+            /*
+             * Wenn der Urlaub über die aktuelle Woche
+             * hinausgeht, bekommt der letzte sichtbare
+             * Tag einen Pfeil mit dem tatsächlichen
+             * Enddatum.
+             */
+
+            const isLastVisibleDay =
+                currentDate.getTime() ===
+                lastVisibleDate.getTime();
+
+
+            const showEndArrow =
+                continuesAfterWeek &&
+                isLastVisibleDay;
+
+
+            /* -------------------------------------------------
+               INHALT
+            ------------------------------------------------- */
+
+            eventElement.innerHTML = `
+
+                <div
+                    style="
+                        position:absolute;
+                        left:8px;
+                        top:5px;
+                        right:${
+                            createdBy
+                                ? "125px"
+                                : "8px"
+                        };
+                        overflow:hidden;
+                        white-space:nowrap;
+                        text-overflow:ellipsis;
+                    "
+                >
+                    ${title}
+                </div>
+
+
+                ${
+                    showEndArrow
+                        ? `
+                            <div
+                                style="
+                                    position:absolute;
+                                    right:8px;
+                                    top:5px;
+                                    font-size:11px;
+                                    font-weight:700;
+                                    white-space:nowrap;
+                                "
+                            >
+                                → ${actualEnd.toLocaleDateString(
+                                    "de-DE",
+                                    {
+                                        day:"2-digit",
+                                        month:"2-digit"
+                                    }
+                                )}
+                            </div>
+                        `
+                        : ""
+                }
+
+
+                ${
+                    createdBy
+                        ? `
+                            <div
+                                style="
+                                    position:absolute;
+                                    right:8px;
+                                    bottom:4px;
+                                    max-width:45%;
+                                    overflow:hidden;
+                                    white-space:nowrap;
+                                    text-overflow:ellipsis;
+                                    text-align:right;
+                                    font-size:10px;
+                                    font-weight:600;
+                                    opacity:.95;
+                                "
+                            >
+                                ${createdBy}
+                            </div>
+                        `
+                        : ""
+                }
+
+            `;
+
+
+            /* -------------------------------------------------
+               TOOLTIP
+            ------------------------------------------------- */
+
+            const startText =
+                start.toLocaleDateString(
+                    "de-DE",
+                    {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric"
+                    }
+                );
+
+
+            const endText =
+                actualEnd.toLocaleDateString(
+                    "de-DE",
+                    {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric"
+                    }
+                );
+
+
+            eventElement.title =
+                `${eventData.title || "Termin"}\n${startText} – ${endText}` +
+                (
+                    eventData.created_by
+                        ? `\nErstellt von: ${eventData.created_by}`
+                        : ""
+                ) +
+                (
+                    eventData.description
+                        ? `\n\n${eventData.description}`
+                        : ""
+                );
+
+
+            /* -------------------------------------------------
+               KLICK
+            ------------------------------------------------- */
+
+            eventElement.addEventListener(
+                "click",
+                event => {
+
+                    event.stopPropagation();
+
+
+                    showScheduleEventDetails(
+                        eventData
+                    );
+
+                }
+            );
+
+
+            column.style.position =
+                "relative";
+
+
+            column.appendChild(
+                eventElement
+            );
+
+        }
+
+
+        /*
+         * Nächster Tag
+         */
+
+        currentDate.setDate(
+            currentDate.getDate() + 1
+        );
+
+    }
+
+}
+
+/* =========================================================
+   TEAM-TEILNAHME
+========================================================= */
+
+async function openScheduleParticipationModal(
+    eventData
+) {
+
+    const existingModal =
+        document.getElementById(
+            "schedule-participation-modal"
+        );
+
+
+    if (existingModal) {
+        existingModal.remove();
+    }
+
+
+    const players =
+        getScheduleTeamPlayers();
+
+
+    if (!players.length) {
+
+        alert(
+            "Für dieses Team sind keine Spieler hinterlegt."
+        );
+
+        return;
+    }
+
+
+    const participants =
+        Array.isArray(
+            eventData._participants
+        )
+            ? eventData._participants
+            : [];
+
+
+    const savedName =
+        getScheduleSavedParticipantName();
+
+
+    const modal =
+        document.createElement(
+            "div"
+        );
+
+
+    modal.id =
+        "schedule-participation-modal";
+
+
+    modal.style.position =
+        "fixed";
+
+    modal.style.inset =
+        "0";
+
+    modal.style.background =
+        "rgba(0,0,0,0.55)";
+
+    modal.style.display =
+        "flex";
+
+    modal.style.alignItems =
+        "center";
+
+    modal.style.justifyContent =
+        "center";
+
+    modal.style.zIndex =
+        "100000";
+
+    modal.style.padding =
+        "20px";
+
+
+    const box =
+        document.createElement(
+            "div"
+        );
+
+
+    box.style.width =
+        "min(500px, 100%)";
+
+    box.style.background =
+        "#1e1e1e";
+
+    box.style.color =
+        "#fff";
+
+    box.style.borderRadius =
+        "12px";
+
+    box.style.padding =
+        "24px";
+
+    box.style.boxSizing =
+        "border-box";
+
+    box.style.boxShadow =
+        "0 20px 60px rgba(0,0,0,0.45)";
+
+
+    const title =
+        escapeScheduleHtml(
+            eventData.title ||
+            "Team-Termin"
+        );
+
+
+    box.innerHTML = `
+
+        <div
+            style="
+                display:flex;
+                align-items:center;
+                justify-content:space-between;
+                margin-bottom:20px;
+            "
+        >
+
+            <h2
+                style="
+                    margin:0;
+                    font-size:20px;
+                "
+            >
+                Team-Teilnahme
+            </h2>
+
+            <button
+                type="button"
+                id="schedule-participation-close"
+                style="
+                    border:0;
+                    background:transparent;
+                    color:#aaa;
+                    font-size:24px;
+                    cursor:pointer;
+                "
+            >
+                ×
+            </button>
+
+        </div>
+
+
+        <div
+            style="
+                margin-bottom:16px;
+                color:#bbb;
+                font-size:14px;
+            "
+        >
+            ${title}
+        </div>
+
+
+        <label
+            style="
+                display:flex;
+                flex-direction:column;
+                gap:6px;
+                margin-bottom:16px;
+            "
+        >
+
+            <span>
+                Name
+            </span>
+
+            <select
+                id="schedule-participation-player"
+                style="
+                    width:100%;
+                    box-sizing:border-box;
+                    padding:10px;
+                    border-radius:6px;
+                    border:1px solid #444;
+                    background:#2a2a2a;
+                    color:#fff;
+                "
+            >
+
+                <option value="">
+                    Name auswählen
+                </option>
+
+                ${players.map(
+                    player => `
+                        <option
+                            value="${escapeScheduleHtml(player)}"
+                            ${
+                                player === savedName
+                                    ? "selected"
+                                    : ""
+                            }
+                        >
+                            ${escapeScheduleHtml(player)}
+                        </option>
+                    `
+                ).join("")}
+
+            </select>
+
+        </label>
+
+
+        <div
+            id="schedule-participation-status"
+            style="
+                min-height:20px;
+                margin-bottom:16px;
+                color:#aaa;
+                font-size:13px;
+            "
+        ></div>
+
+
+        <div
+            style="
+                display:flex;
+                gap:10px;
+                justify-content:flex-end;
+            "
+        >
+
+            <button
+                type="button"
+                id="schedule-participation-decline"
+                style="
+                    padding:10px 16px;
+                    border-radius:6px;
+                    border:1px solid #7f1d1d;
+                    background:#451a1a;
+                    color:#ffb3b3;
+                    cursor:pointer;
+                "
+            >
+                ✕ Ablehnen
+            </button>
+
+
+            <button
+                type="button"
+                id="schedule-participation-accept"
+                style="
+                    padding:10px 16px;
+                    border-radius:6px;
+                    border:0;
+                    background:#2563eb;
+                    color:#fff;
+                    cursor:pointer;
+                    font-weight:600;
+                "
+            >
+                ✓ Bestätigen
+            </button>
+
+        </div>
+
+    `;
+
+
+    modal.appendChild(
+        box
+    );
+
+
+    document.body.appendChild(
+        modal
+    );
+
+
+    const playerSelect =
+        document.getElementById(
+            "schedule-participation-player"
+        );
+
+
+    const statusElement =
+        document.getElementById(
+            "schedule-participation-status"
+        );
+
+
+    function updateStatus() {
+
+        const playerName =
+            playerSelect.value;
+
+
+        if (!playerName) {
+
+            statusElement.textContent =
+                "";
+
+            return;
+        }
+
+
+        const existing =
+            participants.find(
+                participant =>
+                    participant.player_name ===
+                    playerName
+            );
+
+
+        if (
+            existing?.response ===
+            "accepted"
+        ) {
+
+            statusElement.textContent =
+                "✓ Du hast bereits zugesagt.";
+
+            statusElement.style.color =
+                "#86efac";
+
+        } else if (
+            existing?.response ===
+            "declined"
+        ) {
+
+            statusElement.textContent =
+                "✕ Du hast bereits abgesagt.";
+
+            statusElement.style.color =
+                "#fca5a5";
+
+        } else {
+
+            statusElement.textContent =
+                "Noch keine Antwort.";
+
+            statusElement.style.color =
+                "#aaa";
+
+        }
+
+    }
+
+
+    updateStatus();
+
+
+    playerSelect.addEventListener(
+        "change",
+        () => {
+
+            if (
+                playerSelect.value
+            ) {
+
+                setScheduleSavedParticipantName(
+                    playerSelect.value
+                );
+
+            }
+
+            updateStatus();
+
+        }
+    );
+
+
+    async function saveParticipation(
+        response
+    ) {
+
+        const playerName =
+            playerSelect.value.trim();
+
+
+        if (!playerName) {
+
+            statusElement.textContent =
+                "Bitte wähle zuerst deinen Namen.";
+
+            statusElement.style.color =
+                "#ffb3b3";
+
+            return;
+        }
+
+
+        setScheduleSavedParticipantName(
+            playerName
+        );
+
+
+        const acceptButton =
+            document.getElementById(
+                "schedule-participation-accept"
+            );
+
+
+        const declineButton =
+            document.getElementById(
+                "schedule-participation-decline"
+            );
+
+
+        acceptButton.disabled =
+            true;
+
+        declineButton.disabled =
+            true;
+
+
+        const {
+            error
+        } =
+            await supabaseClient
+                .from(
+                    "team_event_participants"
+                )
+                .upsert(
+                    {
+                        event_id:
+                            eventData.id,
+
+                        team_id:
+                            currentTeam.id,
+
+                        player_name:
+                            playerName,
+
+                        response:
+                            response,
+
+                        updated_at:
+                            new Date().toISOString()
+                    },
+                    {
+                        onConflict:
+                            "event_id,player_name"
+                    }
+                );
+
+
+        if (error) {
+
+            console.error(
+                "Fehler beim Speichern der Teilnahme:",
+                error
+            );
+
+
+            statusElement.textContent =
+                "Die Antwort konnte nicht gespeichert werden.";
+
+            statusElement.style.color =
+                "#ffb3b3";
+
+
+            acceptButton.disabled =
+                false;
+
+            declineButton.disabled =
+                false;
+
+            return;
+        }
+
+
+        modal.remove();
+
+
+        await loadScheduleEvents();
+
+
+        const refreshedEvent =
+            await getScheduleEventById(
+                eventData.id
+            );
+
+
+        if (
+            refreshedEvent
+        ) {
+
+            openScheduleParticipationModal(
+                refreshedEvent
+            );
+
+        }
+
+    }
+
+
+    document
+        .getElementById(
+            "schedule-participation-accept"
+        )
+        .addEventListener(
+            "click",
+            () => {
+
+                saveParticipation(
+                    "accepted"
+                );
+
+            }
+        );
+
+
+    document
+        .getElementById(
+            "schedule-participation-decline"
+        )
+        .addEventListener(
+            "click",
+            () => {
+
+                saveParticipation(
+                    "declined"
+                );
+
+            }
+        );
+
+
+    document
+        .getElementById(
+            "schedule-participation-close"
+        )
+        .addEventListener(
+            "click",
+            () => {
+
+                modal.remove();
+
+            }
+        );
+
+
+    modal.addEventListener(
+        "click",
+        event => {
+
+            if (
+                event.target === modal
+            ) {
+
+                modal.remove();
+
+            }
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   EINEN TERMIN MIT TEILNEHMERN NEU LADEN
+========================================================= */
+
+async function getScheduleEventById(
+    eventId
+) {
+
+    const {
+        data,
+        error
+    } =
+        await supabaseClient
+            .from("team_events")
+            .select(`
+                id,
+                team_id,
+                title,
+                description,
+                start_time,
+                end_time,
+                event_type,
+                all_day,
+                created_by,
+                team_event,
+                created_at,
+                updated_at
+            `)
+            .eq(
+                "id",
+                eventId
+            )
+            .single();
+
+
+    if (error || !data) {
+
+        console.error(
+            "Fehler beim Laden des Termins:",
+            error
+        );
+
+        return null;
+    }
+
+
+    const {
+        data: participants,
+        error: participantError
+    } =
+        await supabaseClient
+            .from(
+                "team_event_participants"
+            )
+            .select(`
+                id,
+                event_id,
+                team_id,
+                player_name,
+                response,
+                created_at,
+                updated_at
+            `)
+            .eq(
+                "event_id",
+                eventId
+            );
+
+
+    if (participantError) {
+
+        console.error(
+            "Fehler beim Laden der Teilnehmer:",
+            participantError
+        );
+
+        data._participants = [];
+
+    } else {
+
+        data._participants =
+            participants || [];
+
+    }
+
+
+    return data;
+
+}
+
+/* =========================================================
+   TERMINDETAILS
+========================================================= */
+
+function showScheduleEventDetails(
+    eventData
+) {
+
+    const existingModal =
+        document.getElementById(
+            "schedule-event-details-modal"
+        );
+
+
+    if (existingModal) {
+        existingModal.remove();
+    }
+
+
+    const start =
+        eventData?.start_time
+            ? new Date(
+                eventData.start_time
+            )
+            : null;
+
+
+    const end =
+        eventData?.end_time
+            ? new Date(
+                eventData.end_time
+            )
+            : null;
+
+
+    const modal =
+        document.createElement(
+            "div"
+        );
+
+
+    modal.id =
+        "schedule-event-details-modal";
+
+
+    modal.style.position =
+        "fixed";
+
+    modal.style.inset =
+        "0";
+
+    modal.style.background =
+        "rgba(0, 0, 0, 0.55)";
+
+    modal.style.display =
+        "flex";
+
+    modal.style.alignItems =
+        "center";
+
+    modal.style.justifyContent =
+        "center";
+
+    modal.style.zIndex =
+        "99999";
+
+    modal.style.padding =
+        "20px";
+
+
+    const box =
+        document.createElement(
+            "div"
+        );
+
+
+    box.style.width =
+        "min(500px, 100%)";
+
+    box.style.maxHeight =
+        "90vh";
+
+    box.style.overflowY =
+        "auto";
+
+    box.style.background =
+        "#1e1e1e";
+
+    box.style.color =
+        "#ffffff";
+
+    box.style.borderRadius =
+        "12px";
+
+    box.style.padding =
+        "24px";
+
+    box.style.boxSizing =
+        "border-box";
+
+    box.style.boxShadow =
+        "0 20px 60px rgba(0,0,0,0.45)";
+
+
+    const title =
+        escapeScheduleHtml(
+            eventData.title ||
+            "Termin"
+        );
+
+
+    const description =
+        escapeScheduleHtml(
+            eventData.description ||
+            ""
+        );
+
+
+    const eventType =
+        escapeScheduleHtml(
+            eventData.event_type ||
+            ""
+        );
+
+
+    const createdBy =
+        escapeScheduleHtml(
+            eventData.created_by ||
+            ""
+        );
+
+
+    let dateText =
+        "";
+
+
+    if (
+        start &&
+        end &&
+        !Number.isNaN(
+            start.getTime()
+        ) &&
+        !Number.isNaN(
+            end.getTime()
+        )
+    ) {
+
+        if (
+            eventData.all_day
+        ) {
+
+            const actualEnd =
+                new Date(
+                    end
+                );
+
+
+            actualEnd.setDate(
+                actualEnd.getDate() - 1
+            );
+
+
+            dateText =
+                `${start.toLocaleDateString(
+                    "de-DE"
+                )} – ${actualEnd.toLocaleDateString(
+                    "de-DE"
+                )}`;
+
+        } else {
+
+            dateText =
+                `${start.toLocaleDateString(
+                    "de-DE"
+                )} · ${formatScheduleTime(
+                    start
+                )} – ${formatScheduleTime(
+                    end
+                )}`;
+
+        }
+
+    }
+
+
+    /* -----------------------------------------------------
+       TEAM-TEILNEHMER VORBEREITEN
+    ----------------------------------------------------- */
+
+    const teamPlayers =
+        eventData.team_event
+            ? getScheduleTeamPlayers()
+            : [];
+
+
+    const participants =
+        Array.isArray(
+            eventData._participants
+        )
+            ? eventData._participants
+            : [];
+
+
+    const participantMap =
+        new Map();
+
+
+    participants.forEach(
+        participant => {
+
+            if (
+                participant?.player_name
+            ) {
+
+                participantMap.set(
+                    participant.player_name,
+                    participant.response
+                );
+
+            }
+
+        }
+    );
+
+
+    const acceptedCount =
+        teamPlayers.filter(
+            player =>
+                participantMap.get(
+                    player
+                ) === "accepted"
+        ).length;
+
+
+    /* -----------------------------------------------------
+       TEILNEHMERLISTE
+    ----------------------------------------------------- */
+
+    let participantListHtml =
+        "";
+
+
+    if (
+        eventData.team_event &&
+        teamPlayers.length
+    ) {
+
+        participantListHtml =
+            teamPlayers
+                .map(
+                    player => {
+
+                        const response =
+                            participantMap.get(
+                                player
+                            );
+
+
+                        let symbol =
+                            "○";
+
+
+                        let symbolColor =
+                            "#999";
+
+
+                        if (
+                            response ===
+                            "accepted"
+                        ) {
+
+                            symbol =
+                                "✓";
+
+                            symbolColor =
+                                "#4ade80";
+
+                        } else if (
+                            response ===
+                            "declined"
+                        ) {
+
+                            symbol =
+                                "✕";
+
+                            symbolColor =
+                                "#f87171";
+
+                        }
+
+
+                        return `
+                            <div
+                                style="
+                                    display:flex;
+                                    align-items:center;
+                                    gap:8px;
+                                    padding:5px 0;
+                                    font-size:13px;
+                                "
+                            >
+
+                                <span
+                                    style="
+                                        width:18px;
+                                        text-align:center;
+                                        color:${symbolColor};
+                                        font-weight:700;
+                                    "
+                                >
+                                    ${symbol}
+                                </span>
+
+                                <span>
+                                    ${escapeScheduleHtml(
+                                        player
+                                    )}
+                                </span>
+
+                            </div>
+                        `;
+
+                    }
+                )
+                .join("");
+
+
+    } else if (
+        eventData.team_event
+    ) {
+
+        participantListHtml =
+            `
+                <div
+                    style="
+                        color:#999;
+                        font-size:12px;
+                    "
+                >
+                    Für dieses Team sind keine Spieler hinterlegt.
+                </div>
+            `;
+
+    }
+
+
+    /* -----------------------------------------------------
+       HTML
+    ----------------------------------------------------- */
+
+    box.innerHTML = `
+
+        <div
+            style="
+                display:flex;
+                align-items:center;
+                justify-content:space-between;
+                margin-bottom:20px;
+            "
+        >
+
+            <h2
+                style="
+                    margin:0;
+                    font-size:20px;
+                "
+            >
+                ${title}
+            </h2>
+
+
+            <button
+                type="button"
+                id="schedule-details-close"
+                style="
+                    border:0;
+                    background:transparent;
+                    color:#aaa;
+                    font-size:24px;
+                    cursor:pointer;
+                "
+            >
+                ×
+            </button>
+
+        </div>
+
+
+        <div
+            style="
+                display:flex;
+                flex-direction:column;
+                gap:12px;
+            "
+        >
+
+            <div
+                style="
+                    color:#bbb;
+                    font-size:14px;
+                "
+            >
+                ${dateText}
+            </div>
+
+
+            ${
+                eventData.all_day
+                    ? `
+                        <div
+                            style="
+                                display:inline-block;
+                                width:max-content;
+                                padding:4px 8px;
+                                border-radius:5px;
+                                background:#2563eb;
+                                font-size:12px;
+                                font-weight:600;
+                            "
+                        >
+                            Ganztägig
+                        </div>
+                    `
+                    : ""
+            }
+
+
+            ${
+                eventType
+                    ? `
+                        <div
+                            style="
+                                color:#aaa;
+                                font-size:13px;
+                            "
+                        >
+                            ${eventType}
+                        </div>
+                    `
+                    : ""
+            }
+
+
+            ${
+                createdBy
+                    ? `
+                        <div
+                            style="
+                                color:#999;
+                                font-size:12px;
+                                margin-top:-4px;
+                            "
+                        >
+                            Erstellt von:
+                            ${createdBy}
+                        </div>
+                    `
+                    : ""
+            }
+
+
+            ${
+                description
+                    ? `
+                        <div
+                            style="
+                                margin-top:6px;
+                                padding:12px;
+                                border-radius:7px;
+                                background:#292929;
+                                color:#ddd;
+                                white-space:pre-wrap;
+                                line-height:1.5;
+                            "
+                        >
+                            ${description}
+                        </div>
+                    `
+                    : ""
+            }
+
+
+            ${
+                eventData.team_event
+                    ? `
+
+                        <div
+                            style="
+                                margin-top:8px;
+                                padding:12px;
+                                border-radius:7px;
+                                background:#292929;
+                            "
+                        >
+
+                            <div
+                                style="
+                                    display:flex;
+                                    justify-content:space-between;
+                                    align-items:center;
+                                    gap:10px;
+                                    margin-bottom:8px;
+                                "
+                            >
+
+                                <strong>
+                                    Team
+                                </strong>
+
+
+                                <span
+                                    style="
+                                        color:#aaa;
+                                        font-size:12px;
+                                    "
+                                >
+                                    ${acceptedCount}/${teamPlayers.length}
+                                    zugesagt
+                                </span>
+
+                            </div>
+
+
+                            <div
+                                style="
+                                    margin-top:4px;
+                                    margin-bottom:12px;
+                                "
+                            >
+                                ${participantListHtml}
+                            </div>
+
+
+                            <button
+                                type="button"
+                                id="schedule-team-participation"
+                                style="
+                                    width:100%;
+                                    padding:10px 14px;
+                                    border-radius:6px;
+                                    border:0;
+                                    background:#2563eb;
+                                    color:#fff;
+                                    cursor:pointer;
+                                    font-weight:600;
+                                "
+                            >
+                                Teilnahme verwalten
+                            </button>
+
+                        </div>
+
+                    `
+                    : ""
+            }
+
+
+            <div
+                style="
+                    display:flex;
+                    justify-content:flex-end;
+                    gap:10px;
+                    margin-top:10px;
+                "
+            >
+
+                <button
+                    type="button"
+                    id="schedule-event-delete"
+                    style="
+                        padding:10px 16px;
+                        border-radius:6px;
+                        border:1px solid #7f1d1d;
+                        background:#451a1a;
+                        color:#ffb3b3;
+                        cursor:pointer;
+                    "
+                >
+                    Löschen
+                </button>
+
+
+                <button
+                    type="button"
+                    id="schedule-event-edit"
+                    style="
+                        padding:10px 16px;
+                        border-radius:6px;
+                        border:0;
+                        background:#2563eb;
+                        color:#fff;
+                        cursor:pointer;
+                        font-weight:600;
+                    "
+                >
+                    Bearbeiten
+                </button>
+
+            </div>
+
+        </div>
+    `;
+
+
+    modal.appendChild(
+        box
+    );
+
+
+    document.body.appendChild(
+        modal
+    );
+
+
+    /* -----------------------------------------------------
+       SCHLIESSEN
+    ----------------------------------------------------- */
+
+    document
+        .getElementById(
+            "schedule-details-close"
+        )
+        .addEventListener(
+            "click",
+            () => {
+
+                modal.remove();
+
+            }
+        );
+
+
+    modal.addEventListener(
+        "click",
+        event => {
+
+            if (
+                event.target === modal
+            ) {
+
+                modal.remove();
+
+            }
+
+        }
+    );
+
+
+    /* -----------------------------------------------------
+       TEAM-TEILNAHME
+    ----------------------------------------------------- */
+
+    if (
+        eventData.team_event
+    ) {
+
+        document
+            .getElementById(
+                "schedule-team-participation"
+            )
+            ?.addEventListener(
+                "click",
+                () => {
+
+                    modal.remove();
+
+                    openScheduleParticipationModal(
+                        eventData
+                    );
+
+                }
+            );
+
+    }
+
+
+    /* -----------------------------------------------------
+       BEARBEITEN
+    ----------------------------------------------------- */
+
+    document
+        .getElementById(
+            "schedule-event-edit"
+        )
+        .addEventListener(
+            "click",
+            () => {
+
+                modal.remove();
+
+                openScheduleEditModal(
+                    eventData
+                );
+
+            }
+        );
+
+
+    /* -----------------------------------------------------
+       LÖSCHEN
+    ----------------------------------------------------- */
+
+    document
+        .getElementById(
+            "schedule-event-delete"
+        )
+        .addEventListener(
+            "click",
+            async () => {
+
+                const confirmed =
+                    confirm(
+                        `Möchtest du "${eventData.title}" wirklich löschen?`
+                    );
+
+
+                if (!confirmed) {
+                    return;
+                }
+
+
+                const {
+                    error
+                } =
+                    await supabaseClient
+                        .from("team_events")
+                        .delete()
+                        .eq(
+                            "id",
+                            eventData.id
+                        );
+
+
+                if (error) {
+
+                    console.error(
+                        "Fehler beim Löschen:",
+                        error
+                    );
+
+
+                    alert(
+                        "Der Termin konnte nicht gelöscht werden:\n\n" +
+                        error.message
+                    );
+
+
+                    return;
+                }
+
+
+                modal.remove();
+
+
+                await loadScheduleEvents();
+
+            }
+        );
+
+}
+
+function openScheduleEditModal(
+    eventData
+) {
+
+    const existingModal =
+        document.getElementById(
+            "schedule-create-modal"
+        );
+
+
+    if (existingModal) {
+        existingModal.remove();
+    }
+
+
+    const start =
+        new Date(
+            eventData.start_time
+        );
+
+
+    const end =
+        new Date(
+            eventData.end_time
+        );
+
+
+    const modal =
+        document.createElement(
+            "div"
+        );
+
+
+    modal.id =
+        "schedule-create-modal";
+
+
+    modal.style.position =
+        "fixed";
+
+    modal.style.inset =
+        "0";
+
+    modal.style.background =
+        "rgba(0, 0, 0, 0.55)";
+
+    modal.style.display =
+        "flex";
+
+    modal.style.alignItems =
+        "center";
+
+    modal.style.justifyContent =
+        "center";
+
+    modal.style.zIndex =
+        "99999";
+
+    modal.style.padding =
+        "20px";
+
+
+    const box =
+        document.createElement(
+            "div"
+        );
+
+
+    box.style.width =
+        "min(500px, 100%)";
+
+    box.style.background =
+        "#1e1e1e";
+
+    box.style.color =
+        "#ffffff";
+
+    box.style.borderRadius =
+        "12px";
+
+    box.style.padding =
+        "24px";
+
+    box.style.boxSizing =
+        "border-box";
+
+    box.style.boxShadow =
+        "0 20px 60px rgba(0,0,0,0.45)";
+
+
+    box.innerHTML = `
+        <div
+            style="
+                display:flex;
+                align-items:center;
+                justify-content:space-between;
+                margin-bottom:20px;
+            "
+        >
+
+            <h2
+                style="
+                    margin:0;
+                    font-size:20px;
+                "
+            >
+                Termin bearbeiten
+            </h2>
+
+
+            <button
+                type="button"
+                id="schedule-modal-close"
+                style="
+                    border:0;
+                    background:transparent;
+                    color:#aaa;
+                    font-size:24px;
+                    cursor:pointer;
+                "
+            >
+                ×
+            </button>
+
+        </div>
+
+
+        <div
+            style="
+                display:flex;
+                flex-direction:column;
+                gap:14px;
+            "
+        >
+
+            <label
+                style="
+                    display:flex;
+                    flex-direction:column;
+                    gap:6px;
+                "
+            >
+                <span>
+                    Titel
+                </span>
+
+                <input
+                    id="schedule-create-title"
+                    type="text"
+                    value="${escapeScheduleHtml(
+                        eventData.title || ""
+                    )}"
+                    style="
+                        width:100%;
+                        box-sizing:border-box;
+                        padding:10px;
+                        border-radius:6px;
+                        border:1px solid #444;
+                        background:#2a2a2a;
+                        color:#fff;
+                    "
+                >
+            </label>
+
+
+            <label
+                style="
+                    display:flex;
+                    flex-direction:column;
+                    gap:6px;
+                "
+            >
+                <span>
+                    Beschreibung
+                </span>
+
+                <textarea
+                    id="schedule-create-description"
+                    rows="3"
+                    style="
+                        width:100%;
+                        box-sizing:border-box;
+                        padding:10px;
+                        border-radius:6px;
+                        border:1px solid #444;
+                        background:#2a2a2a;
+                        color:#fff;
+                        resize:vertical;
+                    "
+                >${escapeScheduleHtml(
+                    eventData.description || ""
+                )}</textarea>
+            </label>
+
+
+            <label
+                style="
+                    display:flex;
+                    flex-direction:column;
+                    gap:6px;
+                "
+            >
+                <span>
+                    Terminart
+                </span>
+
+                <select
+                    id="schedule-create-type"
+                    style="
+                        width:100%;
+                        box-sizing:border-box;
+                        padding:10px;
+                        border-radius:6px;
+                        border:1px solid #444;
+                        background:#2a2a2a;
+                        color:#fff;
+                    "
+                >
+
+                    <option value="training">
+                        Training
+                    </option>
+
+                    <option value="scrim">
+                        Scrim
+                    </option>
+
+                    <option value="match">
+                        Match
+                    </option>
+
+                    <option value="meeting">
+                        Besprechung
+                    </option>
+
+                    <option value="vacation">
+                        Urlaub
+                    </option>
+
+                    <option value="other">
+                        Sonstiges
+                    </option>
+
+                </select>
+            </label>
+
+
+            <label
+                style="
+                    display:flex;
+                    align-items:center;
+                    gap:10px;
+                    cursor:pointer;
+                    padding:4px 0;
+                "
+            >
+
+                <input
+                    id="schedule-create-all-day"
+                    type="checkbox"
+                    ${
+                        eventData.all_day
+                            ? "checked"
+                            : ""
+                    }
+                    style="
+                        width:18px;
+                        height:18px;
+                        cursor:pointer;
+                    "
+                >
+
+                <span>
+                    Ganztägiger Termin
+                </span>
+
+            </label>
+
+
+            <div
+                id="schedule-create-normal-time"
+                style="
+                    display:${
+                        eventData.all_day
+                            ? "none"
+                            : "grid"
+                    };
+                    grid-template-columns:1fr 1fr;
+                    gap:12px;
+                "
+            >
+
+                <label
+                    style="
+                        display:flex;
+                        flex-direction:column;
+                        gap:6px;
+                    "
+                >
+                    <span>
+                        Beginn
+                    </span>
+
+                    <input
+                        id="schedule-create-start"
+                        type="datetime-local"
+                        value="${formatScheduleDateTimeLocal(
+                            start
+                        )}"
+                        style="
+                            width:100%;
+                            box-sizing:border-box;
+                            padding:10px;
+                            border-radius:6px;
+                            border:1px solid #444;
+                            background:#2a2a2a;
+                            color:#fff;
+                        "
+                    >
+                </label>
+
+
+                <label
+                    style="
+                        display:flex;
+                        flex-direction:column;
+                        gap:6px;
+                    "
+                >
+                    <span>
+                        Ende
+                    </span>
+
+                    <input
+                        id="schedule-create-end"
+                        type="datetime-local"
+                        value="${formatScheduleDateTimeLocal(
+                            end
+                        )}"
+                        style="
+                            width:100%;
+                            box-sizing:border-box;
+                            padding:10px;
+                            border-radius:6px;
+                            border:1px solid #444;
+                            background:#2a2a2a;
+                            color:#fff;
+                        "
+                    >
+                </label>
+
+            </div>
+
+
+            <div
+                id="schedule-create-all-day-fields"
+                style="
+                    display:${
+                        eventData.all_day
+                            ? "grid"
+                            : "none"
+                    };
+                    grid-template-columns:1fr 1fr;
+                    gap:12px;
+                "
+            >
+
+                <label
+                    style="
+                        display:flex;
+                        flex-direction:column;
+                        gap:6px;
+                    "
+                >
+                    <span>
+                        Von
+                    </span>
+
+                    <input
+                        id="schedule-create-all-day-start"
+                        type="date"
+                        value="${formatScheduleDateInput(
+                            start
+                        )}"
+                        style="
+                            width:100%;
+                            box-sizing:border-box;
+                            padding:10px;
+                            border-radius:6px;
+                            border:1px solid #444;
+                            background:#2a2a2a;
+                            color:#fff;
+                        "
+                    >
+                </label>
+
+
+                <label
+                    style="
+                        display:flex;
+                        flex-direction:column;
+                        gap:6px;
+                    "
+                >
+                    <span>
+                        Bis
+                    </span>
+
+                    <input
+                        id="schedule-create-all-day-end"
+                        type="date"
+                        value="${
+                            eventData.all_day
+                                ? formatScheduleDateInput(
+                                    new Date(
+                                        end.getTime() -
+                                        24 * 60 * 60 * 1000
+                                    )
+                                )
+                                : formatScheduleDateInput(
+                                    end
+                                )
+                        }"
+                        style="
+                            width:100%;
+                            box-sizing:border-box;
+                            padding:10px;
+                            border-radius:6px;
+                            border:1px solid #444;
+                            background:#2a2a2a;
+                            color:#fff;
+                        "
+                    >
+                </label>
+
+            </div>
+
+
+            <div
+                id="schedule-create-error"
+                style="
+                    display:none;
+                    padding:10px;
+                    border-radius:6px;
+                    background:#4a1f1f;
+                    color:#ffb3b3;
+                    font-size:13px;
+                "
+            ></div>
+
+
+            <div
+                style="
+                    display:flex;
+                    justify-content:flex-end;
+                    gap:10px;
+                    margin-top:6px;
+                "
+            >
+
+                <button
+                    type="button"
+                    id="schedule-create-cancel"
+                    style="
+                        padding:10px 16px;
+                        border-radius:6px;
+                        border:1px solid #444;
+                        background:#2a2a2a;
+                        color:#fff;
+                        cursor:pointer;
+                    "
+                >
+                    Abbrechen
+                </button>
+
+
+                <button
+                    type="button"
+                    id="schedule-create-save"
+                    style="
+                        padding:10px 16px;
+                        border-radius:6px;
+                        border:0;
+                        background:#2563eb;
+                        color:#fff;
+                        cursor:pointer;
+                        font-weight:600;
+                    "
+                >
+                    Änderungen speichern
+                </button>
+
+            </div>
+
+        </div>
+    `;
+
+
+    modal.appendChild(
+        box
+    );
+
+
+    document.body.appendChild(
+        modal
+    );
+
+    addScheduleTeamFields(
+        eventData.created_by || "",
+        !!eventData.team_event
+    );
+
+
+    /* -----------------------------------------------------
+       ELEMENTE
+    ----------------------------------------------------- */
+
+    const allDayCheckbox =
+        document.getElementById(
+            "schedule-create-all-day"
+        );
+
+
+    const normalTimeFields =
+        document.getElementById(
+            "schedule-create-normal-time"
+        );
+
+
+    const allDayFields =
+        document.getElementById(
+            "schedule-create-all-day-fields"
+        );
+
+
+    /* -----------------------------------------------------
+       GANZTÄGIG UMSCHALTEN
+    ----------------------------------------------------- */
+
+    allDayCheckbox.addEventListener(
+        "change",
+        () => {
+
+            if (
+                allDayCheckbox.checked
+            ) {
+
+                normalTimeFields.style.display =
+                    "none";
+
+                allDayFields.style.display =
+                    "grid";
+
+            } else {
+
+                normalTimeFields.style.display =
+                    "grid";
+
+                allDayFields.style.display =
+                    "none";
+
+            }
+
+        }
+    );
+
+
+    /* -----------------------------------------------------
+       SCHLIESSEN
+    ----------------------------------------------------- */
+
+    document
+        .getElementById(
+            "schedule-modal-close"
+        )
+        .addEventListener(
+            "click",
+            () => {
+
+                modal.remove();
+
+            }
+        );
+
+
+    document
+        .getElementById(
+            "schedule-create-cancel"
+        )
+        .addEventListener(
+            "click",
+            () => {
+
+                modal.remove();
+
+            }
+        );
+
+
+    modal.addEventListener(
+        "click",
+        event => {
+
+            if (
+                event.target === modal
+            ) {
+
+                modal.remove();
+
+            }
+
+        }
+    );
+
+
+    /* -----------------------------------------------------
+       SPEICHERN
+    ----------------------------------------------------- */
+
+    document
+        .getElementById(
+            "schedule-create-save"
+        )
+        .addEventListener(
+            "click",
+            () => {
+
+                updateScheduleEvent(
+                    eventData.id
+                );
+
+            }
+        );
+
+}
+
+async function updateScheduleEvent(
+    eventId
+) {
+
+    const titleInput =
+        document.getElementById(
+            "schedule-create-title"
+        );
+
+
+    const descriptionInput =
+        document.getElementById(
+            "schedule-create-description"
+        );
+
+
+    const typeInput =
+        document.getElementById(
+            "schedule-create-type"
+        );
+
+
+    const startInput =
+        document.getElementById(
+            "schedule-create-start"
+        );
+
+
+    const endInput =
+        document.getElementById(
+            "schedule-create-end"
+        );
+
+
+    const allDayCheckbox =
+        document.getElementById(
+            "schedule-create-all-day"
+        );
+
+
+    const allDayStartInput =
+        document.getElementById(
+            "schedule-create-all-day-start"
+        );
+
+    const createdByInput =
+        document.getElementById(
+            "schedule-create-created-by"
+        );
+
+    const teamEventInput =
+        document.getElementById(
+            "schedule-create-team-event"
+        );
+
+
+    const createdBy =
+        createdByInput?.value.trim() ||
+        "";
+
+    const teamEvent =
+        teamEventInput?.checked ||
+        false;
+
+    const allDayEndInput =
+        document.getElementById(
+            "schedule-create-all-day-end"
+        );
+
+
+    const errorElement =
+        document.getElementById(
+            "schedule-create-error"
+        );
+
+
+    const saveButton =
+        document.getElementById(
+            "schedule-create-save"
+        );
+
+
+    const title =
+        titleInput.value.trim();
+
+
+    const description =
+        descriptionInput.value.trim();
+
+
+    const eventType =
+        typeInput.value;
+
+
+    const isAllDay =
+        allDayCheckbox.checked;
+
+
+    let startTime = null;
+    let endTime = null;
+
+
+    /* -----------------------------------------------------
+       TITEL
+    ----------------------------------------------------- */
+
+    if (!title) {
+
+        errorElement.textContent =
+            "Bitte gib einen Titel ein.";
+
+        errorElement.style.display =
+            "block";
+
+        return;
+    }
+
+
+    /* =====================================================
+       GANZTÄGIG
+    ===================================================== */
+
+    if (isAllDay) {
+
+        const startDate =
+            allDayStartInput.value;
+
+
+        const endDate =
+            allDayEndInput.value;
+
+
+        if (
+            !startDate ||
+            !endDate
+        ) {
+
+            errorElement.textContent =
+                "Bitte gib Start- und Enddatum ein.";
+
+            errorElement.style.display =
+                "block";
+
+            return;
+        }
+
+
+        const startDateObject =
+            new Date(
+                `${startDate}T00:00:00`
+            );
+
+
+        const endDateObject =
+            new Date(
+                `${endDate}T00:00:00`
+            );
+
+
+        if (
+            endDateObject <
+            startDateObject
+        ) {
+
+            errorElement.textContent =
+                "Das Enddatum muss am gleichen oder nach dem Startdatum liegen.";
+
+            errorElement.style.display =
+                "block";
+
+            return;
+        }
+
+
+        /*
+         * Enddatum inklusiv.
+         */
+
+        endDateObject.setDate(
+            endDateObject.getDate() + 1
+        );
+
+
+        startTime =
+            startDateObject.toISOString();
+
+
+        endTime =
+            endDateObject.toISOString();
+
+    }
+
+
+    /* =====================================================
+       NORMALER TERMIN
+    ===================================================== */
+
+    else {
+
+        startTime =
+            scheduleLocalDateTimeToISO(
+                startInput.value
+            );
+
+
+        endTime =
+            scheduleLocalDateTimeToISO(
+                endInput.value
+            );
+
+
+        if (
+            !startTime ||
+            !endTime
+        ) {
+
+            errorElement.textContent =
+                "Bitte gib gültige Start- und Endzeiten ein.";
+
+            errorElement.style.display =
+                "block";
+
+            return;
+        }
+
+
+        if (
+            new Date(endTime) <=
+            new Date(startTime)
+        ) {
+
+            errorElement.textContent =
+                "Die Endzeit muss nach der Startzeit liegen.";
+
+            errorElement.style.display =
+                "block";
+
+            return;
+        }
+
+    }
+
+
+    /* -----------------------------------------------------
+       BUTTON
+    ----------------------------------------------------- */
+
+    saveButton.disabled =
+        true;
+
+
+    saveButton.textContent =
+        "Wird gespeichert...";
+
+
+    errorElement.style.display =
+        "none";
+
+
+    /* -----------------------------------------------------
+       SUPABASE UPDATE
+    ----------------------------------------------------- */
+
+    const {
+        data,
+        error
+    } =
+        await supabaseClient
+            .from("team_events")
+            .update({
+                title:
+                    title,
+
+                description:
+                    description || null,
+
+                event_type:
+                    eventType,
+
+                start_time:
+                    startTime,
+
+                end_time:
+                    endTime,
+
+                all_day:
+                    isAllDay,
+
+                updated_at:
+                    new Date().toISOString()
+            })
+            .eq(
+                "id",
+                eventId
+            )
+            .select()
+            .single();
+
+
+    /* -----------------------------------------------------
+       FEHLER
+    ----------------------------------------------------- */
+
+    if (error) {
+
+        console.error(
+            "Fehler beim Aktualisieren des Termins:",
+            error
+        );
+
+
+        errorElement.textContent =
+            "Der Termin konnte nicht geändert werden: " +
+            error.message;
+
+
+        errorElement.style.display =
+            "block";
+
+
+        saveButton.disabled =
+            false;
+
+
+        saveButton.textContent =
+            "Änderungen speichern";
+
+
+        return;
+    }
+
+
+    console.log(
+        "Termin aktualisiert:",
+        data
+    );
+
+
+    /* -----------------------------------------------------
+       MODAL SCHLIESSEN
+    ----------------------------------------------------- */
+
+    const modal =
+        document.getElementById(
+            "schedule-create-modal"
+        );
+
+
+    if (modal) {
+        modal.remove();
+    }
+
+
+    /* -----------------------------------------------------
+       KALENDER NEU LADEN
+    ----------------------------------------------------- */
+
+    await loadScheduleEvents();
+
+}
+
+/* =========================================================
+   EINE WOCHE ZURÜCK
+========================================================= */
 
 function schedulePreviousWeek() {
 
@@ -12468,9 +18417,9 @@ function schedulePreviousWeek() {
 }
 
 
-/*
- * Eine Woche vor
- */
+/* =========================================================
+   EINE WOCHE VOR
+========================================================= */
 
 function scheduleNextWeek() {
 
@@ -12490,9 +18439,9 @@ function scheduleNextWeek() {
 }
 
 
-/*
- * Zur aktuellen Woche springen
- */
+/* =========================================================
+   HEUTIGE WOCHE
+========================================================= */
 
 function scheduleToday() {
 
@@ -12505,13 +18454,13 @@ function scheduleToday() {
 }
 
 
-/*
- * Kalender-Buttons verbinden
- */
+/* =========================================================
+   TERMINPLANER INITIALISIEREN
+========================================================= */
 
 document.addEventListener(
     "DOMContentLoaded",
-    () => {
+    async () => {
 
         const previousButton =
             document.getElementById(
@@ -12562,9 +18511,28 @@ document.addEventListener(
 
 
         /*
-         * Beim Start direkt die aktuelle
-         * Kalenderwoche anzeigen.
+         * Team sicherstellen.
          */
+
+        if (
+            !currentTeam
+        ) {
+
+            try {
+
+                await loadCurrentTeam();
+
+            } catch (error) {
+
+                console.error(
+                    "Terminplaner: Team konnte nicht geladen werden:",
+                    error
+                );
+
+            }
+
+        }
+
 
         updateScheduleWeek();
 
