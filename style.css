@@ -3817,7 +3817,34 @@ span {
 }
 
 .tierlist-card:not(.active) .tierlist-layout {
+    display: block;
+    padding: 10px 20px;
+}
+
+.tierlist-card:not(.active) .tierlist-pool,
+.tierlist-card:not(.active) .tierlist-actions,
+.tierlist-card:not(.active) .tierlist-remove-row {
     display: none;
+}
+
+.tierlist-card:not(.active) .tierlist-rows {
+    gap: 4px;
+}
+
+.tierlist-card:not(.active) .tierlist-row {
+    grid-template-columns: 72px minmax(0, 1fr);
+    min-height: 50px;
+}
+
+.tierlist-card:not(.active) .tierlist-champions {
+    min-height: 48px;
+    gap: 4px;
+    padding: 4px 6px;
+}
+
+.tierlist-card:not(.active) .tierlist-champion {
+    width: 40px;
+    height: 40px;
 }
 
 .tierlist-header {
@@ -3891,23 +3918,13 @@ span {
 }
 
 .tierlist-color-input {
-    width: 24px;
-    height: 18px;
-    margin-bottom: 5px;
+    position: absolute;
+    width: 1px;
+    height: 1px;
     padding: 0;
-    background: transparent;
-    border: 1px solid rgba(17, 17, 17, .45);
-    border-radius: 3px;
+    opacity: 0;
+    pointer-events: none;
     cursor: pointer;
-}
-
-.tierlist-color-input::-webkit-color-swatch-wrapper {
-    padding: 2px;
-}
-
-.tierlist-color-input::-webkit-color-swatch {
-    border: none;
-    border-radius: 2px;
 }
 
 .tierlist-label-input {
@@ -3919,6 +3936,7 @@ span {
     font-weight: 800;
     text-align: center;
     line-height: 1.05;
+    cursor: text;
 }
 
 .tierlist-label-input:focus {

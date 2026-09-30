@@ -10495,10 +10495,10 @@ function renderTierlist(tierlist) {
                     <div class="tierlist-rows">
                         ${tierlist.tiers.map(tier => `
                             <div class="tierlist-row" data-tier-id="${tier.id}" style="--tier-color: ${escapeHtml(tier.color)}">
-                                <label class="tierlist-label">
+                                <div class="tierlist-label">
                                     <input type="color" class="tierlist-color-input" value="${escapeHtml(tier.color)}" aria-label="Farbe der Kategorie" title="Kategorie-Farbe">
                                     <input class="tierlist-label-input" value="${escapeHtml(tier.name)}" aria-label="Kategorie">
-                                </label>
+                                </div>
                                 <div class="tierlist-champions" data-tier-id="${tier.id}">
                                     ${tier.champions.map(champion => renderTierlistChampion(champion, true)).join("")}
                                 </div>
@@ -10592,6 +10592,13 @@ function attachTierlistEvents() {
                 tier.color = event.target.value;
                 row.style.setProperty("--tier-color", tier.color);
                 await saveTierlist(tierlist);
+            });
+        });
+
+        card.querySelectorAll(".tierlist-label").forEach(label => {
+            label.addEventListener("click", event => {
+                if (event.target.closest(".tierlist-label-input")) return;
+                label.querySelector(".tierlist-color-input")?.click();
             });
         });
 
