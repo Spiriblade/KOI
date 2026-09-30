@@ -10416,6 +10416,7 @@ document.addEventListener(
 ========================================= */
 
 let tierlists = [];
+const expandedTierlistIds = new Set();
 
 function createDefaultTierRows() {
     return [];
@@ -10485,7 +10486,7 @@ function renderTierlist(tierlist) {
     const placedChampions = tierlist.tiers.flatMap(tier => tier.champions);
 
     return `
-        <article class="tierlist-card" data-tierlist-id="${tierlist.id}">
+        <article class="tierlist-card${expandedTierlistIds.has(tierlist.id) ? " active" : ""}" data-tierlist-id="${tierlist.id}">
             <div class="tierlist-header">
                 <input class="tierlist-name-input" value="${escapeHtml(tierlist.name)}" aria-label="Name der Tierlist">
                 <button type="button" class="danger-btn tierlist-delete-btn" title="Tierlist löschen">🗑️</button>
@@ -10547,9 +10548,17 @@ function attachTierlistEvents() {
         card.querySelector(".tierlist-header")?.addEventListener("click", event => {
             if (event.target.closest("input, button")) return;
             document.querySelectorAll(".tierlist-card.active").forEach(otherCard => {
-                if (otherCard !== card) otherCard.classList.remove("active");
+                if (otherCard !== card) {
+                    otherCard.classList.remove("active");
+                    expandedTierlistIds.delete(otherCard.dataset.tierlistId);
+                }
             });
             card.classList.toggle("active");
+            if (card.classList.contains("active")) {
+                expandedTierlistIds.add(card.dataset.tierlistId);
+            } else {
+                expandedTierlistIds.delete(card.dataset.tierlistId);
+            }
         });
 
         card.querySelector(".tierlist-name-input")?.addEventListener("change", async event => {
@@ -10651,9 +10660,13 @@ function attachTierlistEvents() {
 }
 
 function fitTierlistLabel(input) {
-    const length = input.value.trim().length;
-    const fontSize = Math.max(10, Math.min(17, 17 - Math.max(0, length - 8) * 0.55));
+    let fontSize = 17;
     input.style.fontSize = `${fontSize}px`;
+
+    while (input.scrollWidth > input.clientWidth && fontSize > 8) {
+        fontSize -= 0.5;
+        input.style.fontSize = `${fontSize}px`;
+    }
 }
 
 function removeChampionFromTierlist(tierlist, championName, rerender = true) {
@@ -10712,6 +10725,7 @@ async function deleteTierlist(id) {
     }
 
     tierlists = tierlists.filter(item => item.id !== id);
+    expandedTierlistIds.delete(id);
     renderTierlists();
 }
 
