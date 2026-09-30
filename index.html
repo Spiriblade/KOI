@@ -96,6 +96,15 @@
             <button
                 type="button"
                 class="nav-btn"
+                data-page="tierlists"
+            >
+                <span>☷</span>
+                <span>Tierlists</span>
+            </button>
+
+            <button
+                type="button"
+                class="nav-btn"
                 data-page="schedule"
             >
                 <span>📅</span>
@@ -716,6 +725,29 @@
                     Teamcomps werden geladen...
                 </div>
 
+            </div>
+
+        </section>
+
+        <!-- =========================
+            TIERLISTS
+        ========================== -->
+
+        <section id="tierlists-page" class="page">
+
+            <div class="page-header">
+                <div>
+                    <h1>Tierlists</h1>
+                    <p>Champion-Rankings pro Spieler und Rolle</p>
+                </div>
+
+                <button type="button" class="primary-btn" id="tierlist-new-btn">
+                    + Tierlist
+                </button>
+            </div>
+
+            <div id="tierlists-container" class="tierlists-container">
+                <div class="tierlists-loading">Tierlists werden geladen...</div>
             </div>
 
         </section>

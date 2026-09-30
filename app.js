@@ -10411,6 +10411,285 @@ document.addEventListener(
     }
 );
 
+/* =========================================
+   TIERLISTS
+========================================= */
+
+let tierlists = [];
+
+function createDefaultTierRows() {
+    return [];
+}
+
+function normalizeTierlist(row) {
+    const tiers = Array.isArray(row.tiers) && row.tiers.length
+        ? row.tiers
+        : createDefaultTierRows();
+
+    return {
+        id: row.id,
+        name: row.name || "Neue Tierlist",
+        tiers: tiers.map((tier, index) => ({
+            id: tier.id || `tier-${index}-${Date.now()}`,
+            name: tier.name || `Tier ${index + 1}`,
+            color: tier.color || "#3b3e48",
+            champions: Array.isArray(tier.champions) ? tier.champions : []
+        }))
+    };
+}
+
+async function loadTierlists() {
+    const container = document.getElementById("tierlists-container");
+    if (!container || !currentTeam?.id) return;
+
+    container.innerHTML = `<div class="tierlists-loading">Tierlists werden geladen...</div>`;
+
+    const { data, error } = await supabaseClient
+        .from("tierlists")
+        .select("*")
+        .eq("team_id", currentTeam.id)
+        .order("created_at", { ascending: true });
+
+    if (error) {
+        console.error("Fehler beim Laden der Tierlists:", error);
+        container.innerHTML = `<div class="tierlists-empty">Tierlists konnten nicht geladen werden.</div>`;
+        return;
+    }
+
+    tierlists = (data || []).map(normalizeTierlist);
+    renderTierlists();
+}
+
+function renderTierlists() {
+    const container = document.getElementById("tierlists-container");
+    if (!container) return;
+
+    if (!tierlists.length) {
+        container.innerHTML = `
+            <div class="tierlists-empty">
+                <p>Noch keine Tierlist vorhanden.</p>
+                <button type="button" class="primary-btn" id="tierlist-empty-new-btn">
+                    + Erste Tierlist erstellen
+                </button>
+            </div>
+        `;
+        document.getElementById("tierlist-empty-new-btn")?.addEventListener("click", createTierlist);
+        return;
+    }
+
+    container.innerHTML = tierlists.map(renderTierlist).join("");
+    attachTierlistEvents();
+}
+
+function renderTierlist(tierlist) {
+    const placedChampions = tierlist.tiers.flatMap(tier => tier.champions);
+
+    return `
+        <article class="tierlist-card" data-tierlist-id="${tierlist.id}">
+            <div class="tierlist-header">
+                <input class="tierlist-name-input" value="${escapeHtml(tierlist.name)}" aria-label="Name der Tierlist">
+                <button type="button" class="danger-btn tierlist-delete-btn" title="Tierlist löschen">🗑️</button>
+            </div>
+            <div class="tierlist-layout">
+                <div>
+                    <div class="tierlist-rows">
+                        ${tierlist.tiers.map(tier => `
+                            <div class="tierlist-row" data-tier-id="${tier.id}" style="--tier-color: ${escapeHtml(tier.color)}">
+                                <label class="tierlist-label">
+                                    <input class="tierlist-label-input" value="${escapeHtml(tier.name)}" aria-label="Kategorie">
+                                </label>
+                                <div class="tierlist-champions" data-tier-id="${tier.id}">
+                                    ${tier.champions.map(champion => renderTierlistChampion(champion, true)).join("")}
+                                </div>
+                                <button type="button" class="tierlist-remove-row" title="Kategorie löschen">×</button>
+                            </div>
+                        `).join("")}
+                    </div>
+                    <div class="tierlist-actions">
+                        <button type="button" class="tierlist-add-row">+ Kategorie</button>
+                    </div>
+                </div>
+                <aside class="tierlist-pool">
+                    <h3>Champions</h3>
+                    <input type="search" class="tierlist-pool-search" placeholder="Champion suchen...">
+                    <div class="tierlist-pool-champions">
+                        ${champions.map(champion => renderTierlistChampion(champion.name, false, placedChampions.includes(champion.name))).join("")}
+                    </div>
+                </aside>
+            </div>
+        </article>
+    `;
+}
+
+function renderTierlistChampion(championName, placed, isPlaced = false) {
+    const champion = getChampion(championName);
+    if (!champion) return "";
+
+    return `
+        <div class="${placed ? "tierlist-champion" : "tierlist-pool-champion"}${isPlaced ? " placed" : ""}"
+             draggable="true" data-champion="${escapeHtml(champion.name)}" title="${escapeHtml(champion.name)}">
+            <img src="${champion.image}" alt="${escapeHtml(champion.name)}">
+            <span>${escapeHtml(champion.name)}</span>
+        </div>
+    `;
+}
+
+function getTierlistByCard(element) {
+    const id = element.closest(".tierlist-card")?.dataset.tierlistId;
+    return tierlists.find(tierlist => tierlist.id === id);
+}
+
+function attachTierlistEvents() {
+    document.querySelectorAll(".tierlist-card").forEach(card => {
+        const tierlist = getTierlistByCard(card);
+
+        card.querySelector(".tierlist-name-input")?.addEventListener("change", async event => {
+            tierlist.name = event.target.value.trim() || "Neue Tierlist";
+            event.target.value = tierlist.name;
+            await saveTierlist(tierlist);
+        });
+
+        card.querySelector(".tierlist-delete-btn")?.addEventListener("click", () => deleteTierlist(tierlist.id));
+
+        card.querySelector(".tierlist-add-row")?.addEventListener("click", () => {
+            const index = tierlist.tiers.length + 1;
+            tierlist.tiers.push({
+                id: `tier-${Date.now()}`,
+                name: `Tier ${index}`,
+                color: "#3b3e48",
+                champions: []
+            });
+            saveTierlist(tierlist).then(renderTierlists);
+        });
+
+        card.querySelectorAll(".tierlist-label-input").forEach(input => {
+            input.addEventListener("change", async event => {
+                const row = event.target.closest(".tierlist-row");
+                const tier = tierlist.tiers.find(item => item.id === row.dataset.tierId);
+                tier.name = event.target.value.trim() || "Tier";
+                event.target.value = tier.name;
+                await saveTierlist(tierlist);
+            });
+        });
+
+        card.querySelectorAll(".tierlist-remove-row").forEach(button => {
+            button.addEventListener("click", () => {
+                if (tierlist.tiers.length === 1) return;
+                const row = button.closest(".tierlist-row");
+                const tierIndex = tierlist.tiers.findIndex(item => item.id === row.dataset.tierId);
+                tierlist.tiers.splice(tierIndex, 1);
+                saveTierlist(tierlist).then(renderTierlists);
+            });
+        });
+
+        card.querySelector(".tierlist-pool-search")?.addEventListener("input", event => {
+            const search = event.target.value.toLowerCase().trim();
+            card.querySelectorAll(".tierlist-pool-champion").forEach(champion => {
+                champion.hidden = !champion.dataset.champion.toLowerCase().includes(search);
+            });
+        });
+
+        card.querySelectorAll("[draggable='true']").forEach(champion => {
+            champion.addEventListener("dragstart", event => {
+                event.dataTransfer.setData("text/plain", champion.dataset.champion);
+                event.dataTransfer.effectAllowed = "move";
+            });
+            champion.addEventListener("contextmenu", event => {
+                if (!champion.classList.contains("tierlist-champion")) return;
+                event.preventDefault();
+                removeChampionFromTierlist(tierlist, champion.dataset.champion);
+            });
+        });
+
+        card.querySelectorAll(".tierlist-champions").forEach(dropzone => {
+            dropzone.addEventListener("dragover", event => {
+                event.preventDefault();
+                dropzone.closest(".tierlist-row").classList.add("drag-over");
+            });
+            dropzone.addEventListener("dragleave", () => dropzone.closest(".tierlist-row").classList.remove("drag-over"));
+            dropzone.addEventListener("drop", event => {
+                event.preventDefault();
+                dropzone.closest(".tierlist-row").classList.remove("drag-over");
+                const tier = tierlist.tiers.find(item => item.id === dropzone.dataset.tierId);
+                const champion = event.dataTransfer.getData("text/plain");
+                removeChampionFromTierlist(tierlist, champion, false);
+                tier.champions.push(champion);
+                saveTierlist(tierlist).then(renderTierlists);
+            });
+        });
+    });
+}
+
+function removeChampionFromTierlist(tierlist, championName, rerender = true) {
+    tierlist.tiers.forEach(tier => {
+        tier.champions = tier.champions.filter(champion => champion !== championName);
+    });
+    saveTierlist(tierlist).then(() => {
+        if (rerender) renderTierlists();
+    });
+}
+
+async function saveTierlist(tierlist) {
+    if (!tierlist?.id) return;
+    const { error } = await supabaseClient.from("tierlists").update({
+        name: tierlist.name,
+        tiers: tierlist.tiers,
+        updated_at: new Date().toISOString()
+    }).eq("id", tierlist.id);
+    if (error) console.error("Fehler beim Speichern der Tierlist:", error);
+}
+
+async function createTierlist() {
+    if (!currentTeam?.id) {
+        alert("Kein Team ausgewählt.");
+        return;
+    }
+
+    const name = prompt("Name der neuen Tierlist:", `Tierlist ${tierlists.length + 1}`);
+    if (name === null) return;
+
+    const { data, error } = await supabaseClient.from("tierlists").insert({
+        team_id: currentTeam.id,
+        name: name.trim() || `Tierlist ${tierlists.length + 1}`,
+        tiers: createDefaultTierRows()
+    }).select().single();
+
+    if (error) {
+        console.error("Fehler beim Erstellen der Tierlist:", error);
+        alert(`Die Tierlist konnte nicht erstellt werden.\n\n${error.message}`);
+        return;
+    }
+
+    tierlists.push(normalizeTierlist(data));
+    renderTierlists();
+}
+
+async function deleteTierlist(id) {
+    const tierlist = tierlists.find(item => item.id === id);
+    if (!tierlist || !confirm(`Tierlist "${tierlist.name}" wirklich löschen?`)) return;
+
+    const { error } = await supabaseClient.from("tierlists").delete().eq("id", id);
+    if (error) {
+        console.error("Fehler beim Löschen der Tierlist:", error);
+        alert("Die Tierlist konnte nicht gelöscht werden.");
+        return;
+    }
+
+    tierlists = tierlists.filter(item => item.id !== id);
+    renderTierlists();
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("tierlist-new-btn")?.addEventListener("click", createTierlist);
+    document.querySelector('.nav-btn[data-page="tierlists"]')?.addEventListener("click", loadTierlists);
+});
+
+document.addEventListener("championsLoaded", () => {
+    if (document.getElementById("tierlists-page")?.classList.contains("active") && tierlists.length) {
+        renderTierlists();
+    }
+});
+
 
 /* =========================================
    MAP EDITOR
