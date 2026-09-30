@@ -10496,6 +10496,7 @@ function renderTierlist(tierlist) {
                         ${tierlist.tiers.map(tier => `
                             <div class="tierlist-row" data-tier-id="${tier.id}" style="--tier-color: ${escapeHtml(tier.color)}">
                                 <label class="tierlist-label">
+                                    <input type="color" class="tierlist-color-input" value="${escapeHtml(tier.color)}" aria-label="Farbe der Kategorie" title="Kategorie-Farbe">
                                     <input class="tierlist-label-input" value="${escapeHtml(tier.name)}" aria-label="Kategorie">
                                 </label>
                                 <div class="tierlist-champions" data-tier-id="${tier.id}">
@@ -10543,6 +10544,14 @@ function attachTierlistEvents() {
     document.querySelectorAll(".tierlist-card").forEach(card => {
         const tierlist = getTierlistByCard(card);
 
+        card.querySelector(".tierlist-header")?.addEventListener("click", event => {
+            if (event.target.closest("input, button")) return;
+            document.querySelectorAll(".tierlist-card.active").forEach(otherCard => {
+                if (otherCard !== card) otherCard.classList.remove("active");
+            });
+            card.classList.toggle("active");
+        });
+
         card.querySelector(".tierlist-name-input")?.addEventListener("change", async event => {
             tierlist.name = event.target.value.trim() || "Neue Tierlist";
             event.target.value = tierlist.name;
@@ -10563,11 +10572,25 @@ function attachTierlistEvents() {
         });
 
         card.querySelectorAll(".tierlist-label-input").forEach(input => {
+            fitTierlistLabel(input);
             input.addEventListener("change", async event => {
                 const row = event.target.closest(".tierlist-row");
                 const tier = tierlist.tiers.find(item => item.id === row.dataset.tierId);
                 tier.name = event.target.value.trim() || "Tier";
                 event.target.value = tier.name;
+                fitTierlistLabel(event.target);
+                await saveTierlist(tierlist);
+            });
+            input.addEventListener("input", () => fitTierlistLabel(input));
+        });
+
+        card.querySelectorAll(".tierlist-color-input").forEach(input => {
+            input.addEventListener("click", event => event.stopPropagation());
+            input.addEventListener("change", async event => {
+                const row = event.target.closest(".tierlist-row");
+                const tier = tierlist.tiers.find(item => item.id === row.dataset.tierId);
+                tier.color = event.target.value;
+                row.style.setProperty("--tier-color", tier.color);
                 await saveTierlist(tierlist);
             });
         });
@@ -10618,6 +10641,12 @@ function attachTierlistEvents() {
             });
         });
     });
+}
+
+function fitTierlistLabel(input) {
+    const length = input.value.trim().length;
+    const fontSize = Math.max(10, Math.min(17, 17 - Math.max(0, length - 8) * 0.55));
+    input.style.fontSize = `${fontSize}px`;
 }
 
 function removeChampionFromTierlist(tierlist, championName, rerender = true) {

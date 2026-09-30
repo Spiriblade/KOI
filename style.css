@@ -3816,6 +3816,10 @@ span {
     overflow: hidden;
 }
 
+.tierlist-card:not(.active) .tierlist-layout {
+    display: none;
+}
+
 .tierlist-header {
     display: flex;
     align-items: center;
@@ -3823,6 +3827,7 @@ span {
     padding: 16px 20px;
     background: #1a1c22;
     border-bottom: 1px solid #272a31;
+    cursor: pointer;
 }
 
 .tierlist-name-input {
@@ -3874,6 +3879,7 @@ span {
 
 .tierlist-label {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     padding: 10px 6px;
@@ -3884,6 +3890,26 @@ span {
     overflow-wrap: anywhere;
 }
 
+.tierlist-color-input {
+    width: 24px;
+    height: 18px;
+    margin-bottom: 5px;
+    padding: 0;
+    background: transparent;
+    border: 1px solid rgba(17, 17, 17, .45);
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.tierlist-color-input::-webkit-color-swatch-wrapper {
+    padding: 2px;
+}
+
+.tierlist-color-input::-webkit-color-swatch {
+    border: none;
+    border-radius: 2px;
+}
+
 .tierlist-label-input {
     width: 100%;
     min-width: 0;
@@ -3892,6 +3918,7 @@ span {
     border: none;
     font-weight: 800;
     text-align: center;
+    line-height: 1.05;
 }
 
 .tierlist-label-input:focus {
